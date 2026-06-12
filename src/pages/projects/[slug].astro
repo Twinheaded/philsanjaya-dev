@@ -5,6 +5,15 @@ import MetricCard from '../../components/MetricCard.astro';
 
 export async function getStaticPaths() {
   const projects = await getCollection('projects', ({ data }) => data.status === 'published');
+  // FR-20 fails loudly: Astro's loader would otherwise only warn and
+  // silently drop one of two entries sharing a slug.
+  const seen = new Set<string>();
+  for (const p of projects) {
+    if (seen.has(p.data.slug)) {
+      throw new Error(`Duplicate project slug "${p.data.slug}" — every project needs its own`);
+    }
+    seen.add(p.data.slug);
+  }
   return projects.map((project) => ({
     params: { slug: project.data.slug },
     props: { project },
@@ -20,24 +29,24 @@ const d = project.data;
 <Shell title={`${d.title} — Phil Sanjaya`} description={d.summary}>
   <article class="flex h-full min-h-0 flex-col p-5 md:p-12" data-study>
     <header class="flex flex-wrap items-baseline justify-between gap-2">
+      <!-- Persistent h1: the visual title lives in the overview chapter,
+           which is display:none on other chapters under JS. -->
+      <h1 class="sr-only">{d.title}</h1>
       <a href="/projects" class="font-mono text-xs text-mist hover:text-ink">&larr; projects</a>
       <!-- FR-36: chapter tabs are real hash anchors — deep links work with
-           and without JS; with JS they become slide controls. -->
+           and without JS; with JS they become slide controls. aria-current
+           is set by the script only (no single chapter is "current" in the
+           stacked no-JS reading mode). -->
       <nav class="flex flex-wrap gap-3" aria-label="Chapters">
-        <a
-          href="#overview"
-          data-tab="overview"
-          aria-current="true"
-          class="tab font-mono text-xs text-mist"
-        >
-          <span>00</span>
-          <span class="hidden sm:inline">Overview</span>
+        <a href="#overview" data-tab="overview" class="tab font-mono text-xs text-mist">
+          <span aria-hidden="true">00</span>
+          <span class="sr-only sm:not-sr-only">Overview</span>
         </a>
         {
           chapters.map((c, i) => (
             <a href={`#${c.slug}`} data-tab={c.slug} class="tab font-mono text-xs text-mist">
-              <span>0{i + 1}</span>
-              <span class="hidden sm:inline">{c.text}</span>
+              <span aria-hidden="true">0{i + 1}</span>
+              <span class="sr-only sm:not-sr-only">{c.text}</span>
             </a>
           ))
         }
@@ -54,9 +63,12 @@ const d = project.data;
         aria-label="Overview"
       >
         <p class="font-mono text-xs tracking-[0.08em] text-signal-text">{d.tags.join(' · ')}</p>
-        <h1 class="mt-2 font-display text-[clamp(1.75rem,4vw,2.5rem)] leading-tight font-medium">
+        <p
+          aria-hidden="true"
+          class="mt-2 font-display text-[clamp(1.75rem,4vw,2.5rem)] leading-tight font-medium"
+        >
           {d.title}
-        </h1>
+        </p>
         {d.question && <p class="mt-3 max-w-2xl text-mist">{d.question}</p>}
         {
           d.metrics.length > 0 && (
@@ -66,6 +78,27 @@ const d = project.data;
               ))}
             </div>
           )
+        }
+        {
+          d.hero &&
+            (/\.(webm|mp4)$/i.test(d.hero) ? (
+              <video
+                src={d.hero}
+                class="mt-6 max-h-[40vh] rounded-[10px] border border-line"
+                controls
+                muted
+                playsinline
+                preload="none"
+              ></video>
+            ) : (
+              <img
+                src={d.hero}
+                alt={`${d.title} — demonstration`}
+                class="mt-6 max-h-[40vh] rounded-[10px] border border-line"
+                loading="lazy"
+                decoding="async"
+              />
+            ))
         }
         <div class="mt-6 flex flex-wrap gap-x-6 gap-y-1">
           {
@@ -189,7 +222,7 @@ const d = project.data;
   // into chapter sections, then drives tabs, the next action, arrow keys,
   // and #chapter deep links. All listeners are delegated so they survive
   // view-transition swaps; everything no-ops off case-study pages.
-  const CURRENT = { sections: [] as HTMLElement[], active: 0, animating: false };
+  const CURRENT = { sections: [] as HTMLElement[], active: 0, animating: false, timer: 0 };
 
   function study(): HTMLElement | null {
     return document.querySelector('[data-study]');
@@ -222,6 +255,17 @@ const d = project.data;
           leading.push(node);
         }
       }
+      // FR-34: chapters are optional. A body with no h2 headings becomes
+      // one chapter rather than being discarded.
+      if (!current && leading.length) {
+        const fallback = document.createElement('section');
+        fallback.dataset.chapter = 'study';
+        fallback.className = 'chapter';
+        fallback.tabIndex = 0;
+        fallback.setAttribute('aria-label', 'Study');
+        fallback.append(...leading.splice(0));
+        sections.push(fallback);
+      }
       content.replaceChildren(...sections);
       content.dataset.grouped = '1';
     }
@@ -243,6 +287,11 @@ const d = project.data;
         next.textContent = `next: ${label.toLowerCase()} →`;
         next.classList.remove('hidden');
       } else {
+        // Never hide the focused element — focus would silently drop to
+        // <body> (FR-71).
+        if (document.activeElement === next) {
+          sections[active]?.focus({ preventScroll: true });
+        }
         next.classList.add('hidden');
       }
     }
@@ -262,18 +311,24 @@ const d = project.data;
     CURRENT.animating = true;
     newS.classList.add(forward ? 'ch-in-right' : 'ch-in-left');
     oldS.classList.add(forward ? 'ch-out-left' : 'ch-out-right');
-    window.setTimeout(() => {
+    CURRENT.timer = window.setTimeout(() => {
       oldS.hidden = true;
       oldS.classList.remove('ch-out-left', 'ch-out-right');
       newS.classList.remove('ch-in-right', 'ch-in-left');
       CURRENT.animating = false;
     }, 470);
     const id = newS.dataset.chapter ?? 'overview';
-    history.replaceState(null, '', `#${id}`);
+    // Preserve ClientRouter's history state ({index, scrollX, scrollY}) —
+    // a null state makes its popstate handler swallow the next Back press.
+    history.replaceState(history.state, '', `#${id}`);
+    // Move focus with the content so activation is announced and keyboard
+    // users follow the swap (chapters are focusable regions).
+    newS.focus({ preventScroll: true });
     syncChrome(root);
   }
 
   function setup(): void {
+    window.clearTimeout(CURRENT.timer); // a stale timer must not unlock the next page
     const root = study();
     if (!root) {
       CURRENT.sections = [];
@@ -299,21 +354,29 @@ const d = project.data;
   setup();
   document.addEventListener('astro:page-load', setup);
 
-  document.addEventListener('click', (e) => {
-    const root = study();
-    if (!root) return;
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-    const tab = target.closest<HTMLElement>('[data-tab]');
-    if (tab && root.contains(tab)) {
-      e.preventDefault();
-      show(CURRENT.sections.findIndex((s) => s.dataset.chapter === tab.dataset.tab));
-      return;
-    }
-    if (target.closest('[data-next]')) {
-      show(CURRENT.active + 1);
-    }
-  });
+  // Capture phase: this must win against ClientRouter's own click
+  // listener, which would otherwise push a history entry per tab click.
+  // Modified clicks (ctrl/cmd/shift/middle) stay with the browser.
+  document.addEventListener(
+    'click',
+    (e) => {
+      const root = study();
+      if (!root) return;
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const tab = target.closest<HTMLElement>('[data-tab]');
+      if (tab && root.contains(tab)) {
+        e.preventDefault();
+        show(CURRENT.sections.findIndex((s) => s.dataset.chapter === tab.dataset.tab));
+        return;
+      }
+      if (target.closest('[data-next]')) {
+        show(CURRENT.active + 1);
+      }
+    },
+    true
+  );
 
   document.addEventListener('keydown', (e) => {
     if (!study()) return;
@@ -324,11 +387,13 @@ const d = project.data;
     show(CURRENT.active + (e.key === 'ArrowRight' ? 1 : -1));
   });
 
-  // Hash navigation (back/forward between chapter deep links).
+  // Hash navigation (back/forward between chapter deep links). An empty
+  // hash means the bare URL — that is the overview.
   window.addEventListener('hashchange', () => {
     const root = study();
     if (!root) return;
-    const idx = CURRENT.sections.findIndex((s) => s.dataset.chapter === location.hash.slice(1));
+    const id = location.hash.slice(1);
+    const idx = id ? CURRENT.sections.findIndex((s) => s.dataset.chapter === id) : 0;
     if (idx >= 0) show(idx);
   });
 </script>
