@@ -1,2 +1,107 @@
 @import 'tailwindcss';
 @import './tokens.css';
+
+/* Self-hosted woff2 subsets (PRD §9.2, §11.1) */
+@import '@fontsource/archivo/500.css';
+@import '@fontsource/instrument-sans/400.css';
+@import '@fontsource/instrument-sans/500.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-mist: var(--mist);
+  --color-line: var(--line);
+  --color-signal: var(--signal);
+  --color-debug: var(--debug);
+  --font-display: 'Archivo', 'Instrument Sans', system-ui, sans-serif;
+  --font-sans: 'Instrument Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+
+  /* FR-01: the document body never scrolls; panels fit the stage. */
+  body {
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    line-height: 1.65;
+  }
+}
+
+/*
+ * Directional panel slides (FR-04, §9.5).
+ * The stage carries view-transition-name: stage; the rail is isolated under
+ * its own name so it stays still. data-nav-direction is set on the incoming
+ * document by the shell script before the swap.
+ */
+@keyframes stage-out-left {
+  to {
+    transform: translateX(-100%);
+  }
+}
+@keyframes stage-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes stage-out-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes stage-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+::view-transition-old(stage),
+::view-transition-new(stage) {
+  animation-duration: 550ms;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation-fill-mode: both;
+}
+html[data-nav-direction='forward']::view-transition-old(stage) {
+  animation-name: stage-out-left;
+}
+html[data-nav-direction='forward']::view-transition-new(stage) {
+  animation-name: stage-in-right;
+}
+html[data-nav-direction='back']::view-transition-old(stage) {
+  animation-name: stage-out-right;
+}
+html[data-nav-direction='back']::view-transition-new(stage) {
+  animation-name: stage-in-left;
+}
+
+/* FR-07: reduced motion replaces slides with a ≤150ms fade. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-nav-direction]::view-transition-old(stage),
+  ::view-transition-old(stage),
+  ::view-transition-old(root) {
+    animation: vt-fade-out 150ms ease-out both;
+  }
+  html[data-nav-direction]::view-transition-new(stage),
+  ::view-transition-new(stage),
+  ::view-transition-new(root) {
+    animation: vt-fade-in 150ms ease-out both;
+  }
+}

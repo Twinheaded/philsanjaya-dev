@@ -1,0 +1,16 @@
+---
+interface Props {
+  kicker: string;
+  title: string;
+}
+
+const { kicker, title } = Astro.props;
+---
+
+<div class="flex h-full flex-col p-5 md:p-12">
+  <p class="font-mono text-xs tracking-[0.08em] text-mist">{kicker}</p>
+  <h1 class="mt-2 font-display text-[28px] font-medium">{title}</h1>
+  <div class="mt-6 max-w-xl text-mist">
+    <slot />
+  </div>
+</div>

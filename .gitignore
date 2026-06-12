@@ -21,3 +21,6 @@ lerna-debug.log*
 
 # jetbrains
 .idea/
+
+# local agent tooling (machine-specific launch config)
+/.claude/
