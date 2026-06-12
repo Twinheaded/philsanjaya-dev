@@ -5,6 +5,11 @@ import NotePane from '../../components/NotePane.astro';
 
 export async function getStaticPaths() {
   const notes = await getCollection('notes');
+  for (const n of notes) {
+    if (/^\d+$/.test(n.id)) {
+      throw new Error(`Note filename "${n.id}.md" collides with pagination routes — rename it`);
+    }
+  }
   return notes.map((note) => ({
     params: { slug: note.id },
     props: { note },

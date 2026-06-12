@@ -1,9 +1,18 @@
 ---
+import type { GetStaticPaths } from 'astro';
 import { getCollection } from 'astro:content';
-import Shell from '../layouts/Shell.astro';
-import { SITE } from '../lib/site';
+import Shell from '../../layouts/Shell.astro';
+import { SITE } from '../../lib/site';
 
-const entries = (await getCollection('buildlog')).sort((a, b) => b.data.entry - a.data.entry);
+export const getStaticPaths = (async ({ paginate }) => {
+  const entries = (await getCollection('buildlog')).sort((a, b) => b.data.entry - a.data.entry);
+  // FR-50: the timeline stays within the viewport — four cards per page
+  // fit the smallest supported stage; older entries paginate rather than
+  // clip out of reach.
+  return paginate(entries, { pageSize: 4 });
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props;
 
 const formatDate = (d: Date) =>
   d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -16,11 +25,9 @@ const formatDate = (d: Date) =>
   <div class="flex h-full flex-col p-5 md:p-12">
     <p class="font-mono text-xs tracking-[0.08em] text-mist">04 — build log</p>
     <h1 class="mt-2 font-display text-[28px] font-medium">Build log</h1>
-    <!-- FR-50: newest first; the log is capped editorially (§12) so the
-         timeline fits the stage. -->
-    <ol class="relative mt-6 min-h-0 max-w-2xl space-y-4 overflow-hidden border-l border-line pl-6">
+    <ol class="relative mt-6 min-h-0 max-w-2xl space-y-4 border-l border-line pl-6">
       {
-        entries.map((e) => (
+        page.data.map((e) => (
           <li class="relative">
             <span
               class="absolute top-5 -left-[27.5px] h-[7px] w-[7px] rounded-full bg-signal"
@@ -56,6 +63,22 @@ const formatDate = (d: Date) =>
         ))
       }
     </ol>
+    {
+      (page.url.prev || page.url.next) && (
+        <p class="mt-6 flex gap-6 font-mono text-xs">
+          {page.url.prev && (
+            <a href={page.url.prev} class="text-mist hover:text-ink">
+              &larr; newer
+            </a>
+          )}
+          {page.url.next && (
+            <a href={page.url.next} class="text-mist hover:text-ink">
+              older &rarr;
+            </a>
+          )}
+        </p>
+      )
+    }
   </div>
 </Shell>
 

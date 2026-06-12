@@ -6,6 +6,11 @@ import { SITE } from '../../lib/site';
 
 export async function getStaticPaths() {
   const entries = await getCollection('buildlog');
+  for (const e of entries) {
+    if (/^\d+$/.test(e.id)) {
+      throw new Error(`Build-log filename "${e.id}.md" collides with pagination routes — rename it`);
+    }
+  }
   return entries.map((entry) => ({
     params: { slug: entry.id },
     props: { entry },
