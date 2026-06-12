@@ -12,8 +12,9 @@ Rules (PRD §14, v1.1):
 
 | # | Title | Status |
 |---|-------|--------|
-| [0001](0001-astro-5-over-nextjs-and-plain-html.md) | Astro 5 over Next.js and plain HTML | Accepted |
+| [0001](0001-astro-5-over-nextjs-and-plain-html.md) | Astro 5 over Next.js and plain HTML | Superseded by 0006 |
 | [0002](0002-no-scroll-shell-with-no-js-fallback.md) | No-scroll shell with no-JS fallback | Accepted |
 | [0003](0003-vanilla-ts-agent-island-no-client-framework.md) | Vanilla TS agent island, no client framework | Accepted |
 | [0004](0004-source-required-metrics-schema.md) | Source-required metrics schema | Accepted |
 | [0005](0005-cloudflare-pages-hosting.md) | Cloudflare Pages hosting | Accepted |
+| [0006](0006-astro-6-upgrade.md) | Astro 6 upgrade | Accepted |

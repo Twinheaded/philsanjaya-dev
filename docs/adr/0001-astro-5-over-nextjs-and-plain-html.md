@@ -4,7 +4,7 @@ Date: 2026-06-12 · Elaborates PRD §11.1–11.2
 
 ## Status
 
-Accepted
+Superseded by [0006](0006-astro-6-upgrade.md)
 
 ## Context
 
