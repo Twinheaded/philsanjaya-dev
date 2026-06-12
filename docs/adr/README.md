@@ -18,3 +18,4 @@ Rules (PRD §14, v1.1):
 | [0004](0004-source-required-metrics-schema.md) | Source-required metrics schema | Accepted |
 | [0005](0005-cloudflare-pages-hosting.md) | Cloudflare Pages hosting | Accepted |
 | [0006](0006-astro-6-upgrade.md) | Astro 6 upgrade | Accepted |
+| [0007](0007-ci-driven-pages-deploys.md) | CI-driven Pages deploys over dashboard git integration | Accepted |
