@@ -1,17 +1,57 @@
 ---
+import { getCollection } from 'astro:content';
 import Shell from '../layouts/Shell.astro';
-import Panel from '../components/Panel.astro';
+
+const projects = (await getCollection('projects', ({ data }) => data.status === 'published')).sort(
+  (a, b) => a.data.order - b.data.order
+);
 ---
 
 <Shell
   title="Projects — Phil Sanjaya"
   description="Case studies: agent simulation, ICS anomaly detection on AWS, market sentiment ML, and power forecasting."
 >
-  <Panel kicker="02 — projects" title="Projects">
-    <p>
-      Four case studies are planned here — an agent CTF simulation, ICS anomaly detection on AWS,
-      market sentiment prediction, and power forecasting. The index and case-study template land
-      in milestone M2; the writing follows in M3.
-    </p>
-  </Panel>
+  <div class="flex h-full flex-col p-5 md:p-12">
+    <p class="font-mono text-xs tracking-[0.08em] text-mist">02 — projects</p>
+    <h1 class="mt-2 font-display text-[28px] font-medium">Projects</h1>
+    {
+      projects.length > 0 ? (
+        <ul
+          class="mt-6 grid min-h-0 flex-1 content-start gap-4 overflow-hidden sm:grid-cols-2 sm:content-stretch"
+          style="grid-auto-rows: minmax(0, 1fr); max-block-size: 100%;"
+        >
+          {projects.map((p) => (
+            <li class="flex min-h-0">
+              <a
+                href={`/projects/${p.data.slug}`}
+                class="project-card flex min-h-0 flex-1 flex-col justify-between gap-2 overflow-hidden rounded-[10px] border border-line bg-surface p-5 motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
+              >
+                <div class="min-h-0">
+                  <p class="font-mono text-xs tracking-[0.08em] text-signal-text">{p.data.tags[0]}</p>
+                  <h2 class="mt-1 font-display text-xl font-medium text-ink">{p.data.title}</h2>
+                  <p class="summary mt-1 text-sm text-mist">{p.data.summary}</p>
+                </div>
+                <p class="font-mono text-xs text-mist">{p.data.period}</p>
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="mt-6 max-w-xl text-mist">No projects published yet.</p>
+      )
+    }
+  </div>
 </Shell>
+
+<style>
+  .project-card:hover {
+    border-color: var(--signal);
+  }
+  /* Cards clamp rather than grow: the grid divides the stage, never scrolls it. */
+  .summary {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>
