@@ -140,8 +140,13 @@ const d = project.data;
     visibility: hidden;
   }
 
-  [data-study] .chapter {
-    outline-offset: -2px;
+  /* Chapters are focusable regions so swaps are announced and keyboard
+     scrolling works, but a full-pane focus ring reads as a glitch — no
+     outline here (Phil's call at M2 review; revisit a subtler indicator
+     in PHI-44). Tabs, links, and buttons keep their rings. */
+  [data-study] .chapter:focus,
+  [data-study] .chapter:focus-visible {
+    outline: none;
   }
 
   /* With JS: chapters become slides; the frame stops scrolling and each
@@ -222,7 +227,7 @@ const d = project.data;
   // into chapter sections, then drives tabs, the next action, arrow keys,
   // and #chapter deep links. All listeners are delegated so they survive
   // view-transition swaps; everything no-ops off case-study pages.
-  const CURRENT = { sections: [] as HTMLElement[], active: 0, animating: false, timer: 0 };
+  const CURRENT = { sections: [] as HTMLElement[], active: 0, timer: 0 };
 
   function study(): HTMLElement | null {
     return document.querySelector('[data-study]');
@@ -300,22 +305,28 @@ const d = project.data;
   function show(idx: number): void {
     const root = study();
     if (!root) return;
-    const { sections, active } = CURRENT;
-    if (idx < 0 || idx >= sections.length || idx === active || CURRENT.animating) return;
-    const oldS = sections[active];
+    const { sections } = CURRENT;
+    if (idx < 0 || idx >= sections.length || idx === CURRENT.active) return;
+    // Interrupt any in-flight slide and retarget: the latest input wins
+    // instantly instead of being dropped mid-animation.
+    window.clearTimeout(CURRENT.timer);
+    for (const s of sections) {
+      s.classList.remove('ch-in-right', 'ch-in-left', 'ch-out-left', 'ch-out-right');
+      s.hidden = true;
+    }
+    const oldS = sections[CURRENT.active];
     const newS = sections[idx];
+    const forward = idx > CURRENT.active;
     CURRENT.active = idx;
+    oldS.hidden = false;
     newS.hidden = false;
     newS.scrollTop = 0;
-    const forward = idx > active;
-    CURRENT.animating = true;
     newS.classList.add(forward ? 'ch-in-right' : 'ch-in-left');
     oldS.classList.add(forward ? 'ch-out-left' : 'ch-out-right');
     CURRENT.timer = window.setTimeout(() => {
       oldS.hidden = true;
       oldS.classList.remove('ch-out-left', 'ch-out-right');
       newS.classList.remove('ch-in-right', 'ch-in-left');
-      CURRENT.animating = false;
     }, 470);
     const id = newS.dataset.chapter ?? 'overview';
     // Preserve ClientRouter's history state ({index, scrollX, scrollY}) —
@@ -335,7 +346,6 @@ const d = project.data;
       return;
     }
     CURRENT.sections = group(root);
-    CURRENT.animating = false;
     const fromHash = location.hash.slice(1);
     const target = Math.max(
       0,
