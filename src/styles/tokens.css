@@ -7,6 +7,10 @@
   --mist: #67706c;
   --line: rgba(22, 27, 25, 0.14);
   --signal: #149e7c;
+  /* Signal when used as text: #149e7c is 3.15:1 on --bg, below the 4.5:1
+     AA floor (FR-70), so normal-size text uses this darker variant
+     (4.92:1 on --bg, 5.29:1 on --surface). */
+  --signal-text: #0e7a60;
   --debug: #c97e12;
 }
 
@@ -18,6 +22,7 @@
   --mist: #9aa39e;
   --line: rgba(231, 234, 232, 0.14);
   --signal: #23b893;
+  --signal-text: #23b893; /* 7.43:1 on dark --bg, passes as-is */
   --debug: #e09a2f;
 }
 
@@ -30,6 +35,7 @@
     --mist: #9aa39e;
     --line: rgba(231, 234, 232, 0.14);
     --signal: #23b893;
+    --signal-text: #23b893;
     --debug: #e09a2f;
   }
 }

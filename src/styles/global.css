@@ -14,6 +14,7 @@
   --color-mist: var(--mist);
   --color-line: var(--line);
   --color-signal: var(--signal);
+  --color-signal-text: var(--signal-text);
   --color-debug: var(--debug);
   --font-display: 'Archivo', 'Instrument Sans', system-ui, sans-serif;
   --font-sans: 'Instrument Sans', system-ui, sans-serif;
@@ -33,6 +34,19 @@
     color: var(--ink);
     font-family: var(--font-sans);
     line-height: 1.65;
+  }
+
+  /* FR-71: token focus ring, site-wide (kept out of scoped styles). */
+  :focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+  }
+
+  /* Controls that only function with JS (theme toggle, key hints) are
+     hidden when it never ran — FR-74's no-JS page offers no dead UI.
+     The inline theme script stamps data-js before first paint. */
+  html:not([data-js]) .js-only {
+    display: none;
   }
 }
 
@@ -92,16 +106,19 @@ html[data-nav-direction='back']::view-transition-new(stage) {
   animation-name: stage-in-left;
 }
 
-/* FR-07: reduced motion replaces slides with a ≤150ms fade. */
+/*
+ * FR-07: reduced motion replaces slides with a ≤150ms fade.
+ * Astro's ClientRouter injects `::view-transition-*(*) { animation: none
+ * !important }` under this media query; the html prefix (higher
+ * specificity) plus !important is required for the mandated fade to win.
+ */
 @media (prefers-reduced-motion: reduce) {
-  html[data-nav-direction]::view-transition-old(stage),
-  ::view-transition-old(stage),
-  ::view-transition-old(root) {
-    animation: vt-fade-out 150ms ease-out both;
+  html::view-transition-old(stage),
+  html::view-transition-old(root) {
+    animation: vt-fade-out 150ms ease-out both !important;
   }
-  html[data-nav-direction]::view-transition-new(stage),
-  ::view-transition-new(stage),
-  ::view-transition-new(root) {
-    animation: vt-fade-in 150ms ease-out both;
+  html::view-transition-new(stage),
+  html::view-transition-new(root) {
+    animation: vt-fade-in 150ms ease-out both !important;
   }
 }
