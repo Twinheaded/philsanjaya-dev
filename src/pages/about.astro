@@ -1,22 +1,58 @@
 ---
 import Shell from '../layouts/Shell.astro';
-import Panel from '../components/Panel.astro';
+import { SITE } from '../lib/site';
 ---
 
 <Shell
   title="About — Phil Sanjaya"
-  description="About Phil Sanjaya: software engineering and data science student at Swinburne, Melbourne."
+  description="Phil Sanjaya: final-semester computer science student (Data Science & AI) at Swinburne, Melbourne, seeking graduate software engineering and data/ML roles."
 >
-  <Panel kicker="05 — about" title="About">
-    <p>
-      Software engineering and data science student at Swinburne, Melbourne. Bio, current focus,
-      contact actions, and resume land here in milestone M3.
-    </p>
-    <p class="mt-4">
+  <div class="flex h-full flex-col justify-center p-5 md:p-12">
+    <p class="font-mono text-xs tracking-[0.08em] text-mist">05 — about</p>
+    <h1 class="mt-2 font-display text-[28px] font-medium">About</h1>
+    <div class="mt-6 max-w-xl space-y-4 text-mist">
+      <p>
+        I'm Phil — a final-semester Bachelor of Computer Science student (Data Science &amp; AI
+        major) at Swinburne, Melbourne, completing in July 2026. I build agent simulations, ML
+        pipelines, and industrial-control-system security tooling in Python; most recently I
+        owned the AWS cloud pipeline on a smart-grid ICS security capstone and built the
+        multi-agent capture-the-flag simulation in the projects panel.
+      </p>
+      <p>
+        Before this degree I ran e-commerce operations full-time for two years — inventory,
+        marketplaces, logistics, and a small team — which is where I learned that systems break
+        at their handoffs.
+      </p>
+      <p>
+        Current focus: finishing the degree and building this site in public — every decision in
+        the build log, every number with a receipt.
+      </p>
+      <p class="text-ink">
+        I'm looking for graduate software engineering or data/ML roles, available from July 2026.
+      </p>
+    </div>
+    <div class="mt-8 flex flex-wrap gap-4">
       <a
-        class="text-signal-text underline underline-offset-4"
-        href="https://github.com/Twinheaded/philsanjaya-dev">Follow the build on GitHub</a
+        href="mailto:sanjayaphilipus11@gmail.com"
+        class="rounded-[10px] border border-line bg-surface px-5 py-2 text-sm hover:border-signal motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
+        >Email me</a
+      >
+      <a
+        href="https://github.com/Twinheaded"
+        class="rounded-[10px] border border-line bg-surface px-5 py-2 text-sm hover:border-signal motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
+        >GitHub</a
+      >
+      <a
+        href="https://linkedin.com/in/philipus-sanjaya"
+        class="rounded-[10px] border border-line bg-surface px-5 py-2 text-sm hover:border-signal motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
+        >LinkedIn</a
+      >
+    </div>
+    <p class="mt-6 max-w-xl font-mono text-xs text-mist">
+      This site's source is public:
+      <a class="text-signal-text underline underline-offset-4" href={SITE.repoUrl}
+        >github.com/Twinheaded/philsanjaya-dev</a
       >
     </p>
-  </Panel>
+  </div>
 </Shell>
