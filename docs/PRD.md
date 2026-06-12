@@ -1,15 +1,15 @@
 # Portfolio Website — Product Requirements Document
 
-| | |
-|---|---|
-| **Product** | Personal portfolio website (working domain: philsanjaya.dev, TBC) |
-| **Version** | 1.0 |
-| **Date** | 12 June 2026 |
-| **Owner / Director** | Phil Sanjaya |
-| **Architect / Auditor** | Claude (web) |
-| **Builder** | Claude Code |
-| **Tracking** | Linear project "Portfolio Website" (PHI-27 … PHI-47) |
-| **Repo location of this file** | `docs/PRD.md` |
+|                                |                                                                   |
+| ------------------------------ | ----------------------------------------------------------------- |
+| **Product**                    | Personal portfolio website (working domain: philsanjaya.dev, TBC) |
+| **Version**                    | 1.2                                                               |
+| **Date**                       | 13 June 2026                                                      |
+| **Owner / Director**           | Phil Sanjaya                                                      |
+| **Architect / Auditor**        | Claude (web)                                                      |
+| **Builder**                    | Claude Code                                                       |
+| **Tracking**                   | Linear project "Portfolio Website" (PHI-27 … PHI-47)              |
+| **Repo location of this file** | `docs/PRD.md`                                                     |
 
 ---
 
@@ -48,7 +48,7 @@ Success at launch: live on the production domain, four case studies published, b
 
 ## 5. Scope (MoSCoW)
 
-**Must:** no-scroll shell with slide transitions and keyboard navigation; wander agent island with live readout; content collections (projects / notes / buildlog); projects index; chaptered case-study template with honest dashboard; notes reading pane (contained scroll); build-log route; four case studies; about + resume + contact; light/dark themes; reduced-motion support; deploy pipeline; SEO basics; WCAG AA.
+**Must:** no-scroll shell with slide transitions and keyboard navigation; wander agent island with live readout; content collections (projects / notes / buildlog); projects index; chaptered case-study template with honest dashboard; notes reading pane (contained scroll); build-log route; four case studies; about + resume + contact; light/dark themes; reduced-motion support; deploy pipeline; SEO basics; WCAG AA; unit-tested steering maths with a CI build-and-test gate; architecture decision records.
 
 **Should:** route-aware behaviour FSM; cursor/touch interaction; `d` debug overlay; keycap indicators; OG image generation; custom 404 with fleeing agents; Lighthouse ≥ 95 gate.
 
@@ -58,17 +58,17 @@ Success at launch: live on the production domain, four case studies published, b
 
 ## 6. Information architecture
 
-| # | Route | Panel | Content source |
-|---|-------|-------|----------------|
-| 01 | `/` | Home — hero, agent canvas, readout, primary actions | static + island |
-| 02 | `/projects` | Projects index — card grid | `projects` collection |
-| — | `/projects/[slug]` | Case study — chaptered slides | `projects` collection |
-| 03 | `/notes` | Notes index | `notes` collection |
-| — | `/notes/[slug]` | Note reading view (contained scroll) | `notes` collection |
-| 04 | `/log` | Build log timeline | `buildlog` collection |
-| — | `/log/[slug]` | Build-log entry (contained scroll) | `buildlog` collection |
-| 05 | `/about` | About, contact, resume link | static |
-| — | `/404` | Fleeing agents + route home | static + island |
+| #   | Route              | Panel                                               | Content source        |
+| --- | ------------------ | --------------------------------------------------- | --------------------- |
+| 01  | `/`                | Home — hero, agent canvas, readout, primary actions | static + island       |
+| 02  | `/projects`        | Projects index — card grid                          | `projects` collection |
+| —   | `/projects/[slug]` | Case study — chaptered slides                       | `projects` collection |
+| 03  | `/notes`           | Notes index                                         | `notes` collection    |
+| —   | `/notes/[slug]`    | Note reading view (contained scroll)                | `notes` collection    |
+| 04  | `/log`             | Build log timeline                                  | `buildlog` collection |
+| —   | `/log/[slug]`      | Build-log entry (contained scroll)                  | `buildlog` collection |
+| 05  | `/about`           | About, contact, resume link                         | static                |
+| —   | `/404`             | Fleeing agents + route home                         | static + island       |
 
 Rail order is a true sequence (left → right matches panel order), which is why the numbered markers are earned rather than decorative.
 
@@ -159,15 +159,15 @@ Rail order is a true sequence (left → right matches panel order), which is why
 
 ## 8. Non-functional requirements
 
-| Budget | Target |
-|---|---|
-| Lighthouse (perf / a11y / best practices / SEO) | ≥ 95 each, production build, throttled run |
-| Total JavaScript, site-wide | ≤ 50 KB gzipped |
-| Agent island bundle | ≤ 8 KB gz (M1), ≤ 12 KB gz with FSM + debug (M4) |
-| Canvas frame rate | steady 60fps at 24 agents on mid-range hardware |
-| Cumulative layout shift | 0 (fixed stage makes this achievable) |
-| Largest contentful paint (home) | < 1.5s on simulated Fast 3G |
-| Fonts | subset, `woff2`, preloaded; ≤ 90 KB total |
+| Budget                                          | Target                                           |
+| ----------------------------------------------- | ------------------------------------------------ |
+| Lighthouse (perf / a11y / best practices / SEO) | ≥ 95 each, production build, throttled run       |
+| Total JavaScript, site-wide                     | ≤ 50 KB gzipped                                  |
+| Agent island bundle                             | ≤ 8 KB gz (M1), ≤ 12 KB gz with FSM + debug (M4) |
+| Canvas frame rate                               | steady 60fps at 24 agents on mid-range hardware  |
+| Cumulative layout shift                         | 0 (fixed stage makes this achievable)            |
+| Largest contentful paint (home)                 | < 1.5s on simulated Fast 3G                      |
+| Fonts                                           | subset, `woff2`, preloaded; ≤ 90 KB total        |
 
 ## 9. Design system
 
@@ -175,25 +175,25 @@ Derived from the subject's own world — simulation instruments and control pane
 
 ### 9.1 Design tokens (colour)
 
-| Token | Light | Dark | Use |
-|---|---|---|---|
-| `--bg` | `#F6F7F5` canvas | `#101312` graphite | page background |
-| `--surface` | `#FFFFFF` | `#171B1A` | cards, panes |
-| `--ink` | `#161B19` | `#E7EAE8` paper | primary text |
-| `--mist` | `#67706C` | `#9AA39E` | secondary text, hints |
-| `--line` | `rgba(22,27,25,.14)` | `rgba(231,234,232,.14)` | hairline borders |
-| `--signal` | `#149E7C` | `#23B893` | accent, agents, active states, links |
-| `--debug` | `#C97E12` | `#E09A2F` | debug overlay **only** |
+| Token       | Light                | Dark                    | Use                                  |
+| ----------- | -------------------- | ----------------------- | ------------------------------------ |
+| `--bg`      | `#F6F7F5` canvas     | `#101312` graphite      | page background                      |
+| `--surface` | `#FFFFFF`            | `#171B1A`               | cards, panes                         |
+| `--ink`     | `#161B19`            | `#E7EAE8` paper         | primary text                         |
+| `--mist`    | `#67706C`            | `#9AA39E`               | secondary text, hints                |
+| `--line`    | `rgba(22,27,25,.14)` | `rgba(231,234,232,.14)` | hairline borders                     |
+| `--signal`  | `#149E7C`            | `#23B893`               | accent, agents, active states, links |
+| `--debug`   | `#C97E12`            | `#E09A2F`               | debug overlay **only**               |
 
 Rules: amber never appears outside the debug overlay; signal teal is the only accent; semantic colour is not used decoratively. Avoid the generic AI-design defaults (cream + terracotta serif; black + acid green; broadsheet hairlines) — this palette is cool, instrument-like, and specific to the brief.
 
 ### 9.2 Typography
 
-| Role | Face | Usage |
-|---|---|---|
-| Display | **Archivo** (500, slightly expanded width where supported) | name, panel titles, chapter titles |
-| Body / UI | **Instrument Sans** (400 / 500) | prose, cards, controls |
-| Utility | **IBM Plex Mono** (400) | kickers, readout, SHAs, dates, keycaps, debug labels |
+| Role      | Face                                                       | Usage                                                |
+| --------- | ---------------------------------------------------------- | ---------------------------------------------------- |
+| Display   | **Archivo** (500, slightly expanded width where supported) | name, panel titles, chapter titles                   |
+| Body / UI | **Instrument Sans** (400 / 500)                            | prose, cards, controls                               |
+| Utility   | **IBM Plex Mono** (400)                                    | kickers, readout, SHAs, dates, keycaps, debug labels |
 
 Scale: 12px mono kicker (letter-spacing 0.08em) · 14px UI · 16px body (line-height 1.65) · 20px h3 · 28px h2 · `clamp(2.5rem, 6vw, 4rem)` display. Two weights only (400/500). Sentence case everywhere. The mono face carries the instrument personality; the display face is used with restraint.
 
@@ -207,27 +207,27 @@ Desktop: 200px rail + fluid stage; panel content on an 8px spacing grid with gen
 
 ### 9.5 Motion
 
-| Motion | Spec |
-|---|---|
-| Panel slide (shell) | 550ms `cubic-bezier(0.22, 0.61, 0.36, 1)`, directional |
-| Chapter slide | 450ms, same curve |
-| Micro (hover, keycaps, focus) | 150ms ease-out |
-| Behaviour blend (FSM) | ~1000ms linear interpolation of steering weights |
-| Reduced motion | slides → ≤150ms fade; island static; micro-motion off |
+| Motion                        | Spec                                                   |
+| ----------------------------- | ------------------------------------------------------ |
+| Panel slide (shell)           | 550ms `cubic-bezier(0.22, 0.61, 0.36, 1)`, directional |
+| Chapter slide                 | 450ms, same curve                                      |
+| Micro (hover, keycaps, focus) | 150ms ease-out                                         |
+| Behaviour blend (FSM)         | ~1000ms linear interpolation of steering weights       |
+| Reduced motion                | slides → ≤150ms fade; island static; micro-motion off  |
 
 One orchestrated moment (the panel slide) rather than scattered effects.
 
 ## 10. Agent behaviour state table
 
-| Route / context | Behaviour | Count | Opacity | Notes |
-|---|---|---|---|---|
-| `/` (home) | `wander` | 18–24 | 0.55 | default state; readout shows `wander()` |
-| Case study — Architecture chapter | `align` | 10–12 | 0.25 | calm order behind structural content |
-| Any reading pane (notes, log entry) | island absent | — | — | nothing competes with prose |
-| `/404` | `flee` (from screen centre) | 18–24 | 0.55 | chaos as the joke |
-| Pointer within 80px (any active state) | `flee` (local) | — | — | desktop only; touch = tap impulse |
-| `d` pressed | active behaviour + debug overlay | — | — | amber vectors, wander circle |
-| Reduced motion | static frame | — | 0.35 | no loop, no interaction |
+| Route / context                        | Behaviour                        | Count | Opacity | Notes                                   |
+| -------------------------------------- | -------------------------------- | ----- | ------- | --------------------------------------- |
+| `/` (home)                             | `wander`                         | 18–24 | 0.55    | default state; readout shows `wander()` |
+| Case study — Architecture chapter      | `align`                          | 10–12 | 0.25    | calm order behind structural content    |
+| Any reading pane (notes, log entry)    | island absent                    | —     | —       | nothing competes with prose             |
+| `/404`                                 | `flee` (from screen centre)      | 18–24 | 0.55    | chaos as the joke                       |
+| Pointer within 80px (any active state) | `flee` (local)                   | —     | —       | desktop only; touch = tap impulse       |
+| `d` pressed                            | active behaviour + debug overlay | —     | —       | amber vectors, wander circle            |
+| Reduced motion                         | static frame                     | —     | 0.35    | no loop, no interaction                 |
 
 Wander maths (reference, from COS30002 Task 11): each tick, jitter a target point on a circle of radius `r` projected `p` ahead of the agent; steer toward it; clamp speed. Implement deterministically enough to unit-test the maths in isolation.
 
@@ -235,7 +235,7 @@ Wander maths (reference, from COS30002 Task 11): each tick, jitter a target poin
 
 ### 11.1 Stack
 
-- **Astro 5** (static output), `<ClientRouter />` view transitions, content collections with zod.
+- **Astro 6** (static output), `<ClientRouter />` view transitions, content collections with zod.
 - **Tailwind v4** for styling; design tokens as CSS custom properties consumed by Tailwind.
 - **TypeScript strict** everywhere, including the island.
 - **No client framework.** The agent island is vanilla TS; total client JS stays inside the §8 budget.
@@ -271,6 +271,20 @@ portfolio/
 
 GitHub (public repo) → Cloudflare Pages, auto-deploy on `main`. Preview URL `*.pages.dev` until M5; then production domain, HTTPS enforced, `www` → apex, security headers (CSP, X-Content-Type-Options, Referrer-Policy).
 
+### 11.5 Testing and CI
+
+- **Vitest** for unit tests. The mandated test surface is the steering maths (`islands/agents/behaviours.ts`): heading-jitter bounds, speed clamp, edge wrap, and run-to-run determinism under a seeded RNG (`SEED = 42`). `align` and `flee` join the suite when they land (PHI-42).
+- **GitHub Actions** on every push and PR: `npm ci` → `npm run build` → `npm test`. A red workflow blocks milestone review; CI must be green on the commit Phil reviews.
+- **Dependabot** security updates enabled; lockfile committed; dependency surface kept deliberately small.
+- No coverage-percentage targets. Coverage theatre is explicitly out of scope — testing the maths well beats testing everything badly.
+
+### 11.6 Architecture decision records
+
+- Significant architecture decisions are recorded in `docs/adr/NNNN-short-slug.md` using MADR-lite: **Status / Context / Decision / Consequences**, one page maximum.
+- Accepted ADRs are immutable — a changed mind produces a superseding ADR, never an edit. The log is the history of the project's thinking.
+- Seed set (PHI-49): 0001 Astro 6 over Next.js and plain HTML · 0002 no-scroll shell with no-JS fallback · 0003 vanilla TS agent island, no client framework · 0004 source-required metrics schema · 0005 Cloudflare Pages hosting.
+- New significant decisions get an ADR **before** implementation; build-log entries cite ADRs as receipts alongside commit SHAs.
+
 ## 12. Build log content guidelines
 
 - Entries are 250–400 words: the decision, the options, the trade-off, the outcome. Notebook, not diary.
@@ -281,13 +295,13 @@ GitHub (public repo) → Cloudflare Pages, auto-deploy on `main`. Preview URL `*
 
 ## 13. Milestones and Linear mapping
 
-| Milestone | Target | Issues | Exit criteria |
-|---|---|---|---|
-| M1 Foundation | 21 Jun 2026 | PHI-27 scaffold · PHI-28 deploy · PHI-29 shell · PHI-30 wander island | Live URL; demonstrably no-scroll; agents wandering |
-| M2 Content engine | 28 Jun 2026 | PHI-31 schemas · PHI-32 projects index · PHI-33 case-study template · PHI-34 notes pane · PHI-35 build-log route | One seeded example of every content type renders |
-| M3 Content sprint | 12 Jul 2026 | PHI-36 CTF Arena · PHI-37 AEGISX · PHI-38 Market sentiment · PHI-39 Power forecasting · PHI-40 about/resume · PHI-41 log entries 00–02 | All content real; zero placeholders; numbers sourced |
-| M4 Polish & behaviours | 19 Jul 2026 | PHI-42 behaviour FSM · PHI-43 debug overlay · PHI-44 a11y/microinteractions · PHI-45 SEO/Lighthouse | All §8 budgets met; Axe clean |
-| M5 Launch | 26 Jul 2026 | PHI-46 domain/hardening · PHI-47 launch review | Public on production domain; Phil's explicit go |
+| Milestone              | Target      | Issues                                                                                                                                 | Exit criteria                                                |
+| ---------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| M1 Foundation          | 21 Jun 2026 | PHI-27 scaffold · PHI-28 deploy · PHI-29 shell · PHI-30 wander island · PHI-48 CI + tests · PHI-49 ADR seed                            | Live URL; demonstrably no-scroll; agents wandering; CI green |
+| M2 Content engine      | 28 Jun 2026 | PHI-31 schemas · PHI-32 projects index · PHI-33 case-study template · PHI-34 notes pane · PHI-35 build-log route                       | One seeded example of every content type renders             |
+| M3 Content sprint      | 12 Jul 2026 | PHI-36 CTF Arena · PHI-37 AEGISX · PHI-38 Market sentiment · PHI-39 Power forecasting · PHI-40 about/resume · PHI-41 log entries 00–02 | All content real; zero placeholders; numbers sourced         |
+| M4 Polish & behaviours | 19 Jul 2026 | PHI-42 behaviour FSM · PHI-43 debug overlay · PHI-44 a11y/microinteractions · PHI-45 SEO/Lighthouse                                    | All §8 budgets met; Axe clean                                |
+| M5 Launch              | 26 Jul 2026 | PHI-46 domain/hardening · PHI-47 launch review                                                                                         | Public on production domain; Phil's explicit go              |
 
 Dates assume post-semester availability and are adjustable; sequence is not.
 
@@ -297,25 +311,27 @@ Dates assume post-semester availability and are adjustable; sequence is not.
 
 1. **Shell discipline.** Prefix shell executions with `cmd /c` (e.g. `cmd /c npm run build`) so processes terminate cleanly. Avoid interactive/persistent shells.
 2. **One issue at a time, in numeric order** (1.1 → 1.2 → …). Do not start a milestone until the previous one is reviewed by Phil.
-3. **Verify before commit.** A task is done only when `cmd /c npm run build` passes **and** the behaviour is confirmed in the dev server. Never commit untested work.
+3. **Verify before commit.** A task is done only when `cmd /c npm run build` passes **and** the behaviour is confirmed in the dev server. Never commit untested work. From PHI-48 onward, `cmd /c npm test` must also pass locally, and CI must be green on the pushed commit before a milestone is reviewed.
 4. **Stop on failure.** Surface the error and halt; never build the next step on a broken state.
 5. **Commits.** Conventional Commits, imperative mood, subject < 72 chars, footer `Refs: PHI-xx`. One issue may span multiple commits; each commit is a runnable checkpoint.
 6. **Paths** relative; no hardcoded absolute paths; configuration in files, not constants.
 7. **Cleanup.** Remove caches and any ephemeral generator scripts before declaring a task complete.
 8. **Pause for irreversibles.** Force-pushes, history rewrites, or mass deletions require Phil's explicit confirmation.
 9. **No fabricated content.** If source material for a case study is missing, mark the section pending and flag it — do not invent.
+10. **Record decisions.** Any significant architecture choice not already covered by an ADR gets one in `docs/adr/` (§11.6) before implementation. If unsure whether a decision is significant, it is.
 
 ## 15. Risks and mitigations
 
-| Risk | Mitigation |
-|---|---|
-| No-scroll fights long content | Chaptered studies (FR-34), contained-scroll exception (§7.5), FR-37 fallback |
-| Unusual UX confuses visitors | Persistent visible nav, keycap hints, FR-06 deep links, FR-74 no-JS fallback |
-| Agent island bloats or janks | §8 bundle/fps budgets enforced per issue; island isolated in one module |
-| Content sprint stalls (it is writing) | M3 is the longest window; case studies reuse existing reports/PRDs |
-| Coursework publication issue | §4.6 rule; PHI-47 audit gate before launch |
-| Fabricated-number drift over time | FR-22 `source` field is schema-required; PHI-47 audit |
-| Scope creep on fun features | MoSCoW (§5); Could-items only after Must/Should complete |
+| Risk                                           | Mitigation                                                                                              |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| No-scroll fights long content                  | Chaptered studies (FR-34), contained-scroll exception (§7.5), FR-37 fallback                            |
+| Unusual UX confuses visitors                   | Persistent visible nav, keycap hints, FR-06 deep links, FR-74 no-JS fallback                            |
+| Agent island bloats or janks                   | §8 bundle/fps budgets enforced per issue; island isolated in one module                                 |
+| Content sprint stalls (it is writing)          | M3 is the longest window; case studies reuse existing reports/PRDs                                      |
+| Coursework publication issue                   | §4.6 rule; PHI-47 audit gate before launch                                                              |
+| Fabricated-number drift over time              | FR-22 `source` field is schema-required; PHI-47 audit                                                   |
+| Scope creep on fun features                    | MoSCoW (§5); Could-items only after Must/Should complete                                                |
+| Supply-chain vulnerability in npm dependencies | Committed lockfile; Dependabot security updates; small dependency surface; `npm audit` triage at PHI-46 |
 
 ## 16. Out of scope (v1)
 
@@ -323,12 +339,12 @@ CMS, comments, search, i18n, client frameworks, paid services beyond the domain,
 
 ## 17. Open decisions
 
-| Decision | Default | Owner | Due |
-|---|---|---|---|
-| Domain name | `philsanjaya.dev` | Phil | before PHI-46 |
-| Analytics | none (revisit post-launch; if any, privacy-respecting e.g. Plausible/umami) | Phil | PHI-45 |
-| Resume final content | current resume, refreshed | Phil | PHI-40 |
-| Public repo name | `philsanjaya.dev` or `portfolio` | Phil | PHI-27 |
+| Decision             | Default                                                                     | Owner | Due           |
+| -------------------- | --------------------------------------------------------------------------- | ----- | ------------- |
+| Domain name          | `philsanjaya.dev`                                                           | Phil  | before PHI-46 |
+| Analytics            | none (revisit post-launch; if any, privacy-respecting e.g. Plausible/umami) | Phil  | PHI-45        |
+| Resume final content | current resume, refreshed                                                   | Phil  | PHI-40        |
+| Public repo name     | `philsanjaya.dev` or `portfolio`                                            | Phil  | PHI-27        |
 
 ---
 
@@ -338,11 +354,11 @@ Paste into Claude Code from the empty project folder:
 
 > Read `docs/PRD.md` in full before doing anything — it is the source of truth for this project.
 >
-> You are the builder for my portfolio website. The Linear project "Portfolio Website" tracks the work: milestones M1–M5, issues PHI-27 through PHI-47, numbered 1.1 → 5.2. Execute **M1 only** for now, one issue at a time in numeric order, starting with PHI-27 (1.1 Scaffold).
+> You are the builder for my portfolio website. The Linear project "Portfolio Website" tracks the work: milestones M1–M5, issues PHI-27 through PHI-49, numbered 1.1 → 5.2 (note: 1.5 = PHI-48 and 1.6 = PHI-49 were added in PRD v1.1). Execute **M1 only** for now, one issue at a time in numeric order, starting with PHI-27 (1.1 Scaffold).
 >
 > Non-negotiables from the PRD: Windows shell discipline (`cmd /c` prefix, §14.1); verify with `cmd /c npm run build` plus a manual dev-server check before any commit (§14.3); stop immediately on failure (§14.4); Conventional Commits with footer `Refs: PHI-xx` (§14.5); the honest-numbers rule applies to everything, including UI chrome (§4.2).
 >
-> When all four M1 issues are done and verified, stop and report back with: the live deploy URL, the commit list, and anything that deviated from the PRD. I will review before M2 begins.
+> When all six M1 issues (PHI-27 → PHI-30, PHI-48, PHI-49) are done and verified, stop and report back with: the live deploy URL, the CI status, the commit list, and anything that deviated from the PRD. I will review before M2 begins.
 
 ## Appendix B — Case-study markdown skeleton
 
@@ -372,19 +388,33 @@ links:
 ---
 
 ## Problem
+
 …
 
 ## Approach
+
 …
 
 ## Architecture
+
 …
 
 ## Results
+
 …
 
 ## Reflection
+
 …
 ```
 
-*End of PRD v1.0 — changes to this document are themselves Conventional Commits (`docs(prd): …`).*
+## 18. Revision history
+
+| Version | Date        | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 12 Jun 2026 | Initial PRD.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 1.1     | 12 Jun 2026 | Right-sized engineering practices adopted after best-practice review: §11.5 testing and CI (Vitest, GitHub Actions gate, Dependabot); §11.6 architecture decision records; supply-chain risk added to §15; PHI-48 and PHI-49 added to M1 (§13); workflow rules 3 and 10 updated (§14); Must scope extended (§5); Appendix A updated to six M1 issues. Explicitly **not** adopted at this scale: formal RFCs (the design conversation and build log serve this), separate TDD (PRD §9–§11 is the technical design), OpenAPI contracts (no API), formal SLOs/SLAs (§8 budgets are the equivalent), runbooks (README Maintenance section instead, PHI-47), standalone test-plan and QA sign-off documents (per-issue DoD + milestone review serve this). |
+
+---
+
+_End of PRD v1.1 — changes to this document are themselves Conventional Commits (`docs(prd): …`)._
