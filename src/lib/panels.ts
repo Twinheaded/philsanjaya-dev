@@ -20,5 +20,11 @@ export const PANELS: Panel[] = [
 export function panelIndex(pathname: string): number {
   const path =
     pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-  return PANELS.findIndex((p) => p.href === path);
+  const direct = PANELS.findIndex((p) => p.href === path);
+  if (direct !== -1) return direct;
+  // Paginated index routes (/notes/2, /log/3) still belong to their panel:
+  // the rail marker and arrow-key navigation stay active there.
+  const paged = path.match(/^(\/(?:notes|log))\/\d+$/);
+  if (paged) return PANELS.findIndex((p) => p.href === paged[1]);
+  return -1;
 }
