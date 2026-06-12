@@ -28,7 +28,8 @@ em-dash, never a guess. Even the fps readout under the agents obeys it.
 
 The stack followed from the constraints rather than the other way round: Astro for
 content-as-data and near-zero default JavaScript, content collections for
-schema-checked markdown, Cloudflare Pages for deploys on every push (PRD §11.2).
+schema-checked markdown (PRD §11.2), and Cloudflare Pages deploying `main` through
+the CI gate (PRD §11.4, ADR 0007).
 
 The meta-decision is the one you are reading: the site documents its own
 construction. Designed in conversation with Claude, specified in a PRD, tracked in

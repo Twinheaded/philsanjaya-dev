@@ -19,8 +19,11 @@ const metric = z.object({
   source: z.string().min(1, 'every metric needs a source (PRD FR-22)'),
 });
 
+/** Underscore convention: _file.md AND _dir/anything are work-in-progress. */
+const CONTENT_GLOB = ['**/[^_]*.md', '!_*/**', '!**/_*/**'];
+
 const projects = defineCollection({
-  loader: glob({ base: './src/content/projects', pattern: '**/[^_]*.md' }),
+  loader: glob({ base: './src/content/projects', pattern: CONTENT_GLOB }),
   schema: z.object({
     title: z.string().min(1),
     slug: z
@@ -35,14 +38,24 @@ const projects = defineCollection({
     metrics: z.array(metric).default([]),
     status: z.enum(['draft', 'published']),
     links: z
-      .array(z.object({ label: z.string().min(1), url: z.string().url() }))
+      .array(
+        z.object({
+          label: z.string().min(1),
+          // Absolute URLs or site-relative paths (e.g. /resume.pdf, FR-61) —
+          // the production domain is undecided until M5, so relative must work.
+          url: z
+            .string()
+            .url()
+            .or(z.string().regex(/^\//, 'site-relative links start with /')),
+        })
+      )
       .default([]),
     hero: z.string().optional(),
   }),
 });
 
 const notes = defineCollection({
-  loader: glob({ base: './src/content/notes', pattern: '**/[^_]*.md' }),
+  loader: glob({ base: './src/content/notes', pattern: CONTENT_GLOB }),
   schema: z.object({
     title: z.string().min(1),
     date: z.coerce.date(),
@@ -52,7 +65,7 @@ const notes = defineCollection({
 });
 
 const buildlog = defineCollection({
-  loader: glob({ base: './src/content/buildlog', pattern: '**/[^_]*.md' }),
+  loader: glob({ base: './src/content/buildlog', pattern: CONTENT_GLOB }),
   schema: z.object({
     title: z.string().min(1),
     entry: z.number().int().min(0),

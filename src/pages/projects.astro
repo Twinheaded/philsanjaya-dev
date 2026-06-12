@@ -5,12 +5,16 @@ import Shell from '../layouts/Shell.astro';
 const projects = (await getCollection('projects', ({ data }) => data.status === 'published')).sort(
   (a, b) => a.data.order - b.data.order
 );
+
+// Derived from what is actually published — the description never
+// advertises content the page does not contain (§9.3, FR-80).
+const description =
+  projects.length > 0
+    ? `Projects by Phil Sanjaya: ${projects.map((p) => p.data.title).join(', ')}.`
+    : 'Projects by Phil Sanjaya.';
 ---
 
-<Shell
-  title="Projects — Phil Sanjaya"
-  description="Case studies: agent simulation, ICS anomaly detection on AWS, market sentiment ML, and power forecasting."
->
+<Shell title="Projects — Phil Sanjaya" description={description}>
   <div class="flex h-full flex-col p-5 md:p-12">
     <p class="font-mono text-xs tracking-[0.08em] text-mist">02 — projects</p>
     <h1 class="mt-2 font-display text-[28px] font-medium">Projects</h1>
@@ -46,6 +50,11 @@ const projects = (await getCollection('projects', ({ data }) => data.status === 
 <style>
   .project-card:hover {
     border-color: var(--signal);
+  }
+  /* The grid clips overflow flush to the cards; draw the ring inward so
+     it stays fully visible on edge cells (FR-32). */
+  .project-card:focus-visible {
+    outline-offset: -2px;
   }
   /* Cards clamp rather than grow: the grid divides the stage, never scrolls it. */
   .summary {
