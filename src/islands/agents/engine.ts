@@ -34,7 +34,8 @@ const BEHAVIOURS: Record<string, ForceFn> = {
   wander: (agent, env) => wanderForce(agent, env.params, env.rng),
 };
 
-const PARAMS: WanderParams = {
+/** Production steering parameters — exported so the unit tests pin the shipped values. */
+export const PARAMS: WanderParams = {
   circleDistance: 60,
   circleRadius: 24,
   jitter: 0.25,
@@ -43,7 +44,8 @@ const PARAMS: WanderParams = {
 };
 
 const OPACITY = 0.55; // §10: default home-panel state
-const MARGIN = 16;
+const REDUCED_OPACITY = 0.35; // §10: reduced-motion static frame
+export const MARGIN = 16;
 const MAX_DT = 0.05; // clamp integration after tab-hidden gaps
 
 function makeAgents(width: number, height: number, rng: Rng): Agent[] {
@@ -70,10 +72,11 @@ function draw(
   ctx: CanvasRenderingContext2D,
   agents: Agent[],
   bounds: Bounds,
-  color: string
+  color: string,
+  alpha: number
 ): void {
   ctx.clearRect(0, 0, bounds.width, bounds.height);
-  ctx.globalAlpha = OPACITY;
+  ctx.globalAlpha = alpha;
   ctx.fillStyle = color;
   ctx.strokeStyle = color;
   ctx.lineWidth = 1;
@@ -92,28 +95,33 @@ function draw(
 
 /**
  * Mount the island on a canvas. Returns a cleanup function. Under
- * prefers-reduced-motion a single static frame is drawn and no loop
- * runs (FR-17).
+ * prefers-reduced-motion a single static frame is drawn at the dimmed
+ * §10 opacity and no loop runs (FR-17).
  */
 export function mountAgents(
   canvas: HTMLCanvasElement,
   onReadout: (data: ReadoutData) => void
 ): () => void {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return () => {};
+  const context = canvas.getContext('2d');
+  if (!context) return () => {};
+  // Re-bind with the narrowed type: narrowing does not flow into the
+  // hoisted closures below.
+  const ctx: CanvasRenderingContext2D = context;
 
   const rng = mulberry32((performance.timeOrigin + performance.now()) >>> 0);
   const behaviour = 'wander';
   const bounds: Bounds = { width: 0, height: 0, margin: MARGIN };
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const alpha = reduced ? REDUCED_OPACITY : OPACITY;
   let agents: Agent[] = [];
   let color = signalColor(canvas);
   let rafId = 0;
 
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
   function resize(): void {
     const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return; // hidden/unlaid-out: keep prior state
+    // Read DPR per resize: zoom and monitor moves change it live.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     bounds.width = rect.width;
     bounds.height = rect.height;
     canvas.width = Math.round(rect.width * dpr);
@@ -122,17 +130,32 @@ export function mountAgents(
     if (agents.length === 0) agents = makeAgents(bounds.width, bounds.height, rng);
   }
 
+  // Setting canvas.width clears the bitmap, so redraw immediately rather
+  // than leaving a blank frame until the next rAF tick.
   const observer = new ResizeObserver(() => {
     resize();
-    if (reduced) draw(ctx, agents, bounds, color);
+    draw(ctx, agents, bounds, color, alpha);
   });
   observer.observe(canvas);
   resize();
 
   if (reduced) {
-    draw(ctx, agents, bounds, color);
+    draw(ctx, agents, bounds, color, alpha);
     onReadout({ count: agents.length, behaviour, fps: null });
-    return () => observer.disconnect();
+    // No loop runs, so track theme switches explicitly: the toggle flips
+    // data-theme on <html>, which changes --signal.
+    const themeObserver = new MutationObserver(() => {
+      color = signalColor(canvas);
+      draw(ctx, agents, bounds, color, alpha);
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => {
+      observer.disconnect();
+      themeObserver.disconnect();
+    };
   }
 
   onReadout({ count: agents.length, behaviour, fps: null });
@@ -152,7 +175,7 @@ export function mountAgents(
       const [fx, fy] = force(a, env);
       step(a, fx, fy, PARAMS, bounds, dt);
     }
-    draw(ctx, agents, bounds, color);
+    draw(ctx, agents, bounds, color, alpha);
 
     // FR-14: fps is sampled at 1 Hz from real frame counts.
     frames += 1;
