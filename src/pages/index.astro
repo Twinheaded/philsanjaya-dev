@@ -56,7 +56,9 @@ import Shell from '../layouts/Shell.astro';
         cleanup = mountAgents(canvas, (data) => renderReadout(readout, data));
       }
 
-      // Fires on initial load and after every view-transition swap.
+      // Run once now (on a cold load astro:page-load may already have
+      // fired before this module finished loading) and after every swap.
+      mount();
       document.addEventListener('astro:page-load', mount);
     </script>
   </section>

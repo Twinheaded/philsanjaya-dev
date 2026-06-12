@@ -1,0 +1,364 @@
+---
+import { getCollection, render } from 'astro:content';
+import Shell from '../../layouts/Shell.astro';
+import MetricCard from '../../components/MetricCard.astro';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects', ({ data }) => data.status === 'published');
+  return projects.map((project) => ({
+    params: { slug: project.data.slug },
+    props: { project },
+  }));
+}
+
+const { project } = Astro.props;
+const { Content, headings } = await render(project);
+const chapters = headings.filter((h) => h.depth === 2);
+const d = project.data;
+---
+
+<Shell title={`${d.title} — Phil Sanjaya`} description={d.summary}>
+  <article class="flex h-full min-h-0 flex-col p-5 md:p-12" data-study>
+    <header class="flex flex-wrap items-baseline justify-between gap-2">
+      <a href="/projects" class="font-mono text-xs text-mist hover:text-ink">&larr; projects</a>
+      <!-- FR-36: chapter tabs are real hash anchors — deep links work with
+           and without JS; with JS they become slide controls. -->
+      <nav class="flex flex-wrap gap-3" aria-label="Chapters">
+        <a
+          href="#overview"
+          data-tab="overview"
+          aria-current="true"
+          class="tab font-mono text-xs text-mist"
+        >
+          <span>00</span>
+          <span class="hidden sm:inline">Overview</span>
+        </a>
+        {
+          chapters.map((c, i) => (
+            <a href={`#${c.slug}`} data-tab={c.slug} class="tab font-mono text-xs text-mist">
+              <span>0{i + 1}</span>
+              <span class="hidden sm:inline">{c.text}</span>
+            </a>
+          ))
+        }
+      </nav>
+    </header>
+
+    <div class="relative mt-4 min-h-0 flex-1 overflow-y-auto" data-frame>
+      <!-- Chapter zero (FR-35): the generated dashboard. -->
+      <section
+        id="overview"
+        data-chapter="overview"
+        class="chapter"
+        tabindex="0"
+        aria-label="Overview"
+      >
+        <p class="font-mono text-xs tracking-[0.08em] text-signal-text">{d.tags.join(' · ')}</p>
+        <h1 class="mt-2 font-display text-[clamp(1.75rem,4vw,2.5rem)] leading-tight font-medium">
+          {d.title}
+        </h1>
+        {d.question && <p class="mt-3 max-w-2xl text-mist">{d.question}</p>}
+        {
+          d.metrics.length > 0 && (
+            <div class="mt-6 grid gap-4 md:grid-cols-3">
+              {d.metrics.map((m) => (
+                <MetricCard label={m.label} value={m.value} source={m.source} />
+              ))}
+            </div>
+          )
+        }
+        <div class="mt-6 flex flex-wrap gap-x-6 gap-y-1">
+          {
+            d.links.map((l) => (
+              <a
+                href={l.url}
+                class="font-mono text-xs text-signal-text underline underline-offset-4"
+              >
+                {l.label}
+              </a>
+            ))
+          }
+        </div>
+        <p class="mt-4 font-mono text-xs text-mist">{d.stack.join(' · ')} · {d.period}</p>
+      </section>
+
+      <!-- The body, rendered once; a small script groups it into chapter
+           sections. Without JS everything reads top-to-bottom in this
+           contained-scroll frame (FR-74, FR-37). -->
+      <div data-content class="prose-chapters">
+        <Content />
+      </div>
+    </div>
+
+    <p class="js-only mt-4 h-5 shrink-0">
+      <button
+        type="button"
+        data-next
+        class="hidden cursor-pointer font-mono text-xs text-mist hover:text-ink"
+      ></button>
+    </p>
+  </article>
+</Shell>
+
+<style is:global>
+  /* Hide ungrouped raw content only when JS is running, until the
+     grouping script has run — avoids a stacked-content flash. */
+  html[data-js] [data-content]:not([data-grouped]) {
+    visibility: hidden;
+  }
+
+  [data-study] .chapter {
+    outline-offset: -2px;
+  }
+
+  /* With JS: chapters become slides; the frame stops scrolling and each
+     chapter scrolls internally instead (FR-37 contained fallback). */
+  html[data-js] [data-study] [data-frame] {
+    overflow: hidden;
+  }
+  html[data-js] [data-study] .chapter {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+  }
+  html[data-js] [data-study] .chapter[hidden] {
+    display: none;
+  }
+
+  /* Chapter slide: 450ms, shell curve (§9.5); reduced motion: 150ms fade. */
+  @media (prefers-reduced-motion: no-preference) {
+    [data-study] .ch-in-right {
+      animation: ch-in-right 450ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+    [data-study] .ch-in-left {
+      animation: ch-in-left 450ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+    [data-study] .ch-out-left {
+      animation: ch-out-left 450ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+    [data-study] .ch-out-right {
+      animation: ch-out-right 450ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-study] .ch-in-right,
+    [data-study] .ch-in-left {
+      animation: vt-fade-in 150ms ease-out both;
+    }
+    [data-study] .ch-out-left,
+    [data-study] .ch-out-right {
+      animation: vt-fade-out 150ms ease-out both;
+    }
+  }
+  @keyframes ch-in-right {
+    from {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes ch-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes ch-out-left {
+    to {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes ch-out-right {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Prose defaults for chapter bodies (markdown output). */
+  .prose-chapters h2 {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+  .prose-chapters p {
+    margin-top: 0.75rem;
+    max-width: 42rem;
+    color: var(--mist);
+  }
+  .prose-chapters ul,
+  .prose-chapters ol {
+    margin-top: 0.75rem;
+    max-width: 42rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+    color: var(--mist);
+  }
+  .prose-chapters a {
+    color: var(--signal-text);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .prose-chapters code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+  }
+</style>
+
+<style>
+  .tab[aria-current='true'] {
+    color: var(--ink);
+  }
+  .tab[aria-current='true'] > span:first-child {
+    color: var(--signal-text);
+  }
+  .tab:hover {
+    color: var(--ink);
+  }
+</style>
+
+<script>
+  // Case-study chapter machinery (FR-34/36/37): groups the rendered body
+  // into chapter sections, then drives tabs, the next action, arrow keys,
+  // and #chapter deep links. All listeners are delegated so they survive
+  // view-transition swaps; everything no-ops off case-study pages.
+  const CURRENT = { sections: [] as HTMLElement[], active: 0, animating: false };
+
+  function study(): HTMLElement | null {
+    return document.querySelector('[data-study]');
+  }
+
+  function group(root: HTMLElement): HTMLElement[] {
+    const content = root.querySelector<HTMLElement>('[data-content]');
+    const overview = root.querySelector<HTMLElement>('[data-chapter="overview"]');
+    if (!content || !overview) return [];
+    if (!content.dataset.grouped) {
+      const sections: HTMLElement[] = [];
+      let current: HTMLElement | null = null;
+      const leading: ChildNode[] = [];
+      for (const node of [...content.childNodes]) {
+        if (node.nodeName === 'H2') {
+          const h2 = node as HTMLElement;
+          current = document.createElement('section');
+          current.dataset.chapter = h2.id;
+          current.className = 'chapter';
+          current.tabIndex = 0;
+          current.setAttribute('aria-label', h2.textContent ?? 'Chapter');
+          sections.push(current);
+          if (leading.length) {
+            current.append(...leading.splice(0));
+          }
+        }
+        if (current) {
+          current.appendChild(node);
+        } else {
+          leading.push(node);
+        }
+      }
+      content.replaceChildren(...sections);
+      content.dataset.grouped = '1';
+    }
+    return [overview, ...content.querySelectorAll<HTMLElement>('.chapter')];
+  }
+
+  function syncChrome(root: HTMLElement): void {
+    const { sections, active } = CURRENT;
+    for (const tab of root.querySelectorAll<HTMLElement>('[data-tab]')) {
+      const isActive = tab.dataset.tab === sections[active]?.dataset.chapter;
+      if (isActive) tab.setAttribute('aria-current', 'true');
+      else tab.removeAttribute('aria-current');
+    }
+    const next = root.querySelector<HTMLElement>('[data-next]');
+    if (next) {
+      const upcoming = sections[active + 1];
+      if (upcoming) {
+        const label = upcoming.getAttribute('aria-label') ?? 'next chapter';
+        next.textContent = `next: ${label.toLowerCase()} →`;
+        next.classList.remove('hidden');
+      } else {
+        next.classList.add('hidden');
+      }
+    }
+  }
+
+  function show(idx: number): void {
+    const root = study();
+    if (!root) return;
+    const { sections, active } = CURRENT;
+    if (idx < 0 || idx >= sections.length || idx === active || CURRENT.animating) return;
+    const oldS = sections[active];
+    const newS = sections[idx];
+    CURRENT.active = idx;
+    newS.hidden = false;
+    newS.scrollTop = 0;
+    const forward = idx > active;
+    CURRENT.animating = true;
+    newS.classList.add(forward ? 'ch-in-right' : 'ch-in-left');
+    oldS.classList.add(forward ? 'ch-out-left' : 'ch-out-right');
+    window.setTimeout(() => {
+      oldS.hidden = true;
+      oldS.classList.remove('ch-out-left', 'ch-out-right');
+      newS.classList.remove('ch-in-right', 'ch-in-left');
+      CURRENT.animating = false;
+    }, 470);
+    const id = newS.dataset.chapter ?? 'overview';
+    history.replaceState(null, '', `#${id}`);
+    syncChrome(root);
+  }
+
+  function setup(): void {
+    const root = study();
+    if (!root) {
+      CURRENT.sections = [];
+      return;
+    }
+    CURRENT.sections = group(root);
+    CURRENT.animating = false;
+    const fromHash = location.hash.slice(1);
+    const target = Math.max(
+      0,
+      CURRENT.sections.findIndex((s) => s.dataset.chapter === fromHash)
+    );
+    CURRENT.active = target;
+    CURRENT.sections.forEach((s, i) => {
+      s.hidden = i !== target;
+    });
+    syncChrome(root);
+  }
+
+  // Run once now (module scripts are deferred, so the DOM is ready —
+  // and on a cold load astro:page-load may already have fired before
+  // this module finished loading) and again after every swap.
+  setup();
+  document.addEventListener('astro:page-load', setup);
+
+  document.addEventListener('click', (e) => {
+    const root = study();
+    if (!root) return;
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    const tab = target.closest<HTMLElement>('[data-tab]');
+    if (tab && root.contains(tab)) {
+      e.preventDefault();
+      show(CURRENT.sections.findIndex((s) => s.dataset.chapter === tab.dataset.tab));
+      return;
+    }
+    if (target.closest('[data-next]')) {
+      show(CURRENT.active + 1);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!study()) return;
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const t = e.target as HTMLElement | null;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    show(CURRENT.active + (e.key === 'ArrowRight' ? 1 : -1));
+  });
+
+  // Hash navigation (back/forward between chapter deep links).
+  window.addEventListener('hashchange', () => {
+    const root = study();
+    if (!root) return;
+    const idx = CURRENT.sections.findIndex((s) => s.dataset.chapter === location.hash.slice(1));
+    if (idx >= 0) show(idx);
+  });
+</script>
