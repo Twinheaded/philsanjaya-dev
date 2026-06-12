@@ -1,0 +1,25 @@
+/* Design tokens — PRD §9.1. Amber (--debug) is reserved for the debug overlay only. */
+
+:root {
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --ink: #161b19;
+  --mist: #67706c;
+  --line: rgba(22, 27, 25, 0.14);
+  --signal: #149e7c;
+  --debug: #c97e12;
+}
+
+/* Dark values apply via system preference until the explicit theme toggle
+   lands with the shell (FR-08, PHI-29). */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101312;
+    --surface: #171b1a;
+    --ink: #e7eae8;
+    --mist: #9aa39e;
+    --line: rgba(231, 234, 232, 0.14);
+    --signal: #23b893;
+    --debug: #e09a2f;
+  }
+}
