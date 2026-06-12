@@ -87,6 +87,13 @@
   }
 }
 
+/* The transition overlay must not eat clicks: inputs that land during
+   the 550ms slide pass through to the incoming page and interrupt it,
+   instead of dying on the snapshot (rapid rail clicks felt stuck). */
+::view-transition {
+  pointer-events: none;
+}
+
 ::view-transition-old(stage),
 ::view-transition-new(stage) {
   animation-duration: 550ms;
