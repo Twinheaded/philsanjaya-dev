@@ -14,20 +14,14 @@ import {
   wrap,
   type Agent,
   type Bounds,
-  type WanderParams,
 } from './behaviours';
+// The engine's shipped parameters, not a copy — so the pinned numbers are
+// the numbers production runs with.
+import { MARGIN, PARAMS } from './engine';
 
 const SEED = 42;
 
-const PARAMS: WanderParams = {
-  circleDistance: 60,
-  circleRadius: 24,
-  jitter: 0.25,
-  maxSpeed: 38,
-  maxForce: 30,
-};
-
-const BOUNDS: Bounds = { width: 1080, height: 720, margin: 16 };
+const BOUNDS: Bounds = { width: 1080, height: 720, margin: MARGIN };
 
 const DT = 1 / 60;
 
@@ -85,9 +79,30 @@ describe('wanderForce', () => {
       step(agent, fx, fy, PARAMS, BOUNDS, DT);
     }
   });
+
+  it('engages the force clamp when velocity far exceeds the desired speed', () => {
+    // From the ambient cruise state the unclamped force never nears
+    // maxForce, so this overspeed case exists to make the clamp bind:
+    // |desired − v| ≥ |v| − maxSpeed = 62 px/s², so the returned force
+    // must sit exactly on the maxForce circle. Deleting the clamp in
+    // wanderForce fails this test.
+    const rng = mulberry32(SEED);
+    const agent = { ...makeAgent(), vx: 100, vy: 0 };
+    const [fx, fy] = wanderForce(agent, PARAMS, rng);
+    expect(Math.hypot(fx, fy)).toBeCloseTo(PARAMS.maxForce, 9);
+  });
 });
 
 describe('step', () => {
+  it('clamps an overspeed velocity on the first step', () => {
+    // Direct mutation-killer for the speed clamp: from cruise speed the
+    // integration can never exceed maxSpeed even without the clamp, so
+    // start above it. Deleting the limit() in step fails this test.
+    const agent = { ...makeAgent(), vx: 100, vy: 0 };
+    step(agent, 0, 0, PARAMS, BOUNDS, DT);
+    expect(Math.hypot(agent.vx, agent.vy)).toBeCloseTo(PARAMS.maxSpeed, 9);
+  });
+
   it('clamps speed to maxSpeed over a long run', () => {
     const rng = mulberry32(SEED);
     const agent = makeAgent();
