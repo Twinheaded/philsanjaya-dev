@@ -162,6 +162,17 @@ const current = panelIndex(Astro.url.pathname);
   });
 
   // --- Arrow-key navigation between top-level panels (FR-05).
+  // Inputs that arrive while a panel transition is already in flight are
+  // ignored rather than aborting it mid-slide — spamming keys or swipes
+  // produces clean sequential transitions instead of thrash.
+  let navInFlight = false;
+  document.addEventListener('astro:before-preparation', () => {
+    navInFlight = true;
+  });
+  document.addEventListener('astro:page-load', () => {
+    navInFlight = false;
+  });
+
   document.addEventListener('keydown', (e) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -175,6 +186,7 @@ const current = panelIndex(Astro.url.pathname);
     ) {
       return;
     }
+    if (navInFlight) return;
     const current = panelIndex(location.pathname);
     if (current === -1) return;
     const next = current + (e.key === 'ArrowRight' ? 1 : -1);
@@ -208,6 +220,7 @@ const current = panelIndex(Astro.url.pathname);
       const dy = e.changedTouches[0].clientY - touchStartY;
       touchStartX = null;
       touchStartY = null;
+      if (navInFlight) return;
       if (Math.abs(dx) < 48 || Math.abs(dx) < 2 * Math.abs(dy)) return;
       const current = panelIndex(location.pathname);
       if (current === -1) return;
