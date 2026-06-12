@@ -6,27 +6,58 @@ import Shell from '../layouts/Shell.astro';
   title="Phil Sanjaya"
   description="Portfolio of Phil Sanjaya — software engineering and data science student building agent simulations, ML pipelines, and ICS security tooling."
 >
-  <section class="flex h-full flex-col justify-center p-5 md:p-12">
-    <p class="font-mono text-xs tracking-[0.08em] text-signal">philsanjaya.dev — built in public</p>
-    <h1 class="mt-3 font-display text-[clamp(2.5rem,6vw,4rem)] leading-tight font-medium">
-      Phil Sanjaya
-    </h1>
-    <p class="mt-4 max-w-xl text-mist">
-      Software engineering and data science student at Swinburne, Melbourne. I build agent
-      simulations, ML pipelines, and ICS security tooling — and I'm looking for internships and
-      graduate roles.
-    </p>
-    <div class="mt-8 flex gap-4">
-      <a
-        href="/projects"
-        class="rounded-[10px] border border-line px-5 py-2 text-sm transition-colors duration-150 ease-out hover:border-signal"
-        >View projects</a
-      >
-      <a
-        href="/about"
-        class="rounded-[10px] border border-line px-5 py-2 text-sm transition-colors duration-150 ease-out hover:border-signal"
-        >About me</a
-      >
+  <section class="relative flex h-full flex-col justify-center p-5 md:p-12">
+    <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+      <canvas id="agent-canvas" class="h-full w-full"></canvas>
     </div>
+    <div class="relative">
+      <p class="font-mono text-xs tracking-[0.08em] text-signal">
+        philsanjaya.dev — built in public
+      </p>
+      <h1 class="mt-3 font-display text-[clamp(2.5rem,6vw,4rem)] leading-tight font-medium">
+        Phil Sanjaya
+      </h1>
+      <p class="mt-4 max-w-xl text-mist">
+        Software engineering and data science student at Swinburne, Melbourne. I build agent
+        simulations, ML pipelines, and ICS security tooling — and I'm looking for internships and
+        graduate roles.
+      </p>
+      <div class="mt-8 flex gap-4">
+        <a
+          href="/projects"
+          class="rounded-[10px] border border-line bg-surface px-5 py-2 text-sm transition-colors duration-150 ease-out hover:border-signal"
+          >View projects</a
+        >
+        <a
+          href="/about"
+          class="rounded-[10px] border border-line bg-surface px-5 py-2 text-sm transition-colors duration-150 ease-out hover:border-signal"
+          >About me</a
+        >
+      </div>
+    </div>
+    <p
+      id="agent-readout"
+      class="absolute bottom-5 left-5 font-mono text-xs text-mist md:bottom-8 md:left-12"
+    >
+    </p>
   </section>
 </Shell>
+
+<script>
+  import { mountAgents } from '../islands/agents/engine';
+  import { renderReadout } from '../islands/agents/readout';
+
+  let cleanup: (() => void) | null = null;
+
+  function mount(): void {
+    cleanup?.();
+    cleanup = null;
+    const canvas = document.getElementById('agent-canvas') as HTMLCanvasElement | null;
+    const readout = document.getElementById('agent-readout');
+    if (!canvas || !readout) return;
+    cleanup = mountAgents(canvas, (data) => renderReadout(readout, data));
+  }
+
+  // Fires on initial load and after every view-transition swap.
+  document.addEventListener('astro:page-load', mount);
+</script>
