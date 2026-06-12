@@ -1,16 +1,70 @@
 ---
+import { getCollection } from 'astro:content';
 import Shell from '../layouts/Shell.astro';
-import Panel from '../components/Panel.astro';
+import { SITE } from '../lib/site';
+
+const entries = (await getCollection('buildlog')).sort((a, b) => b.data.entry - a.data.entry);
+
+const formatDate = (d: Date) =>
+  d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 ---
 
 <Shell
   title="Build log — Phil Sanjaya"
   description="How this site is being designed and built: decisions, trade-offs, and commit receipts."
 >
-  <Panel kicker="04 — build log" title="Build log">
-    <p>
-      How this site is being designed and built — the decisions, the trade-offs, and the commit
-      hashes as receipts. The timeline lands in milestone M2; entries publish from M3.
-    </p>
-  </Panel>
+  <div class="flex h-full flex-col p-5 md:p-12">
+    <p class="font-mono text-xs tracking-[0.08em] text-mist">04 — build log</p>
+    <h1 class="mt-2 font-display text-[28px] font-medium">Build log</h1>
+    <!-- FR-50: newest first; the log is capped editorially (§12) so the
+         timeline fits the stage. -->
+    <ol class="relative mt-6 min-h-0 max-w-2xl space-y-4 overflow-hidden border-l border-line pl-6">
+      {
+        entries.map((e) => (
+          <li class="relative">
+            <span
+              class="absolute top-5 -left-[27.5px] h-[7px] w-[7px] rounded-full bg-signal"
+              aria-hidden="true"
+            />
+            <article class="rounded-[10px] border border-line bg-surface p-4">
+              <p class="font-mono text-xs text-mist">
+                entry {String(e.data.entry).padStart(2, '0')} ·{' '}
+                <time datetime={e.data.date.toISOString().slice(0, 10)}>
+                  {formatDate(e.data.date)}
+                </time>{' '}
+                · {e.data.milestone}
+              </p>
+              <h2 class="mt-1 font-display text-xl font-medium">
+                <a href={`/log/${e.id}`} class="entry-link text-ink">
+                  {e.data.title}
+                </a>
+              </h2>
+              {e.data.commits.length > 0 && (
+                <p class="mt-2 flex flex-wrap gap-2">
+                  {e.data.commits.map((sha) => (
+                    <a
+                      href={`${SITE.repoUrl}/commit/${sha}`}
+                      class="chip rounded border border-line px-1.5 py-0.5 font-mono text-[11px] text-mist"
+                    >
+                      {sha}
+                    </a>
+                  ))}
+                </p>
+              )}
+            </article>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
 </Shell>
+
+<style>
+  .entry-link:hover {
+    color: var(--signal-text);
+  }
+  .chip:hover {
+    border-color: var(--signal);
+    color: var(--ink);
+  }
+</style>
