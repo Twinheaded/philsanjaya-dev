@@ -1,0 +1,49 @@
+---
+/**
+ * Contained-scroll reading pane (§7.5, FR-41–43): the shell stays fixed,
+ * only this pane scrolls. Focusable so keyboard scrolling works; the
+ * bottom-fade mask is toggled by the script below and only ever shows
+ * while content remains beneath the fold.
+ */
+interface Props {
+  label: string;
+}
+
+const { label } = Astro.props;
+---
+
+<div
+  class="note-pane min-h-0 flex-1"
+  data-note-pane
+  tabindex="0"
+  role="region"
+  aria-label={label}
+>
+  <slot />
+</div>
+
+<script>
+  function syncPanes(): void {
+    for (const pane of document.querySelectorAll<HTMLElement>('[data-note-pane]')) {
+      const update = (): void => {
+        pane.classList.toggle(
+          'more-below',
+          pane.scrollTop + pane.clientHeight < pane.scrollHeight - 1
+        );
+      };
+      if (!pane.dataset.maskWired) {
+        pane.dataset.maskWired = '1';
+        pane.addEventListener('scroll', update, { passive: true });
+        const observer = new ResizeObserver(update);
+        // Observe the content too: font loading grows scrollHeight
+        // without resizing the pane's own box.
+        observer.observe(pane);
+        if (pane.firstElementChild) observer.observe(pane.firstElementChild);
+      }
+      update();
+    }
+  }
+
+  syncPanes();
+  document.addEventListener('astro:page-load', syncPanes);
+</script>

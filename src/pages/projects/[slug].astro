@@ -85,7 +85,7 @@ const d = project.data;
       <!-- The body, rendered once; a small script groups it into chapter
            sections. Without JS everything reads top-to-bottom in this
            contained-scroll frame (FR-74, FR-37). -->
-      <div data-content class="prose-chapters">
+      <div data-content class="prose-md">
         <Content />
       </div>
     </div>
@@ -169,36 +169,6 @@ const d = project.data;
     to {
       transform: translateX(100%);
     }
-  }
-
-  /* Prose defaults for chapter bodies (markdown output). */
-  .prose-chapters h2 {
-    font-family: var(--font-display);
-    font-size: 28px;
-    font-weight: 500;
-    line-height: 1.2;
-  }
-  .prose-chapters p {
-    margin-top: 0.75rem;
-    max-width: 42rem;
-    color: var(--mist);
-  }
-  .prose-chapters ul,
-  .prose-chapters ol {
-    margin-top: 0.75rem;
-    max-width: 42rem;
-    padding-left: 1.25rem;
-    list-style: disc;
-    color: var(--mist);
-  }
-  .prose-chapters a {
-    color: var(--signal-text);
-    text-decoration: underline;
-    text-underline-offset: 4px;
-  }
-  .prose-chapters code {
-    font-family: var(--font-mono);
-    font-size: 0.875em;
   }
 </style>
 

@@ -1,0 +1,67 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { getCollection } from 'astro:content';
+import Shell from '../../layouts/Shell.astro';
+
+export const getStaticPaths = (async ({ paginate }) => {
+  const notes = (await getCollection('notes')).sort(
+    (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
+  );
+  // FR-40: the list fits the viewport; beyond six entries it paginates.
+  return paginate(notes, { pageSize: 6 });
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props;
+
+const formatDate = (d: Date) =>
+  d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+---
+
+<Shell title="Notes — Phil Sanjaya" description="Short technical notes by Phil Sanjaya.">
+  <div class="flex h-full flex-col p-5 md:p-12">
+    <p class="font-mono text-xs tracking-[0.08em] text-mist">03 — notes</p>
+    <h1 class="mt-2 font-display text-[28px] font-medium">Notes</h1>
+    <ul class="mt-6 max-w-2xl divide-y divide-line border-y border-line">
+      {
+        page.data.map((note) => (
+          <li>
+            <a
+              href={`/notes/${note.id}`}
+              class="note-row flex items-baseline gap-4 py-3 motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
+            >
+              <time
+                datetime={note.data.date.toISOString().slice(0, 10)}
+                class="shrink-0 font-mono text-xs text-mist"
+              >
+                {formatDate(note.data.date)}
+              </time>
+              <span class="text-ink">{note.data.title}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+    {
+      (page.url.prev || page.url.next) && (
+        <p class="mt-6 flex gap-6 font-mono text-xs">
+          {page.url.prev && (
+            <a href={page.url.prev} class="text-mist hover:text-ink">
+              &larr; newer
+            </a>
+          )}
+          {page.url.next && (
+            <a href={page.url.next} class="text-mist hover:text-ink">
+              older &rarr;
+            </a>
+          )}
+        </p>
+      )
+    }
+  </div>
+</Shell>
+
+<style>
+  .note-row:hover span {
+    color: var(--signal-text);
+  }
+</style>
