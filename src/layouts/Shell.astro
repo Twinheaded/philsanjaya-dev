@@ -69,7 +69,7 @@ const current = panelIndex(Astro.url.pathname);
         >
       </div>
     </div>
-    <div class="flex h-dvh flex-col-reverse md:flex-row">
+    <div class="relative flex h-dvh flex-col-reverse md:flex-row">
       <nav
         class="rail flex h-14 shrink-0 items-stretch border-t border-line md:h-auto md:w-[200px] md:flex-col md:border-t-0 md:border-r md:p-6"
         aria-label="Main"
@@ -116,6 +116,21 @@ const current = panelIndex(Astro.url.pathname);
       <main id="main" class="stage min-h-0 min-w-0 flex-1 overflow-hidden" transition:name="stage">
         <slot />
       </main>
+      <!-- FR-09: keycap indicators sit low in the stage and light for 150ms
+           on an actual arrow keypress, teaching the shortcut silently.
+           Decorative + desktop-only (mobile navigates by swipe). -->
+      <div
+        id="keycaps"
+        aria-hidden="true"
+        class="js-only pointer-events-none absolute bottom-4 left-1/2 hidden -translate-x-1/2 gap-1.5 font-mono text-xs md:flex"
+      >
+        <kbd data-key="ArrowLeft" class="keycap rounded border border-line px-2 py-0.5 text-mist"
+          >&larr;</kbd
+        >
+        <kbd data-key="ArrowRight" class="keycap rounded border border-line px-2 py-0.5 text-mist"
+          >&rarr;</kbd
+        >
+      </div>
     </div>
   </body>
 </html>
@@ -138,6 +153,18 @@ const current = panelIndex(Astro.url.pathname);
   }
   .nav-item[aria-current='page'] .num {
     color: var(--signal-text);
+  }
+  /* FR-09: a pressed keycap lights to the signal accent for 150ms. */
+  .keycap.lit {
+    border-color: var(--signal);
+    color: var(--ink);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .keycap {
+      transition:
+        color 150ms ease-out,
+        border-color 150ms ease-out;
+    }
   }
 </style>
 
@@ -173,6 +200,16 @@ const current = panelIndex(Astro.url.pathname);
     navInFlight = false;
   });
 
+  // FR-09: flash the matching keycap for 150ms on a real keypress.
+  let keycapTimer = 0;
+  function flashKeycap(key: string): void {
+    const cap = document.querySelector(`.keycap[data-key="${key}"]`);
+    if (!cap) return;
+    cap.classList.add('lit');
+    window.clearTimeout(keycapTimer);
+    keycapTimer = window.setTimeout(() => cap.classList.remove('lit'), 150);
+  }
+
   document.addEventListener('keydown', (e) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -186,6 +223,8 @@ const current = panelIndex(Astro.url.pathname);
     ) {
       return;
     }
+    // Light the keycap on the actual press, even at a boundary or mid-slide.
+    flashKeycap(e.key);
     if (navInFlight) return;
     const current = panelIndex(location.pathname);
     if (current === -1) return;

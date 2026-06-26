@@ -53,6 +53,10 @@ const d = project.data;
       </nav>
     </header>
 
+    <!-- Chapter changes are announced here for assistive tech; the focused
+         chapter region carries no visible ring (Phil's M2 call). -->
+    <p class="sr-only" aria-live="polite" data-announce></p>
+
     <div class="relative mt-4 min-h-0 flex-1 overflow-y-auto" data-frame>
       <!-- align island (§10): calm order behind the architecture chapter
            only; activated by the chapter script, faint and aria-hidden. -->
@@ -250,6 +254,15 @@ const d = project.data;
     island?.setActive(active);
   }
 
+  /** Announce the current chapter to assistive tech (FR-71/72). */
+  function announce(root: HTMLElement): void {
+    const region = root.querySelector<HTMLElement>('[data-announce]');
+    const section = CURRENT.sections[CURRENT.active];
+    if (!region || !section) return;
+    const label = section.getAttribute('aria-label') ?? 'Chapter';
+    region.textContent = `${label}, chapter ${CURRENT.active + 1} of ${CURRENT.sections.length}`;
+  }
+
   function group(root: HTMLElement): HTMLElement[] {
     const content = root.querySelector<HTMLElement>('[data-content]');
     const overview = root.querySelector<HTMLElement>('[data-chapter="overview"]');
@@ -354,6 +367,7 @@ const d = project.data;
     newS.focus({ preventScroll: true });
     syncChrome(root);
     syncIsland();
+    announce(root);
   }
 
   function setup(): void {

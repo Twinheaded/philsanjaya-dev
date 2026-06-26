@@ -23,6 +23,15 @@ const { label } = Astro.props;
 </div>
 
 <script>
+  // Observers are tracked and disconnected on swap so each navigation does
+  // not leave a live ResizeObserver on a detached pane (M2 review item).
+  const observers: ResizeObserver[] = [];
+
+  function teardown(): void {
+    for (const o of observers) o.disconnect();
+    observers.length = 0;
+  }
+
   function syncPanes(): void {
     for (const pane of document.querySelectorAll<HTMLElement>('[data-note-pane]')) {
       const update = (): void => {
@@ -39,11 +48,13 @@ const { label } = Astro.props;
         // without resizing the pane's own box.
         observer.observe(pane);
         if (pane.firstElementChild) observer.observe(pane.firstElementChild);
+        observers.push(observer);
       }
       update();
     }
   }
 
+  document.addEventListener('astro:before-swap', teardown);
   syncPanes();
   document.addEventListener('astro:page-load', syncPanes);
 </script>
