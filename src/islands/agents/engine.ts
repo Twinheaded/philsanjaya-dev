@@ -24,6 +24,8 @@ export interface ReadoutData {
   behaviour: Behaviour;
   /** Frames per second sampled over the last ~1s window; null until measured. */
   fps: number | null;
+  /** Debug overlay on — the readout appends ` · debug` (FR-15). */
+  debug: boolean;
 }
 
 export interface IslandOptions {
@@ -37,6 +39,8 @@ export interface IslandOptions {
   fleeFromCenter?: boolean;
   /** Start hidden + paused; the case study activates align on its architecture chapter. */
   startActive?: boolean;
+  /** Element id of a debug toggle button (kept in sync via aria-pressed, FR-15). */
+  debugButtonId?: string;
 }
 
 export interface IslandController {
@@ -90,6 +94,59 @@ function makeAgents(
 
 function signalColor(canvas: HTMLCanvasElement): string {
   return getComputedStyle(canvas).getPropertyValue('--signal').trim() || '#149e7c';
+}
+
+function debugColor(canvas: HTMLCanvasElement): string {
+  // §9.2: amber appears *only* in the debug overlay.
+  return getComputedStyle(canvas).getPropertyValue('--debug').trim() || '#c97e12';
+}
+
+/**
+ * Debug overlay (FR-15): the classic Reynolds visualisation — each agent's
+ * velocity vector, its steering-force vector, and (for wander) the wander
+ * circle projected ahead with the target point on its rim. Drawn at 1px in
+ * instrument amber, full opacity. `forces` holds the [fx, fy] applied this
+ * frame, indexed 2·i.
+ */
+function drawDebug(
+  ctx: CanvasRenderingContext2D,
+  agents: Agent[],
+  forces: number[],
+  showWanderCircle: boolean,
+  color: string
+): void {
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 1;
+  for (let i = 0; i < agents.length; i++) {
+    const a = agents[i];
+    // Velocity vector (actual heading and speed, scaled to be legible).
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(a.x + a.vx * 0.5, a.y + a.vy * 0.5);
+    ctx.stroke();
+    // Steering force vector applied this frame.
+    const fx = forces[i * 2];
+    const fy = forces[i * 2 + 1];
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(a.x + fx * 0.6, a.y + fy * 0.6);
+    ctx.stroke();
+    if (showWanderCircle) {
+      const heading = Math.atan2(a.vy, a.vx);
+      const cx = a.x + Math.cos(heading) * PARAMS.circleDistance;
+      const cy = a.y + Math.sin(heading) * PARAMS.circleDistance;
+      ctx.beginPath();
+      ctx.arc(cx, cy, PARAMS.circleRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      const tx = cx + Math.cos(heading + a.wanderAngle) * PARAMS.circleRadius;
+      const ty = cy + Math.sin(heading + a.wanderAngle) * PARAMS.circleRadius;
+      ctx.beginPath();
+      ctx.arc(tx, ty, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 }
 
 function draw(
@@ -154,6 +211,15 @@ export function mountAgents(
   let pointer: { x: number; y: number } | null = null;
   let tap: { x: number; y: number; t: number } | null = null;
 
+  // Debug overlay state (FR-15/16). Off by default; no cost when off.
+  let debug = false;
+  let dColor = debugColor(canvas);
+  const dForce: number[] = [];
+  const showWanderCircle = behaviour === 'wander' && !options.fleeFromCenter;
+  const debugButton = options.debugButtonId
+    ? document.getElementById(options.debugButtonId)
+    : null;
+
   function resize(): void {
     const rect = canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return; // hidden/unlaid-out: keep prior state
@@ -174,10 +240,11 @@ export function mountAgents(
   resize();
 
   // ---- Reduced motion: one static frame, no loop, no interaction (FR-17).
+  // The debug overlay is a motion/interaction feature, so it stays off here.
   if (reduced) {
     const render = (): void => draw(ctx, agents, bounds, color, targetOpacity * weight);
     render();
-    onReadout({ count: agents.length, behaviour, fps: null });
+    onReadout({ count: agents.length, behaviour, fps: null, debug: false });
     const themeObserver = new MutationObserver(() => {
       color = signalColor(canvas);
       render();
@@ -200,7 +267,10 @@ export function mountAgents(
   }
 
   // ---- Animated path.
-  onReadout({ count: agents.length, behaviour, fps: null });
+  let lastFps: number | null = null;
+  const emitReadout = (): void =>
+    onReadout({ count: agents.length, behaviour, fps: lastFps, debug });
+  emitReadout();
 
   let last = performance.now();
   let windowStart = last;
@@ -264,7 +334,8 @@ export function mountAgents(
       weight = target > weight ? Math.min(target, weight + stepw) : Math.max(target, weight - stepw);
     }
 
-    for (const a of agents) {
+    for (let i = 0; i < agents.length; i++) {
+      const a = agents[i];
       let [fx, fy] = baseForce(a);
       const r = repel(a, now);
       if (r.s > 0) {
@@ -272,18 +343,25 @@ export function mountAgents(
         fx = fx * (1 - r.s) + px * r.s;
         fy = fy * (1 - r.s) + py * r.s;
       }
+      if (debug) {
+        dForce[i * 2] = fx;
+        dForce[i * 2 + 1] = fy;
+      }
       step(a, fx, fy, PARAMS, bounds, dt);
     }
     draw(ctx, agents, bounds, color, targetOpacity * weight);
+    // FR-15/16: the overlay only runs when on, so it costs nothing off.
+    if (debug && weight > 0) drawDebug(ctx, agents, dForce, showWanderCircle, dColor);
 
     frames += 1;
     const elapsed = now - windowStart;
     if (elapsed >= 1000) {
-      const fps = Math.round((frames * 1000) / elapsed);
+      lastFps = Math.round((frames * 1000) / elapsed);
       frames = 0;
       windowStart = now;
       color = signalColor(canvas);
-      onReadout({ count: agents.length, behaviour, fps });
+      if (debug) dColor = debugColor(canvas);
+      emitReadout();
     }
 
     // Fully faded out and not coming back: stop to cost no fps (FR-16 spirit).
@@ -337,6 +415,29 @@ export function mountAgents(
   window.addEventListener('pointerleave', onPointerLeave, { passive: true });
   window.addEventListener('touchstart', onTouchStart, { passive: true });
 
+  // Debug toggle (FR-15): `d` key or the adjacent button. State is mirrored
+  // on the button's aria-pressed and reflected in the readout immediately.
+  function toggleDebug(): void {
+    debug = !debug;
+    dColor = debugColor(canvas);
+    debugButton?.setAttribute('aria-pressed', String(debug));
+    emitReadout();
+    // Redraw at once so the overlay appears/clears even between fps samples.
+    draw(ctx, agents, bounds, color, targetOpacity * weight);
+    if (debug && weight > 0) drawDebug(ctx, agents, dForce, showWanderCircle, dColor);
+  }
+
+  const onKeyDown = (e: KeyboardEvent): void => {
+    if (e.key !== 'd' && e.key !== 'D') return;
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const t = e.target as HTMLElement | null;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    toggleDebug();
+  };
+  const onButtonClick = (): void => toggleDebug();
+  document.addEventListener('keydown', onKeyDown);
+  debugButton?.addEventListener('click', onButtonClick);
+
   return {
     destroy() {
       cancelAnimationFrame(rafId);
@@ -346,6 +447,8 @@ export function mountAgents(
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerleave', onPointerLeave);
       window.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('keydown', onKeyDown);
+      debugButton?.removeEventListener('click', onButtonClick);
     },
     setActive(active: boolean) {
       target = active ? 1 : 0;

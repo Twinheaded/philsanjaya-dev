@@ -32,11 +32,17 @@ import Shell from '../layouts/Shell.astro';
         >
       </div>
     </div>
-    <p
-      id="notfound-readout"
-      class="absolute bottom-5 left-5 font-mono text-xs text-mist md:bottom-8 md:left-12"
-    >
-    </p>
+    <div class="absolute bottom-5 left-5 flex items-center gap-3 md:bottom-8 md:left-12">
+      <p id="notfound-readout" class="font-mono text-xs text-mist"></p>
+      <button
+        id="notfound-debug"
+        type="button"
+        aria-pressed="false"
+        aria-label="Toggle steering debug overlay"
+        class="cursor-pointer rounded border border-line px-1.5 py-0.5 font-mono text-[10px] text-mist hover:text-ink aria-pressed:border-signal aria-pressed:text-ink"
+        >d</button
+      >
+    </div>
 
     <script>
       import { mountAgents, type IslandController } from '../islands/agents/engine';
@@ -54,6 +60,7 @@ import Shell from '../layouts/Shell.astro';
         island = mountAgents(canvas, (data) => renderReadout(readout, data), {
           behaviour: 'flee',
           fleeFromCenter: true,
+          debugButtonId: 'notfound-debug',
         });
       }
 

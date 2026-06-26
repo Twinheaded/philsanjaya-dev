@@ -35,11 +35,20 @@ import Shell from '../layouts/Shell.astro';
         >
       </div>
     </div>
-    <p
-      id="agent-readout"
-      class="absolute bottom-5 left-5 font-mono text-xs text-mist md:bottom-8 md:left-12"
+    <div
+      class="absolute bottom-5 left-5 flex items-center gap-3 md:bottom-8 md:left-12"
     >
-    </p>
+      <p id="agent-readout" class="font-mono text-xs text-mist"></p>
+      <!-- FR-15: touch-reachable debug toggle; `d` does the same. -->
+      <button
+        id="agent-debug"
+        type="button"
+        aria-pressed="false"
+        aria-label="Toggle steering debug overlay"
+        class="cursor-pointer rounded border border-line px-1.5 py-0.5 font-mono text-[10px] text-mist hover:text-ink aria-pressed:border-signal aria-pressed:text-ink"
+        >d</button
+      >
+    </div>
 
     <script>
       import { mountAgents, type IslandController } from '../islands/agents/engine';
@@ -53,9 +62,10 @@ import Shell from '../layouts/Shell.astro';
         const canvas = document.getElementById('agent-canvas') as HTMLCanvasElement | null;
         const readout = document.getElementById('agent-readout');
         if (!canvas || !readout) return;
-        // Home: wander, the §10 default state.
+        // Home: wander, the §10 default state; `d`/button toggles the overlay.
         island = mountAgents(canvas, (data) => renderReadout(readout, data), {
           behaviour: 'wander',
+          debugButtonId: 'agent-debug',
         });
       }
 

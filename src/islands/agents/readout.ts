@@ -8,5 +8,6 @@ import type { ReadoutData } from './engine';
 
 export function renderReadout(el: Element, data: ReadoutData): void {
   const fps = data.fps === null ? '—' : String(data.fps);
-  el.textContent = `${data.behaviour}() · ${data.count} agents · ${fps} fps`;
+  const debug = data.debug ? ' · debug' : '';
+  el.textContent = `${data.behaviour}() · ${data.count} agents · ${fps} fps${debug}`;
 }
