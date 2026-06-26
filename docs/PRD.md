@@ -274,7 +274,7 @@ GitHub (public repo) → Cloudflare Pages, auto-deploy on `main`. Preview URL `*
 ### 11.5 Testing and CI
 
 - **Vitest** for unit tests. The mandated test surface is the steering maths (`islands/agents/behaviours.ts`): heading-jitter bounds, speed clamp, edge wrap, and run-to-run determinism under a seeded RNG (`SEED = 42`). `align` and `flee` join the suite when they land (PHI-42).
-- **GitHub Actions** on every push and PR: `npm ci` → `npm run build` → `npm test`. A red workflow blocks milestone review; CI must be green on the commit Phil reviews.
+- **GitHub Actions** on every push and PR: `npm ci` → `npm run check` (`astro check`, strict TypeScript) → `npm run build` → `npm test`. The check step is load-bearing: `astro build` strips types and does not typecheck, so without it a type error ships green. Locally the same gate runs as `npm run verify` (check && build && test, exit-code-driven). A red workflow blocks milestone review; CI must be green on the commit Phil reviews.
 - **Dependabot** security updates enabled; lockfile committed; dependency surface kept deliberately small.
 - No coverage-percentage targets. Coverage theatre is explicitly out of scope — testing the maths well beats testing everything badly.
 
