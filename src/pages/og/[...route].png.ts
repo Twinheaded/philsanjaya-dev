@@ -109,5 +109,7 @@ export const GET: APIRoute = async ({ props }) => {
     ],
   });
   const png = new Resvg(svg).render().asPng();
-  return new Response(png, { headers: { 'Content-Type': 'image/png' } });
+  // Wrap the Node Buffer in a plain Uint8Array — a valid BodyInit (Buffer
+  // works at runtime but is not in the Response type).
+  return new Response(new Uint8Array(png), { headers: { 'Content-Type': 'image/png' } });
 };
