@@ -90,7 +90,7 @@ Rail order is a true sequence (left → right matches panel order), which is why
 
 - **FR-10** A single vanilla-TypeScript canvas island renders 18–24 autonomous agents (dot + heading vector) behind the home hero. No framework, no physics library.
 - **FR-11** Behaviours are ports of Phil's COS30002 steering maths: `wander` (heading jitter projected on a wander circle), `align` (neighbour-heading averaging at reduced count/opacity), `flee` (inverse seek from a point). M1 ships `wander` only; the module is structured for M4 to add states without rewrite.
-- **FR-12** A behaviour FSM keys off the current route (state table in §10) and blends transitions over ~1s (Should, M4).
+- **FR-12** A behaviour FSM keys off the current route (state table in §10). **In-page** behaviour transitions — those within a single mounted island, e.g. activating `align` on the case-study Architecture chapter or cursor flee blending in — interpolate their weights over ~1s (Should, M4). Cross-route changes are fresh per-page island mounts and start at full strength; a continuous cross-route behaviour tween is deferred (it would require one persistent global island rather than per-page mounts).
 - **FR-13** Cursor interaction: agents flee within ~80px of the pointer; on touch, a tap emits a one-shot flee impulse (Should, M4).
 - **FR-14** The readout (mono, low contrast) displays only live-measured values: agent count, active behaviour name, fps sampled at 1 Hz. No decorative or fabricated tokens — the honest-numbers rule applies to the chrome itself.
 - **FR-15** Pressing `d` (or a small adjacent button, `aria-pressed`) toggles a debug overlay drawing each agent's velocity vector, steering force vector, and wander circle + target point at 1px in instrument amber (Should, M4).
