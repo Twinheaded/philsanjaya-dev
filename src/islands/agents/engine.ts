@@ -9,6 +9,7 @@
 import {
   alignForce,
   fleeForce,
+  limit,
   mulberry32,
   step,
   wanderForce,
@@ -41,6 +42,12 @@ export interface IslandOptions {
   startActive?: boolean;
   /** Element id of a debug toggle button (kept in sync via aria-pressed, FR-15). */
   debugButtonId?: string;
+  /**
+   * Wire cursor/tap/debug listeners. The case-study align island passes
+   * false: it has no debug affordance and sits behind prose, so the global
+   * listeners would only do dormant work (M4 review).
+   */
+  interactive?: boolean;
 }
 
 export interface IslandController {
@@ -126,13 +133,16 @@ function drawDebug(
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(a.x + a.vx * 0.5, a.y + a.vy * 0.5);
     ctx.stroke();
-    // Steering force vector applied this frame.
+    // Steering force vector applied this frame (skip until the stash is
+    // populated — the very first immediate redraw on toggle-on has none yet).
     const fx = forces[i * 2];
     const fy = forces[i * 2 + 1];
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(a.x + fx * 0.6, a.y + fy * 0.6);
-    ctx.stroke();
+    if (Number.isFinite(fx) && Number.isFinite(fy)) {
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(a.x + fx * 0.6, a.y + fy * 0.6);
+      ctx.stroke();
+    }
     if (showWanderCircle) {
       const heading = Math.atan2(a.vy, a.vx);
       const cx = a.x + Math.cos(heading) * PARAMS.circleDistance;
@@ -198,6 +208,10 @@ export function mountAgents(
   const rng = mulberry32((performance.timeOrigin + performance.now()) >>> 0);
   const bounds: Bounds = { width: 0, height: 0, margin: MARGIN };
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // §10: the static reduced-motion frame dims to 0.35 (capped, so the already
+  // fainter align island stays at 0.25 rather than brightening).
+  const renderOpacity = reduced ? Math.min(targetOpacity, REDUCED_OPACITY) : targetOpacity;
+  const interactive = options.interactive !== false;
   let agents: Agent[] = [];
   let color = signalColor(canvas);
   let rafId = 0;
@@ -234,7 +248,7 @@ export function mountAgents(
 
   const observer = new ResizeObserver(() => {
     resize();
-    draw(ctx, agents, bounds, color, targetOpacity * weight);
+    draw(ctx, agents, bounds, color, renderOpacity * weight);
   });
   observer.observe(canvas);
   resize();
@@ -242,7 +256,7 @@ export function mountAgents(
   // ---- Reduced motion: one static frame, no loop, no interaction (FR-17).
   // The debug overlay is a motion/interaction feature, so it stays off here.
   if (reduced) {
-    const render = (): void => draw(ctx, agents, bounds, color, targetOpacity * weight);
+    const render = (): void => draw(ctx, agents, bounds, color, renderOpacity * weight);
     render();
     onReadout({ count: agents.length, behaviour, fps: null, debug: false });
     const themeObserver = new MutationObserver(() => {
@@ -285,7 +299,9 @@ export function mountAgents(
       const [ax, ay] = alignForce(a, agents, PARAMS, ALIGN_RADIUS);
       const [wx, wy] = wanderForce(a, PARAMS, rng); // keeps lone agents drifting
       if (ax === 0 && ay === 0) return [wx, wy];
-      return [ax + wx * 0.2, ay + wy * 0.2];
+      // Re-clamp the blend so it keeps the maxForce invariant the rest of
+      // the loop relies on.
+      return limit(ax + wx * 0.2, ay + wy * 0.2, PARAMS.maxForce);
     }
     return wanderForce(a, PARAMS, rng);
   }
@@ -349,7 +365,7 @@ export function mountAgents(
       }
       step(a, fx, fy, PARAMS, bounds, dt);
     }
-    draw(ctx, agents, bounds, color, targetOpacity * weight);
+    draw(ctx, agents, bounds, color, renderOpacity * weight);
     // FR-15/16: the overlay only runs when on, so it costs nothing off.
     if (debug && weight > 0) drawDebug(ctx, agents, dForce, showWanderCircle, dColor);
 
@@ -411,10 +427,6 @@ export function mountAgents(
     const rect = canvas.getBoundingClientRect();
     tap = { x: t.clientX - rect.left, y: t.clientY - rect.top, t: performance.now() };
   };
-  window.addEventListener('pointermove', onPointerMove, { passive: true });
-  window.addEventListener('pointerleave', onPointerLeave, { passive: true });
-  window.addEventListener('touchstart', onTouchStart, { passive: true });
-
   // Debug toggle (FR-15): `d` key or the adjacent button. State is mirrored
   // on the button's aria-pressed and reflected in the readout immediately.
   function toggleDebug(): void {
@@ -423,7 +435,7 @@ export function mountAgents(
     debugButton?.setAttribute('aria-pressed', String(debug));
     emitReadout();
     // Redraw at once so the overlay appears/clears even between fps samples.
-    draw(ctx, agents, bounds, color, targetOpacity * weight);
+    draw(ctx, agents, bounds, color, renderOpacity * weight);
     if (debug && weight > 0) drawDebug(ctx, agents, dForce, showWanderCircle, dColor);
   }
 
@@ -435,8 +447,16 @@ export function mountAgents(
     toggleDebug();
   };
   const onButtonClick = (): void => toggleDebug();
-  document.addEventListener('keydown', onKeyDown);
-  debugButton?.addEventListener('click', onButtonClick);
+
+  // The case-study align island opts out (interactive: false): no cursor
+  // flee, no tap, no debug toggle — it sits behind prose with no affordance.
+  if (interactive) {
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerleave', onPointerLeave, { passive: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('keydown', onKeyDown);
+    debugButton?.addEventListener('click', onButtonClick);
+  }
 
   return {
     destroy() {

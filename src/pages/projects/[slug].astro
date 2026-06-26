@@ -150,13 +150,18 @@ const d = project.data;
     visibility: hidden;
   }
 
-  /* Chapters are focusable regions so swaps are announced and keyboard
-     scrolling works, but a full-pane focus ring reads as a glitch — no
-     outline here (Phil's call at M2 review; revisit a subtler indicator
-     in PHI-44). Tabs, links, and buttons keep their rings. */
-  [data-study] .chapter:focus,
+  /* Chapters are focusable regions (for keyboard scrolling). The full-pane
+     ring read as a glitch on arrow navigation, so chapter changes no longer
+     steal focus (show() does not focus the region) — the aria-live region
+     announces instead. When a keyboard user *does* Tab onto the region, a
+     subtle inset left-edge bar marks it: a real WCAG 2.4.7 indicator that
+     is not the floating box Phil disliked. (M4 review.) */
+  [data-study] .chapter:focus {
+    outline: none;
+  }
   [data-study] .chapter:focus-visible {
     outline: none;
+    box-shadow: inset 3px 0 0 0 var(--signal);
   }
 
   /* With JS: chapters become slides; the frame stops scrolling and each
@@ -362,9 +367,10 @@ const d = project.data;
     // Preserve ClientRouter's history state ({index, scrollX, scrollY}) —
     // a null state makes its popstate handler swallow the next Back press.
     history.replaceState(history.state, '', `#${id}`);
-    // Move focus with the content so activation is announced and keyboard
-    // users follow the swap (chapters are focusable regions).
-    newS.focus({ preventScroll: true });
+    // Do NOT steal focus on chapter change — that flashed the focus box on
+    // every arrow press (Phil's M2 complaint) and double-announced the name.
+    // The aria-live region carries the change; focus stays with the user's
+    // control (tab or next button).
     syncChrome(root);
     syncIsland();
     announce(root);
@@ -398,6 +404,7 @@ const d = project.data;
         opacity: 0.25,
         count: [10, 12],
         startActive: false,
+        interactive: false,
       });
     }
     syncChrome(root);

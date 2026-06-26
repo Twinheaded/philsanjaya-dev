@@ -182,6 +182,44 @@ describe('alignForce', () => {
     const [fx, fy] = alignForce(agent, [agent, ...neighbours], PARAMS, RADIUS);
     expect(Math.hypot(fx, fy)).toBeLessThanOrEqual(PARAMS.maxForce + 1e-9);
   });
+
+  it('combines multiple neighbours (not just the first)', () => {
+    // One neighbour heads +x, one heads +y → the desired heading is the
+    // 45° diagonal. A regression that followed only one neighbour would
+    // point along an axis instead. (Pins that neighbours are combined.)
+    const agent = { x: 0, y: 0, vx: 0, vy: 0, wanderAngle: 0 };
+    const neighbours = [
+      { x: 10, y: 0, vx: PARAMS.maxSpeed, vy: 0, wanderAngle: 0 },
+      { x: 0, y: 10, vx: 0, vy: PARAMS.maxSpeed, wanderAngle: 0 },
+    ];
+    const [fx, fy] = alignForce(agent, [agent, ...neighbours], PARAMS, RADIUS);
+    expect(Math.atan2(fy, fx)).toBeCloseTo(Math.PI / 4, 6);
+  });
+
+  it('subtracts the agent’s own velocity (Reynolds steering, not raw seek)', () => {
+    // An agent already cruising at the neighbours’ heading needs almost no
+    // steering. A mutant that dropped the `- agent.v` term would return a
+    // full-speed force instead. (Pins the steering subtraction.)
+    const agent = { x: 0, y: 0, vx: PARAMS.maxSpeed, vy: 0, wanderAngle: 0 };
+    const neighbours = [
+      { x: 10, y: 0, vx: PARAMS.maxSpeed, vy: 0, wanderAngle: 0 },
+      { x: 0, y: 10, vx: PARAMS.maxSpeed, vy: 0, wanderAngle: 0 },
+    ];
+    const [fx, fy] = alignForce(agent, [agent, ...neighbours], PARAMS, RADIUS);
+    expect(Math.hypot(fx, fy)).toBeCloseTo(0, 9);
+  });
+
+  it('falls back to a stable direction when neighbour velocities cancel', () => {
+    // n > 0 but the velocity sum is (0,0): the `|| 1` guard must avoid 0/0.
+    const agent = { x: 0, y: 0, vx: 0, vy: 0, wanderAngle: 0 };
+    const neighbours = [
+      { x: 10, y: 0, vx: PARAMS.maxSpeed, vy: 0, wanderAngle: 0 },
+      { x: 0, y: 10, vx: -PARAMS.maxSpeed, vy: 0, wanderAngle: 0 },
+    ];
+    const [fx, fy] = alignForce(agent, [agent, ...neighbours], PARAMS, RADIUS);
+    expect(Number.isFinite(fx)).toBe(true);
+    expect(Number.isFinite(fy)).toBe(true);
+  });
 });
 
 describe('fleeForce', () => {

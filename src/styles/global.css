@@ -15,7 +15,8 @@
   --color-line: var(--line);
   --color-signal: var(--signal);
   --color-signal-text: var(--signal-text);
-  --color-debug: var(--debug);
+  /* No --color-debug utility: amber (--debug) is reached only by the canvas
+     overlay via getComputedStyle, so it can never leak into markup (§9.1). */
   --font-display: 'Archivo', 'Instrument Sans', system-ui, sans-serif;
   --font-sans: 'Instrument Sans', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
