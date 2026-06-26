@@ -342,7 +342,7 @@ CMS, comments, search, i18n, client frameworks, paid services beyond the domain,
 | Decision             | Default                                                                     | Owner | Due           |
 | -------------------- | --------------------------------------------------------------------------- | ----- | ------------- |
 | Domain name          | `philsanjaya.dev`                                                           | Phil  | before PHI-46 |
-| Analytics            | none (revisit post-launch; if any, privacy-respecting e.g. Plausible/umami) | Phil  | PHI-45        |
+| Analytics            | **Decided (PHI-45): none for v1** — no analytics or third-party scripts ship; revisit post-launch (if any, privacy-respecting e.g. Plausible/umami) | Phil  | PHI-45        |
 | Resume final content | current resume, refreshed                                                   | Phil  | PHI-40        |
 | Public repo name     | `philsanjaya.dev` or `portfolio`                                            | Phil  | PHI-27        |
 
