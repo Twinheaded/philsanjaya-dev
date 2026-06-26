@@ -54,6 +54,12 @@ const d = project.data;
     </header>
 
     <div class="relative mt-4 min-h-0 flex-1 overflow-y-auto" data-frame>
+      <!-- align island (§10): calm order behind the architecture chapter
+           only; activated by the chapter script, faint and aria-hidden. -->
+      <canvas
+        id="study-canvas"
+        class="pointer-events-none absolute inset-0 h-full w-full"
+        aria-hidden="true"></canvas>
       <!-- Chapter zero (FR-35): the generated dashboard. -->
       <section
         id="overview"
@@ -227,10 +233,21 @@ const d = project.data;
   // into chapter sections, then drives tabs, the next action, arrow keys,
   // and #chapter deep links. All listeners are delegated so they survive
   // view-transition swaps; everything no-ops off case-study pages.
+  import { mountAgents, type IslandController } from '../../islands/agents/engine';
+
   const CURRENT = { sections: [] as HTMLElement[], active: 0, timer: 0 };
+  // align island (§10): faint, 10–12 agents, active only behind the
+  // architecture chapter. Recreated per page; paused otherwise.
+  let island: IslandController | null = null;
 
   function study(): HTMLElement | null {
     return document.querySelector('[data-study]');
+  }
+
+  /** Activate align only while the architecture chapter is showing. */
+  function syncIsland(): void {
+    const active = CURRENT.sections[CURRENT.active]?.dataset.chapter === 'architecture';
+    island?.setActive(active);
   }
 
   function group(root: HTMLElement): HTMLElement[] {
@@ -336,10 +353,13 @@ const d = project.data;
     // users follow the swap (chapters are focusable regions).
     newS.focus({ preventScroll: true });
     syncChrome(root);
+    syncIsland();
   }
 
   function setup(): void {
     window.clearTimeout(CURRENT.timer); // a stale timer must not unlock the next page
+    island?.destroy();
+    island = null;
     const root = study();
     if (!root) {
       CURRENT.sections = [];
@@ -355,7 +375,19 @@ const d = project.data;
     CURRENT.sections.forEach((s, i) => {
       s.hidden = i !== target;
     });
+    // Mount the align island for this page; it stays paused until the
+    // architecture chapter is shown (no fps cost otherwise).
+    const canvas = root.querySelector<HTMLCanvasElement>('#study-canvas');
+    if (canvas) {
+      island = mountAgents(canvas, () => {}, {
+        behaviour: 'align',
+        opacity: 0.25,
+        count: [10, 12],
+        startActive: false,
+      });
+    }
     syncChrome(root);
+    syncIsland();
   }
 
   // Run once now (module scripts are deferred, so the DOM is ready —

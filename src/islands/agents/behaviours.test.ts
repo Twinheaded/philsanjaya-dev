@@ -7,6 +7,8 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  alignForce,
+  fleeForce,
   limit,
   mulberry32,
   step,
@@ -138,6 +140,86 @@ describe('step', () => {
       maxHeadingDelta = Math.max(maxHeadingDelta, Math.abs(h - initialHeading));
     }
     expect(maxHeadingDelta).toBeGreaterThan(0.1);
+  });
+});
+
+describe('alignForce', () => {
+  const RADIUS = 80;
+
+  it('returns no force when the agent has no neighbours', () => {
+    const agent = { ...makeAgent(), vx: 0, vy: 0 };
+    expect(alignForce(agent, [agent], PARAMS, RADIUS)).toEqual([0, 0]);
+  });
+
+  it('steers toward the neighbours’ average heading', () => {
+    // A still agent surrounded by neighbours all cruising +x should be
+    // pushed straight along +x at exactly maxForce (desired maxSpeed, v=0).
+    const agent = { x: 0, y: 0, vx: 0, vy: 0, wanderAngle: 0 };
+    const neighbours = [
+      { x: 10, y: 0, vx: PARAMS.maxSpeed, vy: 0, wanderAngle: 0 },
+      { x: 0, y: 10, vx: PARAMS.maxSpeed, vy: 0, wanderAngle: 0 },
+    ];
+    const [fx, fy] = alignForce(agent, [agent, ...neighbours], PARAMS, RADIUS);
+    expect(fx).toBeCloseTo(PARAMS.maxForce, 9);
+    expect(fy).toBeCloseTo(0, 9);
+  });
+
+  it('ignores neighbours outside the radius', () => {
+    const agent = { x: 0, y: 0, vx: 0, vy: 0, wanderAngle: 0 };
+    const far = { x: RADIUS + 1, y: 0, vx: PARAMS.maxSpeed, vy: 0, wanderAngle: 0 };
+    expect(alignForce(agent, [agent, far], PARAMS, RADIUS)).toEqual([0, 0]);
+  });
+
+  it('never exceeds maxForce', () => {
+    const agent = { x: 0, y: 0, vx: -PARAMS.maxSpeed, vy: 0, wanderAngle: 0 };
+    const neighbours = Array.from({ length: 8 }, (_, i) => ({
+      x: Math.cos(i) * 20,
+      y: Math.sin(i) * 20,
+      vx: PARAMS.maxSpeed,
+      vy: 0,
+      wanderAngle: 0,
+    }));
+    const [fx, fy] = alignForce(agent, [agent, ...neighbours], PARAMS, RADIUS);
+    expect(Math.hypot(fx, fy)).toBeLessThanOrEqual(PARAMS.maxForce + 1e-9);
+  });
+});
+
+describe('fleeForce', () => {
+  it('steers directly away from the point', () => {
+    // Agent at rest to the +x side of the point flees along +x at maxForce.
+    const agent = { x: 10, y: 0, vx: 0, vy: 0, wanderAngle: 0 };
+    const [fx, fy] = fleeForce(agent, 0, 0, PARAMS);
+    expect(fx).toBeCloseTo(PARAMS.maxForce, 9);
+    expect(fy).toBeCloseTo(0, 9);
+  });
+
+  it('points the desired velocity radially outward regardless of position', () => {
+    for (const angle of [0.3, 1.1, 2.7, -2.0, Math.PI]) {
+      const agent = {
+        x: Math.cos(angle) * 50,
+        y: Math.sin(angle) * 50,
+        vx: 0,
+        vy: 0,
+        wanderAngle: 0,
+      };
+      const [fx, fy] = fleeForce(agent, 0, 0, PARAMS);
+      // With v=0 the force equals the desired velocity, so its heading
+      // must match the agent's bearing from the point.
+      expect(Math.atan2(fy, fx)).toBeCloseTo(angle, 6);
+    }
+  });
+
+  it('never exceeds maxForce even at high inbound speed', () => {
+    const agent = { x: 5, y: 0, vx: -PARAMS.maxSpeed, vy: 0, wanderAngle: 0 };
+    const [fx, fy] = fleeForce(agent, 0, 0, PARAMS);
+    expect(Math.hypot(fx, fy)).toBeLessThanOrEqual(PARAMS.maxForce + 1e-9);
+  });
+
+  it('falls back to a stable direction when sitting exactly on the point', () => {
+    const agent = { x: 0, y: 0, vx: 0, vy: 0, wanderAngle: 0 };
+    const [fx, fy] = fleeForce(agent, 0, 0, PARAMS);
+    expect(Number.isFinite(fx)).toBe(true);
+    expect(Number.isFinite(fy)).toBe(true);
   });
 });
 

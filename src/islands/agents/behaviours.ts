@@ -1,11 +1,12 @@
 /**
- * Steering behaviours — a vanilla-TS port of the wander maths from
- * COS30002 Task 11: jitter a target point on a circle projected ahead
- * of the agent, steer toward it, clamp speed.
+ * Steering behaviours — a vanilla-TS port of the COS30002 Task 11 maths.
+ * `wander` jitters a target on a circle projected ahead of the agent;
+ * `align` averages neighbour headings; `flee` is an inverse seek away
+ * from a point (cursor, tap, or screen centre on the 404).
  *
  * Everything here is a pure function over plain data with an injected
- * RNG, so the maths is unit-testable in isolation (PHI-48) and M4 can
- * add behaviours (align, flee) without a rewrite (FR-11).
+ * RNG, so the maths is unit-testable in isolation (PHI-48) and the FSM
+ * (FR-11/FR-12) composes these without an engine rewrite.
  */
 
 export interface Agent {
@@ -77,6 +78,63 @@ export function wanderForce(agent: Agent, params: WanderParams, rng: Rng): [numb
   // Seek it: desired velocity at full speed, steering = desired − velocity.
   const dx = tx - agent.x;
   const dy = ty - agent.y;
+  const d = Math.hypot(dx, dy) || 1;
+  return limit(
+    (dx / d) * params.maxSpeed - agent.vx,
+    (dy / d) * params.maxSpeed - agent.vy,
+    params.maxForce
+  );
+}
+
+/**
+ * Alignment (FR-11, §10): steer toward the average heading of neighbours
+ * within `radius`. Returns [0, 0] when the agent has no neighbours — the
+ * caller blends a little wander so a lone agent keeps drifting rather than
+ * freezing. The agent itself is excluded from its own neighbourhood.
+ */
+export function alignForce(
+  agent: Agent,
+  agents: Agent[],
+  params: WanderParams,
+  radius: number
+): [number, number] {
+  const r2 = radius * radius;
+  let sx = 0;
+  let sy = 0;
+  let n = 0;
+  for (const other of agents) {
+    if (other === agent) continue;
+    const dx = other.x - agent.x;
+    const dy = other.y - agent.y;
+    if (dx * dx + dy * dy <= r2) {
+      sx += other.vx;
+      sy += other.vy;
+      n += 1;
+    }
+  }
+  if (n === 0) return [0, 0];
+  const m = Math.hypot(sx, sy) || 1;
+  return limit(
+    (sx / m) * params.maxSpeed - agent.vx,
+    (sy / m) * params.maxSpeed - agent.vy,
+    params.maxForce
+  );
+}
+
+/**
+ * Flee (FR-11/FR-13, §10): inverse seek — desired velocity points directly
+ * away from (px, py) at full speed; steering = desired − velocity, clamped.
+ * Used for the cursor repulsion, the touch-tap impulse, and the 404 where
+ * the point is the screen centre.
+ */
+export function fleeForce(
+  agent: Agent,
+  px: number,
+  py: number,
+  params: WanderParams
+): [number, number] {
+  const dx = agent.x - px;
+  const dy = agent.y - py;
   const d = Math.hypot(dx, dy) || 1;
   return limit(
     (dx / d) * params.maxSpeed - agent.vx,

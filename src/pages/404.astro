@@ -3,40 +3,37 @@ import Shell from '../layouts/Shell.astro';
 ---
 
 <Shell
-  title="Phil Sanjaya"
-  description="Portfolio of Phil Sanjaya — software engineering and data science student building agent simulations, ML pipelines, and ICS security tooling."
+  title="Not found — Phil Sanjaya"
+  description="That page does not exist. The agents have scattered; here is the way home."
 >
-  <section class="relative flex h-full flex-col justify-center p-5 md:p-12">
+  <section class="relative flex h-full flex-col items-center justify-center p-5 text-center md:p-12">
     <div class="pointer-events-none absolute inset-0" aria-hidden="true">
-      <canvas id="agent-canvas" class="h-full w-full"></canvas>
+      <canvas id="notfound-canvas" class="h-full w-full"></canvas>
     </div>
     <div class="relative">
-      <p class="font-mono text-xs tracking-[0.08em] text-signal-text">
-        philsanjaya.dev — built in public
-      </p>
+      <p class="font-mono text-xs tracking-[0.08em] text-signal-text">error 404</p>
       <h1 class="mt-3 font-display text-[clamp(2.5rem,6vw,4rem)] leading-tight font-medium">
-        Phil Sanjaya
+        Nothing here
       </h1>
-      <p class="mt-4 max-w-xl text-mist">
-        Software engineering and data science student at Swinburne, Melbourne. I build agent
-        simulations, ML pipelines, and ICS security tooling — and I'm looking for internships and
-        graduate roles.
+      <p class="mx-auto mt-4 max-w-md text-mist">
+        That page does not exist — the agents have scattered from the centre. The maths is real;
+        the joke is intended.
       </p>
-      <div class="mt-8 flex gap-4">
+      <div class="mt-8 flex justify-center gap-4">
+        <a
+          href="/"
+          class="rounded-[10px] border border-line bg-surface px-5 py-2 text-sm hover:border-signal motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
+          >Back home</a
+        >
         <a
           href="/projects"
           class="rounded-[10px] border border-line bg-surface px-5 py-2 text-sm hover:border-signal motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
           >View projects</a
         >
-        <a
-          href="/about"
-          class="rounded-[10px] border border-line bg-surface px-5 py-2 text-sm hover:border-signal motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
-          >About me</a
-        >
       </div>
     </div>
     <p
-      id="agent-readout"
+      id="notfound-readout"
       class="absolute bottom-5 left-5 font-mono text-xs text-mist md:bottom-8 md:left-12"
     >
     </p>
@@ -50,17 +47,16 @@ import Shell from '../layouts/Shell.astro';
       function mount(): void {
         island?.destroy();
         island = null;
-        const canvas = document.getElementById('agent-canvas') as HTMLCanvasElement | null;
-        const readout = document.getElementById('agent-readout');
+        const canvas = document.getElementById('notfound-canvas') as HTMLCanvasElement | null;
+        const readout = document.getElementById('notfound-readout');
         if (!canvas || !readout) return;
-        // Home: wander, the §10 default state.
+        // 404: flee from the screen centre — chaos as the joke (§10).
         island = mountAgents(canvas, (data) => renderReadout(readout, data), {
-          behaviour: 'wander',
+          behaviour: 'flee',
+          fleeFromCenter: true,
         });
       }
 
-      // Run once now (on a cold load astro:page-load may already have
-      // fired before this module finished loading) and after every swap.
       mount();
       document.addEventListener('astro:page-load', mount);
     </script>
