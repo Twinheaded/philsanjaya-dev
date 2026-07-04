@@ -2,7 +2,7 @@
 
 |                                |                                                                   |
 | ------------------------------ | ----------------------------------------------------------------- |
-| **Product**                    | Personal portfolio website (working domain: philsanjaya.dev, TBC) |
+| **Product**                    | Personal portfolio website (production domain: philsanjaya.com — purchased, DNS on Cloudflare) |
 | **Version**                    | 1.2                                                               |
 | **Date**                       | 13 June 2026                                                      |
 | **Owner / Director**           | Phil Sanjaya                                                      |
@@ -341,7 +341,7 @@ CMS, comments, search, i18n, client frameworks, paid services beyond the domain,
 
 | Decision             | Default                                                                     | Owner | Due           |
 | -------------------- | --------------------------------------------------------------------------- | ----- | ------------- |
-| Domain name          | `philsanjaya.dev`                                                           | Phil  | before PHI-46 |
+| Domain name          | **Decided: `philsanjaya.com`** — purchased, DNS on Cloudflare; site config (canonical/OG `site`, redirects) flips at PHI-46 | Phil  | before PHI-46 |
 | Analytics            | **Decided (PHI-45): none for v1** — no analytics or third-party scripts ship; revisit post-launch (if any, privacy-respecting e.g. Plausible/umami) | Phil  | PHI-45        |
 | Resume final content | current resume, refreshed                                                   | Phil  | PHI-40        |
 | Public repo name     | `philsanjaya.dev` or `portfolio`                                            | Phil  | PHI-27        |

@@ -24,3 +24,6 @@ lerna-debug.log*
 
 # local agent tooling (machine-specific launch config)
 /.claude/
+
+# private source documents (coursework sources — read and cite only, never commit)
+_inbox/
