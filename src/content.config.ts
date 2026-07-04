@@ -51,6 +51,9 @@ const projects = defineCollection({
       )
       .default([]),
     hero: z.string().optional(),
+    /** Poster frame for video heroes (FR-38): shown before playback and as
+     *  the reduced-motion fallback, where the video never autoplays. */
+    heroPoster: z.string().optional(),
   }),
 });
 

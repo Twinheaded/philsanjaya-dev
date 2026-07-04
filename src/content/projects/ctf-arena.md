@@ -18,6 +18,8 @@ metrics:
   - label: Respawns with influence map
     value: 31 → 8 per match
     source: summary.md secondary study — Mann-Whitney p = 4.05e-50
+hero: /media/ctf-arena-demo.webm
+heroPoster: /media/ctf-arena-poster.webp
 ---
 
 ## Problem
@@ -61,8 +63,11 @@ Across 150 head-to-head matches the coordinated team won 134, lost 2, and drew 1
 and 0.893 over all matches. The hypothesis held, but one part was refuted: the advantage
 was *smallest* on the chokepoint map (0.760) and largest on open ground (0.960), the
 opposite of the prediction — reported as found. The mechanism was the second surprise:
-in symmetric play the coordinated team scores *fewer* captures (0.7 vs 1.6 per match);
-it wins by defence, not offence. The strongest single result belongs to the influence
+in symmetric play the coordinated team scores *fewer* captures (0.7 vs 1.6 per match) —
+but that cut pits each team against a different opponent, so it measures the enemy's
+defence. Head-to-head, where the two styles actually meet, coordination outscores the
+greedy baseline 2.35 to 0.37 captures per match while starving it: it wins by denial
+*and* offence. The strongest single result belongs to the influence
 map, which cut agent respawns from 31.07 to 8.03 per match (p = 4.05e-50).
 
 ## Reflection

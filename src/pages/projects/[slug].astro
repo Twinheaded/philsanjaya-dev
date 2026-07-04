@@ -92,13 +92,22 @@ const d = project.data;
         {
           d.hero &&
             (/\.(webm|mp4)$/i.test(d.hero) ? (
+              /* FR-38: lazy hero — preload="none" means nothing downloads
+                 until the script starts playback (or the user presses play).
+                 Muted-autoplay + loop is applied by the script only when
+                 prefers-reduced-motion allows it; otherwise this stays a
+                 poster with controls. Without JS: poster + controls. */
               <video
                 src={d.hero}
+                poster={d.heroPoster}
                 class="mt-6 max-h-[40vh] rounded-[10px] border border-line"
+                data-hero-video
                 controls
                 muted
+                loop
                 playsinline
                 preload="none"
+                aria-label={`${d.title} — demonstration video`}
               ></video>
             ) : (
               <img
@@ -259,6 +268,24 @@ const d = project.data;
     island?.setActive(active);
   }
 
+  /** FR-38 hero video: muted-autoplay on the overview chapter, paused on
+   *  the others. Under prefers-reduced-motion the video is never started —
+   *  the poster (and controls) stand in, and preload="none" means the
+   *  video bytes are never fetched either. */
+  function syncHero(): void {
+    const video = study()?.querySelector<HTMLVideoElement>('[data-hero-video]');
+    if (!video || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (CURRENT.sections[CURRENT.active]?.dataset.chapter === 'overview') {
+      video.controls = false;
+      video.play().catch(() => {
+        // Autoplay refused (e.g. low-power mode): hand control back.
+        video.controls = true;
+      });
+    } else {
+      video.pause();
+    }
+  }
+
   /** Announce the current chapter to assistive tech (FR-71/72). */
   function announce(root: HTMLElement): void {
     const region = root.querySelector<HTMLElement>('[data-announce]');
@@ -373,6 +400,7 @@ const d = project.data;
     // control (tab or next button).
     syncChrome(root);
     syncIsland();
+    syncHero();
     announce(root);
   }
 
@@ -409,6 +437,7 @@ const d = project.data;
     }
     syncChrome(root);
     syncIsland();
+    syncHero();
   }
 
   // Run once now (module scripts are deferred, so the DOM is ready —
