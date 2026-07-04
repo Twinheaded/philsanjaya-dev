@@ -1,11 +1,11 @@
-# philsanjaya.dev
+# philsanjaya.com
 
 Personal portfolio of Phil Sanjaya — a fixed-viewport, no-scroll site where panels slide
 instead of scrolling, with a live canvas of autonomous steering agents as the signature
 element. Built in public, milestone by milestone.
 
-**Live:** <https://philsanjaya-dev.pages.dev> (Cloudflare Pages; the production domain
-philsanjaya.dev arrives at milestone M5)
+**Live:** <https://philsanjaya.com> (Cloudflare Pages project `philsanjaya-dev`; the
+`philsanjaya-dev.pages.dev` deploy origin serves the same build)
 
 The full specification lives in [docs/PRD.md](docs/PRD.md). Work is tracked in the Linear
 project "Portfolio Website" (PHI-27 … PHI-49); every commit references its issue.

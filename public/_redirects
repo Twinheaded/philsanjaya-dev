@@ -1,0 +1,4 @@
+# www -> apex (PHI-46, PRD §11.4). Cloudflare Pages host-based redirect;
+# www.philsanjaya.com is attached to the project so it terminates TLS here,
+# then every request 301s to the apex with the path preserved.
+https://www.philsanjaya.com/* https://philsanjaya.com/:splat 301

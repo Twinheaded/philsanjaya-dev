@@ -19,7 +19,7 @@ const { title, description, ogImage = '/og/default.png' } = Astro.props;
 const current = panelIndex(Astro.url.pathname);
 
 // Canonical + social URLs from the configured site (PRD §7.80–84). Astro.site
-// is the pages.dev host until M5 flips it to the production domain.
+// is the production domain philsanjaya.com (flipped at PHI-46).
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const ogImageURL = new URL(ogImage, Astro.site);
 ---
@@ -38,7 +38,7 @@ const ogImageURL = new URL(ogImage, Astro.site);
     <link rel="canonical" href={canonical} />
     <!-- Open Graph / Twitter (FR-82). -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="philsanjaya.dev" />
+    <meta property="og:site_name" content="philsanjaya.com" />
     <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -111,7 +111,7 @@ const ogImageURL = new URL(ogImage, Astro.site);
               stroke-width="3"
               stroke-linecap="round"></path>
           </svg>
-          <span class="font-mono text-xs tracking-[0.08em] text-ink">philsanjaya.dev</span>
+          <span class="font-mono text-xs tracking-[0.08em] text-ink">philsanjaya.com</span>
         </a>
         <ol class="flex flex-1 items-stretch justify-around md:mt-10 md:flex-col md:justify-start md:gap-2">
           {

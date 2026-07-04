@@ -28,7 +28,7 @@ interface Card {
 
 const DEFAULT: Card = {
   title: 'Phil Sanjaya',
-  kicker: 'philsanjaya.dev',
+  kicker: 'philsanjaya.com',
   summary:
     'Software engineering and data science — agent simulations, ML pipelines, and ICS security tooling.',
 };
@@ -91,7 +91,7 @@ function template(card: Card): Parameters<typeof satori>[0] {
             ],
           },
         },
-        text('philsanjaya.dev', { fontFamily: 'IBM Plex Mono', fontSize: 24, color: '#67706C' }),
+        text('philsanjaya.com', { fontFamily: 'IBM Plex Mono', fontSize: 24, color: '#67706C' }),
       ],
     },
   };

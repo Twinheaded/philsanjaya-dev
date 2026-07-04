@@ -1,0 +1,10 @@
+# Security headers (PHI-46, PRD §11.4). Served by Cloudflare Pages.
+# The script-src hash is the FR-08 inline theme snippet in Shell.astro —
+# the site's ONLY inline script. If that snippet changes, recompute:
+# sha256(base64) of the exact built <script> body in dist/index.html.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-GPoKBNhT59nkFtJSv49GJPwxuKMFId3KuVUZ5AmqxZA='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
