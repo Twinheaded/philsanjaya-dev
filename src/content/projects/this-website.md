@@ -17,7 +17,7 @@ metrics:
     source: vitest run at launch — behaviours.test.ts (wander, align, flee, clamps, determinism)
   - label: Lighthouse score
     value: 100 · 100 · 100 · 100
-    source: 'home, production, real throttled Chrome — PHI-45 audit + launch re-run (case study with hero video: 99 perf)'
+    source: 'home, production, real throttled Chrome — PHI-45 audit + launch re-run (hero case study: 99–100 perf across runs)'
 links:
   - { label: Source on GitHub, url: 'https://github.com/Twinheaded/philsanjaya-dev' }
 ---
