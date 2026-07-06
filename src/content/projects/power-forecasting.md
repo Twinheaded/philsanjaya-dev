@@ -31,7 +31,7 @@ rather than copy a neighbouring meter.
 
 ## Approach
 
-Three models on an identical 80/20 chronologically-prepared split with a
+Three models on an identical, seeded 80/20 split with a
 train-fit-only scaler: a 200-tree Random Forest, a scikit-learn MLP (64, 32), and a
 Keras network — 64 → 32 → 16 with dropout after the first two layers, 3,265 parameters
 in total — swept across batch sizes 16, 32, and 64. The sweep was real, not decorative:

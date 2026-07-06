@@ -42,7 +42,7 @@ question underneath: when the run is over, what can the code still prove?
 News comes from Alpha Vantage's NEWS_SENTIMENT feed (clients for Finnhub and NewsAPI
 were written but never wired into the pipeline — capability, not usage). Each article's
 title and summary are scored three ways — VADER, TextBlob, and FinBERT — joined by the
-feed's own score, then averaged per trading day into an ensemble sentiment with its
+feed's own score, then averaged per day into an ensemble sentiment with its
 disagreement spread. Every source-ticker-range fetch is cached to CSV, so re-runs skip
 the network entirely. Feature engineering produces 35 features in the configured run:
 OHLCV, eleven sentiment aggregates, seven technical indicators, nine lags, and three
@@ -64,7 +64,7 @@ fit on the network's training residuals, added back onto its forecast.
 ## Results
 
 This chapter spent weeks deliberately empty: the pipeline demonstrably ran — 667
-trading days of multi-tool sentiment for IBM and Coca-Cola sit in the caches with real
+days of multi-tool sentiment for IBM and Coca-Cola sit in the caches with real
 FinBERT scores — but every metric went to stdout and every plot to a window, so there
 was nothing to cite. The receipt now exists: the submitted project report captures the
 configured run in full. Baseline, trained on the 18 technical features left after

@@ -41,7 +41,7 @@ controller is a drop-in sibling that writes an empty role table — every agent 
 to a three-branch greedy policy. The committed study is 600 matches: 50 per condition per
 map across three symmetric maps of varying chokepoint density, all reproducible from one
 master seed through a headless harness that runs at roughly 90× real time. The codebase
-carries 134 pytest tests — including same-seed replay tests that pin determinism — and 53
+carries 135 pytest tests — including same-seed replay tests that pin determinism — and 53
 functional requirements tracked through 18 Linear issues.
 
 ## Architecture

@@ -10,14 +10,14 @@ question: Can a fixed-viewport, no-scroll shell stay usable for real content?
 status: published
 metrics:
   - label: Agent island JS
-    value: 1.6 KB gz
-    source: gzip of the inlined island script, commit 9e8830a
+    value: 2.9 KB gz
+    source: gzip of the dist engine + readout bundles at launch, 2026-07-06 (budget ≤12 KB)
   - label: Steering maths tests
-    value: '18'
-    source: vitest run, commit a6dd73a
+    value: '29'
+    source: vitest run at launch — behaviours.test.ts (wander, align, flee, clamps, determinism)
   - label: Lighthouse score
-    value: pending
-    source: M4 audit (PHI-45)
+    value: 100 · 100 · 100 · 100
+    source: 'home, production, real throttled Chrome — PHI-45 audit + launch re-run (case study with hero video: 99 perf)'
 links:
   - { label: Source on GitHub, url: 'https://github.com/Twinheaded/philsanjaya-dev' }
 ---
@@ -48,7 +48,8 @@ then deploys to Cloudflare Pages.
 ## Results
 
 The metrics above are the build's own receipts: the island's gzipped size, the test
-count, and a Lighthouse card that stays an em-dash until the M4 audit actually runs.
+count, and a Lighthouse card that stayed an em-dash until the M4 audit actually ran —
+and was re-measured, on the production domain, the day the site launched.
 
 ## Reflection
 
