@@ -27,7 +27,7 @@ interface Card {
 }
 
 const DEFAULT: Card = {
-  title: 'Phil Sanjaya',
+  title: 'Philipus Sanjaya',
   kicker: 'philsanjaya.com',
   summary:
     'Software engineering and data science — agent simulations, ML pipelines, and ICS security tooling.',

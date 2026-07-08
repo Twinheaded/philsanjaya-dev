@@ -10,11 +10,11 @@ const projects = (await getCollection('projects', ({ data }) => data.status === 
 // advertises content the page does not contain (§9.3, FR-80).
 const description =
   projects.length > 0
-    ? `Projects by Phil Sanjaya: ${projects.map((p) => p.data.title).join(', ')}.`
-    : 'Projects by Phil Sanjaya.';
+    ? `Projects by Philipus Sanjaya: ${projects.map((p) => p.data.title).join(', ')}.`
+    : 'Projects by Philipus Sanjaya.';
 ---
 
-<Shell title="Projects — Phil Sanjaya" description={description}>
+<Shell title="Projects — Philipus Sanjaya" description={description}>
   <div class="flex h-full flex-col p-5 md:p-12">
     <p class="font-mono text-xs tracking-[0.08em] text-mist">02 — projects</p>
     <h1 class="mt-2 font-display text-[28px] font-medium">Projects</h1>

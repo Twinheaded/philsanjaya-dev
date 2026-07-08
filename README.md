@@ -1,6 +1,6 @@
 # philsanjaya.com
 
-Personal portfolio of Phil Sanjaya — a fixed-viewport, no-scroll site where panels slide
+Personal portfolio of Philipus Sanjaya — a fixed-viewport, no-scroll site where panels slide
 instead of scrolling, with a live canvas of autonomous steering agents as the signature
 element. Built in public, milestone by milestone.
 
