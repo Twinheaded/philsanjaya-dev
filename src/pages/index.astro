@@ -1,11 +1,30 @@
 ---
 import Shell from '../layouts/Shell.astro';
+
+// JSON-LD Person entity: tells search engines this site is the canonical
+// home of Philipus Sanjaya and ties the profiles into one identity. A
+// type="application/ld+json" block is data, never executed, so the CSP
+// script-src hashes in public/_headers do not apply to it.
+const person = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: 'Philipus Sanjaya',
+  alternateName: ['Phil Sanjaya', 'Philip Sanjaya'],
+  url: 'https://philsanjaya.com',
+  email: 'mailto:sanjayaphilipus11@gmail.com',
+  alumniOf: {
+    '@type': 'CollegeOrUniversity',
+    name: 'Swinburne University of Technology',
+  },
+  sameAs: ['https://github.com/Twinheaded', 'https://linkedin.com/in/philipus-sanjaya'],
+};
 ---
 
 <Shell
   title="Philipus Sanjaya"
   description="Portfolio of Philipus Sanjaya — final-semester computer science student (Data Science & AI) at Swinburne building agent simulations, ML pipelines, and ICS security tooling."
 >
+  <script type="application/ld+json" set:html={JSON.stringify(person)} is:inline></script>
   <section class="relative flex h-full flex-col justify-center p-5 md:p-12">
     <div class="pointer-events-none absolute inset-0" aria-hidden="true">
       <canvas id="agent-canvas" class="h-full w-full"></canvas>
