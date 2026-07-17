@@ -95,6 +95,14 @@
   pointer-events: none;
 }
 
+/* The slide stays inside the stage frame: snapshots render in the top
+   layer where no ancestor clips them, and the stage group paints above
+   the rail's (capture order follows DOM order), so an unclipped
+   translateX(±100%) sweeps the outgoing panel across the left menu. */
+::view-transition-image-pair(stage) {
+  overflow: clip;
+}
+
 ::view-transition-old(stage),
 ::view-transition-new(stage) {
   animation-duration: 550ms;
@@ -164,6 +172,16 @@ html[data-nav-direction='back']::view-transition-new(stage) {
 .note-pane.more-below {
   -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
   mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
+}
+
+/* Contained-scroll fallback for fixed panels: layouts sized to fit the
+   stage scroll instead of clipping (or painting over their neighbours)
+   when a short viewport cannot hold them — the same sanctioned-scroll
+   shape as the reading pane. */
+.panel-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--mist) transparent;
 }
 
 /*

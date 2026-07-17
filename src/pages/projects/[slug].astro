@@ -28,7 +28,10 @@ const d = project.data;
 
 <Shell title={`${d.title} — Philipus Sanjaya`} description={d.summary} ogImage={`/og/${d.slug}.png`}>
   <article class="flex h-full min-h-0 flex-col p-5 md:p-12" data-study>
-    <header class="flex flex-wrap items-baseline justify-between gap-2">
+    <!-- pr-24 below md keeps the right-aligned chapter tabs clear of the
+         fixed settings pill (Shell, top-4 right-4 z-40), which otherwise
+         covers the last tabs and intercepts their taps on phones. -->
+    <header class="flex flex-wrap items-baseline justify-between gap-2 pr-24 md:pr-0">
       <!-- Persistent h1: the visual title lives in the overview chapter,
            which is display:none on other chapters under JS. -->
       <h1 class="sr-only">{d.title}</h1>

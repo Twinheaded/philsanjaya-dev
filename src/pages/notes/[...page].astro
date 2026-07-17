@@ -21,7 +21,11 @@ const formatDate = (d: Date) =>
   <div class="flex h-full flex-col p-5 md:p-12">
     <p class="font-mono text-xs tracking-[0.08em] text-mist">03 — notes</p>
     <h1 class="mt-2 font-display text-[28px] font-medium">Notes</h1>
-    <ul class="mt-6 max-w-2xl divide-y divide-line border-y border-line">
+    <!-- Contained scroll (px-1/-mx-1 keeps row focus rings inside the
+         clip): a short stage scrolls the list instead of clipping rows
+         and the pagination out of reach. -->
+    <div class="panel-scroll mt-6 -mx-1 min-h-0 px-1">
+      <ul class="max-w-2xl divide-y divide-line border-y border-line">
       {
         page.data.map((note) => (
           <li>
@@ -40,7 +44,8 @@ const formatDate = (d: Date) =>
           </li>
         ))
       }
-    </ul>
+      </ul>
+    </div>
     {
       (page.url.prev || page.url.next) && (
         <p class="mt-6 flex gap-6 font-mono text-xs">

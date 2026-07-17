@@ -25,11 +25,14 @@ const person = {
   description="Portfolio of Philipus Sanjaya — final-semester computer science student (Data Science & AI) at Swinburne building agent simulations, ML pipelines, and ICS security tooling."
 >
   <script type="application/ld+json" set:html={JSON.stringify(person)} is:inline></script>
-  <section class="relative flex h-full flex-col justify-center p-5 md:p-12">
+  <!-- my-auto centres the hero exactly like justify-center while it
+       fits, but lets very short stages scroll from the top instead of
+       clipping the heading and CTAs off both edges. -->
+  <section class="panel-scroll relative flex h-full flex-col p-5 md:p-12">
     <div class="pointer-events-none absolute inset-0" aria-hidden="true">
       <canvas id="agent-canvas" class="h-full w-full"></canvas>
     </div>
-    <div class="relative">
+    <div class="relative my-auto">
       <p class="font-mono text-xs tracking-[0.08em] text-signal-text">
         philsanjaya.com — built in public
       </p>

@@ -7,8 +7,12 @@ import { SITE } from '../lib/site';
   title="About — Philipus Sanjaya"
   description="Philipus Sanjaya: final-semester computer science student (Data Science & AI) at Swinburne, Melbourne, seeking graduate software engineering and data/ML roles."
 >
-  <div class="flex h-full flex-col justify-center p-5 md:p-12">
-    <p class="font-mono text-xs tracking-[0.08em] text-mist">05 — about</p>
+  <!-- Auto margins on the first/last child centre the group like
+       justify-center while the stage fits it, but collapse to zero when
+       it does not — so short viewports scroll from the top instead of
+       clipping the heading and the contact row off both edges. -->
+  <div class="panel-scroll flex h-full flex-col p-5 md:p-12">
+    <p class="mt-auto font-mono text-xs tracking-[0.08em] text-mist">05 — about</p>
     <h1 class="mt-2 font-display text-[28px] font-medium">About</h1>
     <div class="mt-6 max-w-xl space-y-4 text-mist">
       <p>
@@ -53,7 +57,7 @@ import { SITE } from '../lib/site';
         >Resume (PDF)</a
       >
     </div>
-    <p class="mt-6 max-w-xl font-mono text-xs text-mist">
+    <p class="mt-6 mb-auto max-w-xl font-mono text-xs text-mist">
       This site's source is public:
       <a class="text-signal-text underline underline-offset-4" href={SITE.repoUrl}
         >github.com/Twinheaded/philsanjaya-dev</a

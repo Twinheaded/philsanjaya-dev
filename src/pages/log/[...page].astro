@@ -25,7 +25,12 @@ const formatDate = (d: Date) =>
   <div class="flex h-full flex-col p-5 md:p-12">
     <p class="font-mono text-xs tracking-[0.08em] text-mist">04 — build log</p>
     <h1 class="mt-2 font-display text-[28px] font-medium">Build log</h1>
-    <ol class="relative mt-6 min-h-0 max-w-2xl space-y-4 border-l border-line pl-6">
+    <!-- The scroll box wraps the list (px-1/-mx-1 keeps the timeline
+         dots, which straddle the border, inside the clip) so a short
+         stage scrolls the entries instead of letting the squeezed list
+         paint its cards across the pagination row below. -->
+    <div class="panel-scroll mt-6 -mx-1 min-h-0 px-1">
+      <ol class="relative max-w-2xl space-y-4 border-l border-line pl-6">
       {
         page.data.map((e) => (
           <li class="relative">
@@ -62,7 +67,8 @@ const formatDate = (d: Date) =>
           </li>
         ))
       }
-    </ol>
+      </ol>
+    </div>
     {
       (page.url.prev || page.url.next) && (
         <p class="mt-6 flex gap-6 font-mono text-xs">

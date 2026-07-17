@@ -146,11 +146,14 @@ const ogImageURL = new URL(ogImage, Astro.site);
       </main>
       <!-- FR-09: keycap indicators sit low in the stage and light for 150ms
            on an actual arrow keypress, teaching the shortcut silently.
-           Decorative + desktop-only (mobile navigates by swipe). -->
+           Decorative + lg-up only (the rail's "← → move" hint covers
+           md–lg, and below lg the caps collided with the home readout
+           row); centered over the stage, not the shell, so they clear
+           the readout even with its "· debug" suffix. -->
       <div
         id="keycaps"
         aria-hidden="true"
-        class="js-only pointer-events-none absolute bottom-4 left-1/2 hidden -translate-x-1/2 gap-1.5 font-mono text-xs md:flex"
+        class="js-only pointer-events-none absolute bottom-4 left-[calc(50%+100px)] hidden -translate-x-1/2 gap-1.5 font-mono text-xs lg:flex"
       >
         <kbd data-key="ArrowLeft" class="keycap rounded border border-line px-2 py-0.5 text-mist"
           >&larr;</kbd
