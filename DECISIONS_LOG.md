@@ -135,3 +135,12 @@ are logged here with dates, so the spec's intent and the code stay reconciled.
   spec §2. The dark-mode blocks in `tokens.css` are retained as the seed for the
   future "workshop at night" project.
 - Recorded on the branch as `chore(redesign): baseline audit and decision log`.
+
+### 2026-07-20 — Handoff committed & branch pushed (Phil's decision)
+
+- Per Phil, the handoff spec is now committed to the repo at
+  [`INVENTORS_WORKBENCH_HANDOFF.md`](INVENTORS_WORKBENCH_HANDOFF.md) (repo root) —
+  the source-of-truth the Linear issues cite. It is now part of the public repo,
+  consistent with the "built in public" signature. Resolves M0 flag #1.
+- Pushed `redesign/inventors-workbench` to `origin` at Phil's direction.
+- Holding at the M0 boundary: **M1 (PHI-62) does not start without Phil's go.**
