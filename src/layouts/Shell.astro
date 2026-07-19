@@ -2,11 +2,12 @@
 import '../styles/global.css';
 import { ClientRouter } from 'astro:transitions';
 import { PANELS, panelIndex } from '../lib/panels';
-// Preload the above-the-fold latin subsets so the hero text paints without a
-// font swap (FR-NFR fonts preloaded, §8). Vite fingerprints these URLs.
-import archivoUrl from '@fontsource/archivo/files/archivo-latin-500-normal.woff2?url';
-import instrumentUrl from '@fontsource/instrument-sans/files/instrument-sans-latin-400-normal.woff2?url';
-import monoUrl from '@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2?url';
+// Preload only the two primary Geist weights (400 body, 500 medium/display) so
+// the above-the-fold hero paints without a swap (§6). Geist Mono and Geist 700
+// self-host via @fontsource CSS but are not preloaded; Caveat is never preloaded
+// (diagram-only, §6/§11). Vite fingerprints these URLs.
+import geist400Url from '@fontsource/geist/files/geist-latin-400-normal.woff2?url';
+import geist500Url from '@fontsource/geist/files/geist-latin-500-normal.woff2?url';
 
 interface Props {
   title: string;
@@ -29,9 +30,8 @@ const ogImageURL = new URL(ogImage, Astro.site);
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preload" href={archivoUrl} as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href={instrumentUrl} as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href={monoUrl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={geist400Url} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={geist500Url} as="font" type="font/woff2" crossorigin />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="description" content={description} />

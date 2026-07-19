@@ -1,25 +1,72 @@
 @import 'tailwindcss';
 @import './tokens.css';
 
-/* Self-hosted woff2 subsets (PRD §9.2, §11.1) */
-@import '@fontsource/archivo/500.css';
-@import '@fontsource/instrument-sans/400.css';
-@import '@fontsource/instrument-sans/500.css';
-@import '@fontsource/ibm-plex-mono/400.css';
+/* Self-hosted latin subsets (§6). Geist = display + body, Geist Mono =
+   labels/numbers/data. Preload of the two primary weights (400/500) lives in
+   Shell.astro. Caveat is NOT imported here — it loads lazily with diagram
+   components only (§6/§11) and is never referenced in UI CSS. */
+@import '@fontsource/geist/latin-400.css';
+@import '@fontsource/geist/latin-500.css';
+@import '@fontsource/geist/latin-700.css';
+@import '@fontsource/geist-mono/latin-400.css';
 
 @theme inline {
+  /* Workbench palette → Tailwind utilities. `inline` keeps the var() indirection
+     live so a future theme (§16 dark mode) can re-point the raw tokens. */
+  --color-desk: var(--desk);
+  --color-desk-deep: var(--desk-deep);
+  --color-desk-pool: var(--desk-pool);
+  --color-paper: var(--paper);
+  --color-paper-edge: var(--paper-edge);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-copper: var(--copper);
+  --color-copper-deep: var(--copper-deep);
+  --color-status: var(--status);
+
+  /* Legacy color aliases (bg-bg, bg-surface, text-mist, border-line,
+     text-signal, text-signal-text) — resolve to the workbench palette via the
+     aliases in tokens.css. Retired per-component as milestones rebuild them.
+     No --color-debug utility: amber (--debug) is reached only by the canvas
+     overlay via getComputedStyle, so it can never leak into markup (§9.1). */
   --color-bg: var(--bg);
   --color-surface: var(--surface);
-  --color-ink: var(--ink);
   --color-mist: var(--mist);
   --color-line: var(--line);
   --color-signal: var(--signal);
   --color-signal-text: var(--signal-text);
-  /* No --color-debug utility: amber (--debug) is reached only by the canvas
-     overlay via getComputedStyle, so it can never leak into markup (§9.1). */
-  --font-display: 'Archivo', 'Instrument Sans', system-ui, sans-serif;
-  --font-sans: 'Instrument Sans', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Type — Geist for display + body, Geist Mono for labels/data. Both
+     --font-display and --font-sans are Geist (§6): one family, weight does the
+     work. Caveat is intentionally absent (diagram-only). */
+  --font-display: 'Geist', 'Inter', system-ui, sans-serif;
+  --font-sans: 'Geist', 'Inter', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Type scale (§6). Sizes come from the raw --fs-* tokens (tokens.css) so base
+     CSS and utilities share one source. Utilities: text-display … text-micro. */
+  --text-display: var(--fs-display);
+  --text-display--line-height: 1.05;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.02em;
+
+  --text-h1: var(--fs-h1);
+  --text-h1--line-height: 1.15;
+  --text-h1--font-weight: 500;
+
+  --text-h2: var(--fs-h2);
+  --text-h2--line-height: 1.25;
+  --text-h2--font-weight: 500;
+
+  --text-body: var(--fs-body);
+  --text-body--line-height: 1.65;
+
+  --text-caption: var(--fs-caption);
+  --text-caption--line-height: 1.5;
+
+  --text-micro: var(--fs-micro);
+  --text-micro--line-height: 1.4;
+  --text-micro--letter-spacing: 0.08em;
 }
 
 @layer base {
@@ -28,19 +75,30 @@
     height: 100%;
   }
 
-  /* FR-01: the document body never scrolls; panels fit the stage. */
+  /* FR-01 / §2: the desk never scrolls — the camera moves; open documents
+     scroll internally. The two-tone ground (rung 2, §3/§8): a warm light pool
+     at desk centre fading to a --desk-deep vignette at the edges. */
   body {
     overflow: hidden;
-    background: var(--bg);
+    background-color: var(--desk);
+    background-image: radial-gradient(
+      145% 125% at 50% 38%,
+      var(--desk-pool) 0%,
+      var(--desk) 46%,
+      var(--desk-deep) 100%
+    );
     color: var(--ink);
     font-family: var(--font-sans);
+    font-size: var(--fs-body);
     line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
-  /* FR-71: token focus ring, site-wide (kept out of scoped styles). */
+  /* Focus ring, site-wide — copper, per §7.1 (2px, offset 3px). */
   :focus-visible {
-    outline: 2px solid var(--signal);
-    outline-offset: 2px;
+    outline: 2px solid var(--copper);
+    outline-offset: 3px;
   }
 
   /* Controls that only function with JS (theme toggle, key hints) are

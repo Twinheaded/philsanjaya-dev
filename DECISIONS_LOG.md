@@ -101,7 +101,7 @@ single conventional commit. Branch: `redesign/inventors-workbench`.
 | #   | Linear  | Milestone                                             | Status      |
 | --- | ------- | ----------------------------------------------------- | ----------- |
 | M0  | PHI-61  | Baseline audit and decision log                       | Done        |
-| M1  | PHI-62  | Design tokens, typography, two-tone ground            | Not started |
+| M1  | PHI-62  | Design tokens, typography, two-tone ground            | Done        |
 | M2  | PHI-63  | Zoned desk layout and title-block navigation          | Not started |
 | M3  | PHI-64  | Camera store and Slide verb                           | Not started |
 | M4  | PHI-65  | Fold/Unfold and Stack (document transitions)          | Not started |
@@ -144,3 +144,50 @@ are logged here with dates, so the spec's intent and the code stay reconciled.
   consistent with the "built in public" signature. Resolves M0 flag #1.
 - Pushed `redesign/inventors-workbench` to `origin` at Phil's direction.
 - Holding at the M0 boundary: **M1 (PHI-62) does not start without Phil's go.**
+
+### 2026-07-20 — M1 (PHI-62): tokens, typography, two-tone ground
+
+Per Phil's three M1 implementation notes:
+
+- **One palette via `@theme` (note #1).** `tokens.css` now holds the §5 workbench
+  palette as the single source of truth; `global.css` exposes it to Tailwind via
+  `@theme inline` (keeping the `var()` indirection for a future dark theme). The
+  raw `--fs-*` type-scale tokens are shared by base CSS and the `@theme` `--text-*`
+  utilities so sizes have one source.
+- **Legacy aliases keep every route rendering (note #2).** The original names
+  (`--bg/--surface/--mist/--line/--signal/--signal-text`, plus their Tailwind
+  utilities `bg-surface`/`text-mist`/`border-line`/…) are aliased onto the new
+  palette in `tokens.css` + `@theme`. Verified in-browser: un-migrated components
+  (Shell rail, project cards, `.prose-md`, `MetricCard`) render in the workbench
+  system — paper cards (`#fafaf8`) with paper-edge borders (`#efede7`) on the
+  desk ground, copper-deep active nav (`#8f5a26`), Geist throughout. Each alias
+  retires when its component's milestone rebuilds it.
+- **Fonts (note #3).** Self-hosted Geist (latin 400/500/700) + Geist Mono (400)
+  via Fontsource. **Preloaded only Geist 400 + 500** — deliberately *not* 700:
+  the current hero name (`index.astro`) is `font-medium` (500), so 400+500 are
+  the weights that actually paint above the fold until M2 rebuilds the hero with
+  the §6 700 display. Caveat is **not** installed/imported — deferred to M8
+  (diagram-only, never preloaded). All three faces confirmed `document.fonts`
+  loaded → no FOIT.
+- **Two-tone ground (rung 2).** `body` carries a radial light pool
+  (`--desk-pool #e1dcd3` → `--desk` → `--desk-deep` vignette); the desk still
+  never scrolls (`overflow: hidden`). Focus ring switched to copper (§7.1).
+- **OG images keep the legacy faces.** `src/pages/og/[...route].png.ts` still
+  loads Archivo/Instrument/IBM Plex Mono for satori, so those `@fontsource`
+  packages stay installed. OG cards render unchanged (§2 "OG images intact");
+  restyling OG typography/colours is a later pass, not M1.
+- **Dark-mode token blocks dropped** (superseding the M0 "retain as seed" note):
+  the real seed is handoff §16, not the old palette's dark hexes. The theme
+  toggle in Shell is now a visual no-op for one milestone; M2 hides it per §2.
+- **Contrast (measured).** `--ink` passes AA on paper/desk/desk-deep (15.0 /
+  10.4 / 8.7) — meets §14's requirement. Known transitional items, owned by M2's
+  paper composition + the M10 audit: small *muted* text (`ink-soft`, 3.5:1) and
+  *accent* text (`copper-deep`, 3.8:1) sitting directly on the bare desk fall
+  below 4.5:1; by design these belong on paper (5.1 / 5.5), where the current
+  hero/case-study transitional layout doesn't yet place them. `status` passes on
+  desk (4.6); copper indicators are paper-scoped (3.6).
+- **Verify:** `astro check` 0 errors · `astro build` 18 pages (OG incl.) ·
+  `vitest` 29/29 · in-browser render confirmed on `/`, `/projects`,
+  `/projects/aegisx`; console clean. `vite` still resolves 7.3.5 (pin held).
+- Committed as `feat(tokens): design tokens, typography, two-tone ground`;
+  pushed to update the branch preview. Holding before M2 (PHI-63).
