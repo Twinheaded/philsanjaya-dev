@@ -1,0 +1,150 @@
+---
+/**
+ * Sheet 01 — Home, the desk centre (§4).
+ *
+ * Name, one-line intro, the resume object, and featured experiment cards.
+ * The steering-agent canvas is anchored here (§12): composited above the desk
+ * ground, below the cards. It is only mounted while Home is the current zone —
+ * wiring it to the camera store is M3's job.
+ *
+ * Contrast rule (M2 note 4): text directly on the desk uses --ink only; muted
+ * and accent text lives on paper surfaces.
+ */
+import { getCollection } from 'astro:content';
+
+const featured = (await getCollection('projects', ({ data }) => data.status === 'published'))
+  .sort((a, b) => a.data.order - b.data.order)
+  .slice(0, 3);
+
+const expNo = (order: number) => `EXP.${String(order).padStart(3, '0')}`;
+---
+
+<div class="home">
+  <!-- Layer between the desk ground and the cards (§12). Decorative. -->
+  <div class="home__field" aria-hidden="true">
+    <canvas id="agent-canvas"></canvas>
+  </div>
+
+  <div class="home__content">
+    <p class="zone-kicker">01 — Home</p>
+    <h1 class="home__name">Philipus Sanjaya</h1>
+    <p class="home__intro">
+      Final-semester Computer Science student (Data Science &amp; AI) at Swinburne,
+      Melbourne, completing July 2026. I build agent simulations, ML pipelines, and
+      ICS security tooling — and I'm looking for graduate software engineering and
+      data/ML roles.
+    </p>
+
+    <ul class="home__objects">
+      <li>
+        <a class="paper-card paper-card--resume" href="/resume.pdf">
+          <p class="paper-card__meta">Document</p>
+          <p class="paper-card__title">Resume</p>
+          <p class="paper-card__note">PDF · download</p>
+        </a>
+      </li>
+      {
+        featured.map((p) => (
+          <li>
+            <a class="paper-card" href={`/projects/${p.data.slug}`}>
+              <p class="paper-card__meta">{expNo(p.data.order)}</p>
+              <p class="paper-card__title">{p.data.title}</p>
+              <p class="paper-card__note">{p.data.summary}</p>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="home__more">
+      <a class="desk-link" href="/projects">Open all experiments</a>
+    </p>
+  </div>
+</div>
+
+<style>
+  .home {
+    position: relative;
+  }
+
+  /* Agent field sits above the ground, below the cards (§12). It must not bleed
+     outside the zone: the sheet is a scroll container, so any overhang becomes a
+     horizontal scrollbar on the landing page. */
+  .home__field {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .home__field canvas {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .home__content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .home__name {
+    margin-block-start: calc(var(--space) * 1.5);
+    font-size: var(--fs-display);
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  /* On the bare desk, body copy stays --ink (10.4:1) — muted tones are
+     reserved for paper surfaces. */
+  .home__intro {
+    max-inline-size: 46ch;
+    margin-block-start: calc(var(--space) * 2);
+    color: var(--ink);
+  }
+
+  .home__objects {
+    display: grid;
+    gap: calc(var(--space) * 2);
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    margin-block-start: calc(var(--space) * 4);
+  }
+
+  .home__more {
+    margin-block-start: calc(var(--space) * 3);
+  }
+</style>
+
+<script>
+  import { mountAgents, type IslandController } from '../../islands/agents/engine';
+
+  let island: IslandController | null = null;
+
+  function mount(): void {
+    island?.destroy();
+    island = null;
+    // The canvas is anchored to Home and exists on every route (the desk is
+    // continuous), but only runs while Home is the posed zone — off-zone the
+    // loop would burn frames for nothing (§8 budget).
+    if (document.body.dataset.zone !== 'home') return;
+    const canvas = document.getElementById('agent-canvas') as HTMLCanvasElement | null;
+    if (!canvas) return;
+    island = mountAgents(canvas, () => {}, { behaviour: 'wander' });
+  }
+
+  function mountAndSettle(): void {
+    // Mount straight away — correct whenever layout is already settled.
+    mount();
+    // The field is sized by the zone's content, which reflows once Geist loads.
+    // Re-measure then, so the field is not left sized against a mid-layout box.
+    // Deliberately no requestAnimationFrame: a hidden document never paints a
+    // frame (the engine also parks its loop there, §8), and mounting must not
+    // depend on one.
+    if (document.fonts && document.fonts.status !== 'loaded') {
+      document.fonts.ready.then(mount, mount);
+    }
+  }
+
+  mountAndSettle();
+  document.addEventListener('astro:page-load', mountAndSettle);
+</script>

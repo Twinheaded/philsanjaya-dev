@@ -1,6 +1,6 @@
 ---
 import { getCollection, render } from 'astro:content';
-import Shell from '../../layouts/Shell.astro';
+import Sheet from '../../layouts/Sheet.astro';
 import NotePane from '../../components/NotePane.astro';
 import { SITE } from '../../lib/site';
 
@@ -24,7 +24,7 @@ const formatDate = (d: Date) =>
   d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 ---
 
-<Shell
+<Sheet
   title={`${entry.data.title} — build log — Philipus Sanjaya`}
   description={`Build log entry ${String(entry.data.entry).padStart(2, '0')}: ${entry.data.title}`}
 >
@@ -62,7 +62,7 @@ const formatDate = (d: Date) =>
       </div>
     </NotePane>
   </article>
-</Shell>
+</Sheet>
 
 <style>
   .chip:hover {

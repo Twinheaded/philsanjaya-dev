@@ -1,0 +1,87 @@
+---
+/**
+ * Sheet 03 — Notes (§4): index cards with a slight scatter.
+ *
+ * The tilt is derived deterministically from each note's id (no RNG per
+ * render), so the scatter is stable across builds and navigations.
+ */
+import type { Page } from 'astro';
+import { getCollection, type CollectionEntry } from 'astro:content';
+
+interface Props {
+  /** Supplied by the paginated /notes/[...page] route; defaults to the newest. */
+  page?: Page<CollectionEntry<'notes'>>;
+}
+
+const { page } = Astro.props;
+
+const all = (await getCollection('notes')).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
+);
+const notes = page ? page.data : all.slice(0, 6);
+
+/** Stable -0.80deg .. +0.80deg from the slug (§4: deterministic, no per-render RNG). */
+function tilt(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return `${((h % 161) / 100 - 0.8).toFixed(2)}deg`;
+}
+
+const formatDate = (d: Date) =>
+  d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+---
+
+<div>
+  <p class="zone-kicker">03 — Notes</p>
+  <h1 class="zone-title">Notes</h1>
+
+  {
+    notes.length > 0 ? (
+      <ul class="cards">
+        {notes.map((note) => (
+          <li style={`--tilt:${tilt(note.id)}`}>
+            <a class="paper-card index-card" href={`/notes/${note.id}`}>
+              <p class="paper-card__meta">
+                <time datetime={note.data.date.toISOString().slice(0, 10)}>
+                  {formatDate(note.data.date)}
+                </time>
+              </p>
+              <p class="paper-card__title">{note.data.title}</p>
+              {note.data.summary && <p class="paper-card__note">{note.data.summary}</p>}
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="zone-empty">No notes published yet.</p>
+    )
+  }
+
+  {
+    page && (page.url.prev || page.url.next) && (
+      <p class="zone-pager">
+        {page.url.prev && <a class="desk-link" href={page.url.prev}>&larr; Newer</a>}
+        {page.url.next && <a class="desk-link" href={page.url.next}>Older &rarr;</a>}
+      </p>
+    )
+  }
+</div>
+
+<style>
+  .cards {
+    display: grid;
+    gap: calc(var(--space) * 2);
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    margin-block-start: calc(var(--space) * 3);
+  }
+
+  .index-card {
+    transform: rotate(var(--tilt, 0deg));
+  }
+
+  .zone-pager {
+    display: flex;
+    gap: calc(var(--space) * 3);
+    margin-block-start: calc(var(--space) * 3);
+  }
+</style>

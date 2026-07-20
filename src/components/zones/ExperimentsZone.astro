@@ -1,0 +1,62 @@
+---
+/**
+ * Sheet 02 — Experiments (§4): a bento of the five experiment documents.
+ * Each card is paper at elevation 1 with its EXP number, title, one-line
+ * summary, period and status dot (§10). Muted metadata is safe here because
+ * it sits on paper (M2 note 4).
+ */
+import { getCollection } from 'astro:content';
+
+const experiments = (
+  await getCollection('projects', ({ data }) => data.status === 'published')
+).sort((a, b) => a.data.order - b.data.order);
+
+const expNo = (order: number) => `EXP.${String(order).padStart(3, '0')}`;
+---
+
+<div>
+  <p class="zone-kicker">02 — Experiments</p>
+  <h1 class="zone-title">Experiments</h1>
+
+  {
+    experiments.length > 0 ? (
+      <ul class="bento">
+        {experiments.map((p) => (
+          <li>
+            <a class="paper-card" href={`/projects/${p.data.slug}`}>
+              <p class="paper-card__meta">
+                <span class="status-dot" aria-hidden="true" />
+                {expNo(p.data.order)}
+              </p>
+              <p class="paper-card__title">{p.data.title}</p>
+              <p class="paper-card__note">{p.data.summary}</p>
+              <p class="paper-card__foot">{p.data.period}</p>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="zone-empty">No experiments published yet.</p>
+    )
+  }
+</div>
+
+<style>
+  .bento {
+    display: grid;
+    gap: calc(var(--space) * 2);
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    margin-block-start: calc(var(--space) * 3);
+  }
+
+  /* Forest green, strictly a live/status marker (§5). */
+  .status-dot {
+    display: inline-block;
+    inline-size: 6px;
+    block-size: 6px;
+    margin-inline-end: calc(var(--space) * 0.75);
+    border-radius: 50%;
+    background: var(--status);
+    vertical-align: middle;
+  }
+</style>

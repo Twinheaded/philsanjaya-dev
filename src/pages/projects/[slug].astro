@@ -1,6 +1,6 @@
 ---
 import { getCollection, render } from 'astro:content';
-import Shell from '../../layouts/Shell.astro';
+import Sheet from '../../layouts/Sheet.astro';
 import MetricCard from '../../components/MetricCard.astro';
 
 export async function getStaticPaths() {
@@ -26,12 +26,11 @@ const chapters = headings.filter((h) => h.depth === 2);
 const d = project.data;
 ---
 
-<Shell title={`${d.title} — Philipus Sanjaya`} description={d.summary} ogImage={`/og/${d.slug}.png`}>
+<Sheet title={`${d.title} — Philipus Sanjaya`} description={d.summary} ogImage={`/og/${d.slug}.png`}>
   <article class="flex h-full min-h-0 flex-col p-5 md:p-12" data-study>
-    <!-- pr-24 below md keeps the right-aligned chapter tabs clear of the
-         fixed settings pill (Shell, top-4 right-4 z-40), which otherwise
-         covers the last tabs and intercepts their taps on phones. -->
-    <header class="flex flex-wrap items-baseline justify-between gap-2 pr-24 md:pr-0">
+    <!-- The settings pill this used to clear (pr-24) was removed with the old
+         shell in M2 (§2: hide the settings control), so the padding went with it. -->
+    <header class="flex flex-wrap items-baseline justify-between gap-2">
       <!-- Persistent h1: the visual title lives in the overview chapter,
            which is display:none on other chapters under JS. -->
       <h1 class="sr-only">{d.title}</h1>
@@ -153,7 +152,7 @@ const d = project.data;
       ></button>
     </p>
   </article>
-</Shell>
+</Sheet>
 
 <style is:global>
   /* Hide ungrouped raw content only when JS is running, until the

@@ -70,11 +70,12 @@
 
   /* ---------------------------------------------------------------------- *
    * Legacy aliases — original token names mapped onto the workbench palette.
-   * Kept so un-migrated consumers (Shell, pages, MetricCard, Panel, the agent
-   * island) compile and adopt the new system. Retire each alias when its last
-   * consumer is rebuilt. Do NOT add new usages of these names.
+   * Kept so un-migrated consumers (the document templates under src/pages,
+   * MetricCard, NotePane and the agent island) compile and adopt the new system.
+   * Retire each alias when its last consumer is rebuilt — grep first. Do NOT add
+   * new usages of these names.
    * ---------------------------------------------------------------------- */
-  --bg:          var(--desk);        /* page ground → desk */
+  /* --bg retired in M2: the rebuilt shell paints the ground from --desk. */
   --surface:     var(--paper);       /* cards / panels → paper */
   --mist:        var(--ink-soft);    /* secondary text */
   --line:        var(--paper-edge);  /* borders, dividers, ruled lines */

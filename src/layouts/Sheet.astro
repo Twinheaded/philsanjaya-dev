@@ -1,0 +1,47 @@
+---
+/**
+ * An open document on the desk — layout for the detail routes
+ * (/projects/<slug>, /notes/<slug>, /log/<slug>, 404).
+ *
+ * M2 scope: the document renders as a paper sheet at elevation 3 over the desk
+ * ground, with its own contained scroll, and keeps the title block as the only
+ * chrome. The Unfold/Fold choreography and the Stack blur beneath are M4's —
+ * this is deliberately a static open document, not a faked transition.
+ */
+import BaseHead from '../components/BaseHead.astro';
+import TitleBlock from '../components/TitleBlock.astro';
+import { zoneForPath } from '../lib/zones';
+
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+}
+
+const { title, description, ogImage } = Astro.props;
+const parent = zoneForPath(Astro.url.pathname);
+---
+
+<html lang="en">
+  <head>
+    <BaseHead title={title} description={description} ogImage={ogImage} />
+  </head>
+  <body
+    data-zone={parent.id}
+    data-view="document"
+    style={`--cam-x:${parent.x}; --cam-y:${parent.y}; --cam-zoom:1;`}
+  >
+    <a class="skip-link" href="#sheet-index">Skip to sheet index</a>
+
+    <!-- tabindex: the stage scrolls on short viewports, and a scrollable region
+         must be reachable by keyboard (WCAG 2.1.1). -->
+    <main id="main" class="document" tabindex="0">
+      <div class="document__sheet">
+        <slot />
+      </div>
+    </main>
+
+    <TitleBlock />
+    <p class="sr-only" aria-live="polite">Document open, sheet {parent.sheet} {parent.label}</p>
+  </body>
+</html>

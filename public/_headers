@@ -1,11 +1,17 @@
 # Security headers (PHI-46, PRD §11.4). Served by Cloudflare Pages.
-# The script-src hashes pin the site's TWO inline scripts:
-#   GPoKB… = the FR-08 theme snippet (Shell.astro, every page)
+# The script-src hashes pin the site's TWO executable inline scripts:
+#   P33Z4… = the theme / data-js snippet (BaseHead.astro, every page)
 #   SIi6D… = the reading-pane scroll-mask observer (note/log pages)
-# If either changes, recompute sha256(base64) of the exact built
-# <script> bodies across dist/**/*.html — all of them, not just home.
+# The JSON-LD block on home is type="application/ld+json" — data, never
+# executed — so script-src does not apply to it.
+#
+# WARNING: these hashes cover the exact built <script> body, comments and
+# indentation included. Any edit to those snippets silently breaks CSP in
+# production — `npm run verify` cannot catch it, because _headers is only
+# applied by Cloudflare Pages. After touching either snippet, recompute
+# sha256(base64) over every inline <script> in dist/**/*.html and update here.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-GPoKBNhT59nkFtJSv49GJPwxuKMFId3KuVUZ5AmqxZA=' 'sha256-SIi6DAedYVa9OlhcTRSKfHg0eGE/bKnMtzZaOuXX4YY='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-P33Z4pbyrLeiJCu9CjXFylissC0yaScGMkkGp0pYOF4=' 'sha256-SIi6DAedYVa9OlhcTRSKfHg0eGE/bKnMtzZaOuXX4YY='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY

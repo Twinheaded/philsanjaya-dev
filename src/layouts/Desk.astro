@@ -1,0 +1,97 @@
+---
+/**
+ * The desk — layout for the five zone routes (§3, §4).
+ *
+ * Three layers, back to front:
+ *   Layer 0  the two-tone CSS ground (body, from global.css; WebGL lands in M5)
+ *   Layer 1  the DOM content plane — every zone, positioned in desk units
+ *   Layer 2  the HUD — skip link, title block, route announcer
+ *
+ * The pose is emitted server-side as `--cam-x` / `--cam-y` / `--cam-zoom` on
+ * `<body data-zone>`, and the plane derives its transform from those variables
+ * (M2 note 1). So a hard load is already posed with zero JS (rung 4), and M3's
+ * camera store animates these same variables rather than a second system.
+ *
+ * The desk is continuous: every route renders every zone, which is what lets
+ * M3's Slide move the *plane* with neighbours leaving past the frame edges.
+ * Off-zone content is inert and `content-visibility: auto` (§4).
+ *
+ * M2 has no camera motion (note 2): navigation is a plain route swap.
+ */
+import type { Page } from 'astro';
+import type { CollectionEntry } from 'astro:content';
+import BaseHead from '../components/BaseHead.astro';
+import TitleBlock from '../components/TitleBlock.astro';
+import HomeZone from '../components/zones/HomeZone.astro';
+import ExperimentsZone from '../components/zones/ExperimentsZone.astro';
+import NotesZone from '../components/zones/NotesZone.astro';
+import LogZone from '../components/zones/LogZone.astro';
+import WorkshopZone from '../components/zones/WorkshopZone.astro';
+import { ZONES, zoneById } from '../lib/zones';
+
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+  /** Zone id for this route — sets the pose. */
+  zone: string;
+  notesPage?: Page<CollectionEntry<'notes'>>;
+  logPage?: Page<CollectionEntry<'buildlog'>>;
+}
+
+const { title, description, ogImage, zone, notesPage, logPage } = Astro.props;
+const current = zoneById(zone);
+---
+
+<html lang="en">
+  <head>
+    <BaseHead title={title} description={description} ogImage={ogImage} />
+  </head>
+  <body
+    data-zone={current.id}
+    style={`--cam-x:${current.x}; --cam-y:${current.y}; --cam-zoom:${current.zoom};`}
+  >
+    <a class="skip-link" href="#sheet-index">Skip to sheet index</a>
+
+    <!-- Layer 1 — DOM content plane. -->
+    <div class="desk-plane">
+      {
+        ZONES.map((z) => {
+          const isCurrent = z.id === current.id;
+          // The current zone is the page's <main> landmark; the rest are inert
+          // so keyboard focus never lands on off-screen content.
+          const Tag = isCurrent ? 'main' : 'section';
+          return (
+            <Tag
+              id={isCurrent ? 'main' : undefined}
+              class="zone"
+              data-zone-id={z.id}
+              data-current={isCurrent ? '' : undefined}
+              inert={isCurrent ? undefined : true}
+              aria-label={isCurrent ? undefined : `Sheet ${z.sheet} ${z.label}`}
+              style={`--zone-x:${z.x}; --zone-y:${z.y};`}
+            >
+              {/* tabindex: a scrollable region must be keyboard-operable, or
+                  content above the first focusable child is stranded (WCAG
+                  2.1.1). Off-zone sheets are inert, so those stops are inactive. */}
+              <div class="zone__sheet" tabindex="0">
+                {z.id === 'home' && <HomeZone />}
+                {z.id === 'experiments' && <ExperimentsZone />}
+                {z.id === 'notes' && <NotesZone page={notesPage} />}
+                {z.id === 'log' && <LogZone page={logPage} />}
+                {z.id === 'workshop' && <WorkshopZone />}
+              </div>
+            </Tag>
+          );
+        })
+      }
+    </div>
+
+    <!-- Route extras (structured data, etc.). -->
+    <slot />
+
+    <!-- Layer 2 — HUD. -->
+    <TitleBlock />
+    <p class="sr-only" aria-live="polite">Sheet {current.sheet}, {current.label}</p>
+  </body>
+</html>

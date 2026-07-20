@@ -2,9 +2,9 @@
 @import './tokens.css';
 
 /* Self-hosted latin subsets (§6). Geist = display + body, Geist Mono =
-   labels/numbers/data. Preload of the two primary weights (400/500) lives in
-   Shell.astro. Caveat is NOT imported here — it loads lazily with diagram
-   components only (§6/§11) and is never referenced in UI CSS. */
+   labels/numbers/data. Preloads (400/500/700) live in BaseHead.astro. Caveat is
+   NOT imported here — it loads lazily with diagram components only (§6/§11) and
+   is never referenced in UI CSS. */
 @import '@fontsource/geist/latin-400.css';
 @import '@fontsource/geist/latin-500.css';
 @import '@fontsource/geist/latin-700.css';
@@ -29,7 +29,7 @@
      aliases in tokens.css. Retired per-component as milestones rebuild them.
      No --color-debug utility: amber (--debug) is reached only by the canvas
      overlay via getComputedStyle, so it can never leak into markup (§9.1). */
-  --color-bg: var(--bg);
+  /* --color-bg retired in M2 with the old shell (nothing uses bg-bg). */
   --color-surface: var(--surface);
   --color-mist: var(--mist);
   --color-line: var(--line);
@@ -110,31 +110,11 @@
 }
 
 /*
- * Directional panel slides (FR-04, §9.5).
- * The stage carries view-transition-name: stage; the rail is isolated under
- * its own name so it stays still. data-nav-direction is set on the incoming
- * document by the shell script before the swap.
+ * Route swap (M2 note 2): no camera motion in this milestone. Zone-to-zone
+ * navigation is a plain route swap and the short crossfade below is an explicit
+ * placeholder — the Slide verb (§7.2) arrives in M3 and will animate the camera
+ * variables instead of transitioning snapshots.
  */
-@keyframes stage-out-left {
-  to {
-    transform: translateX(-100%);
-  }
-}
-@keyframes stage-in-right {
-  from {
-    transform: translateX(100%);
-  }
-}
-@keyframes stage-out-right {
-  to {
-    transform: translateX(100%);
-  }
-}
-@keyframes stage-in-left {
-  from {
-    transform: translateX(-100%);
-  }
-}
 @keyframes vt-fade-out {
   to {
     opacity: 0;
@@ -146,38 +126,17 @@
   }
 }
 
-/* The transition overlay must not eat clicks: inputs that land during
-   the 550ms slide pass through to the incoming page and interrupt it,
-   instead of dying on the snapshot (rapid rail clicks felt stuck). */
+/* The transition overlay must not eat clicks: inputs that land during the swap
+   pass through to the incoming page instead of dying on the snapshot. */
 ::view-transition {
   pointer-events: none;
 }
 
-/* The slide stays inside the stage frame: snapshots render in the top
-   layer where no ancestor clips them, and the stage group paints above
-   the rail's (capture order follows DOM order), so an unclipped
-   translateX(±100%) sweeps the outgoing panel across the left menu. */
-::view-transition-image-pair(stage) {
-  overflow: clip;
+::view-transition-old(root) {
+  animation: vt-fade-out 140ms ease-out both;
 }
-
-::view-transition-old(stage),
-::view-transition-new(stage) {
-  animation-duration: 550ms;
-  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
-  animation-fill-mode: both;
-}
-html[data-nav-direction='forward']::view-transition-old(stage) {
-  animation-name: stage-out-left;
-}
-html[data-nav-direction='forward']::view-transition-new(stage) {
-  animation-name: stage-in-right;
-}
-html[data-nav-direction='back']::view-transition-old(stage) {
-  animation-name: stage-out-right;
-}
-html[data-nav-direction='back']::view-transition-new(stage) {
-  animation-name: stage-in-left;
+::view-transition-new(root) {
+  animation: vt-fade-in 140ms ease-out both;
 }
 
 /* Shared markdown prose (case-study chapters, notes, log entries). */
@@ -249,12 +208,232 @@ html[data-nav-direction='back']::view-transition-new(stage) {
  * specificity) plus !important is required for the mandated fade to win.
  */
 @media (prefers-reduced-motion: reduce) {
-  html::view-transition-old(stage),
   html::view-transition-old(root) {
-    animation: vt-fade-out 150ms ease-out both !important;
+    animation: vt-fade-out 120ms ease-out both !important;
   }
-  html::view-transition-new(stage),
   html::view-transition-new(root) {
-    animation: vt-fade-in 150ms ease-out both !important;
+    animation: vt-fade-in 120ms ease-out both !important;
   }
+}
+
+/* ==================================================================== *
+ * The desk (§3, §4) — Layer 1 content plane, Layer 2 HUD.
+ *
+ * Contrast rule (M2 note 4): text on the bare desk uses --ink only
+ * (10.4:1); muted (--ink-soft) and accent (--copper*) text lives on paper,
+ * where it passes AA (5.1 / 5.5). Do not put muted or accent text on the
+ * desk ground.
+ * ==================================================================== */
+
+:root {
+  /* Vertical room the fixed title block needs; zones keep clear of it. */
+  --hud-space: 12rem;
+}
+
+.skip-link {
+  position: absolute;
+  inset-inline-start: -9999px;
+  z-index: 60;
+}
+.skip-link:focus {
+  inset-block-start: calc(var(--space) * 2);
+  inset-inline-start: calc(var(--space) * 2);
+  padding: var(--space) calc(var(--space) * 2);
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-paper);
+  box-shadow: var(--e2);
+  color: var(--ink);
+}
+
+/*
+ * Layer 1 — the DOM content plane: a zero-size origin point pinned to the
+ * viewport, with zones positioned from it in desk units. The transform derives
+ * entirely from the server-rendered --cam-* variables, so a hard load is
+ * already posed with zero JS (rung 4) and M3's camera store animates these same
+ * variables rather than a second positioning system.
+ */
+.desk-plane {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: 0;
+  block-size: 0;
+  transform-origin: 0 0;
+  transform: translate3d(
+      calc(50vw - var(--cam-x) * var(--cam-zoom) * 1px),
+      calc(50vh - var(--cam-y) * var(--cam-zoom) * 1px),
+      0
+    )
+    scale(var(--cam-zoom));
+}
+
+.zone {
+  position: absolute;
+  inset-block-start: calc(var(--zone-y) * 1px);
+  inset-inline-start: calc(var(--zone-x) * 1px);
+  transform: translate(-50%, -50%);
+  /* Tracks the viewport so a zone can never park content out of reach on a
+     small screen (note 6). Real mobile composition is M9. */
+  inline-size: min(64rem, calc((100vw - var(--space) * 5) / var(--cam-zoom)));
+}
+
+/* Off-zone content is skipped until it matters (§4). */
+.zone:not([data-current]) {
+  content-visibility: auto;
+  contain-intrinsic-size: 64rem 40rem;
+}
+
+/* The sanctioned contained scroll: a zone taller than the viewport scrolls
+   inside itself instead of trapping content (note 6). */
+.zone__sheet {
+  /* Cap to the viewport, less a small margin. The zone box is centred on its
+     anchor, so reserving HUD space here would be split top *and* bottom and the
+     last line would still slide under the title block — the clearance is
+     therefore padding *inside* the scroll container, which holds whether the
+     zone scrolls or not (note 6). */
+  max-block-size: calc((100dvh - var(--space) * 4) / var(--cam-zoom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-soft) transparent;
+  /* Breathing room so focus rings survive the scroll container's clip. */
+  padding: 4px;
+  padding-block-end: calc(var(--hud-space) / var(--cam-zoom));
+}
+
+.zone-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.zone-title {
+  margin-block-start: var(--space);
+  font-size: var(--fs-h1);
+  line-height: 1.15;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.zone-empty {
+  margin-block-start: calc(var(--space) * 3);
+  color: var(--ink);
+}
+
+/* Paper objects — elevation 1 resting paper. */
+.paper-card {
+  display: block;
+  block-size: 100%;
+  padding: calc(var(--space) * 2);
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-paper);
+  box-shadow: var(--e1);
+  color: var(--ink);
+  text-decoration: none;
+}
+.paper-card--compact {
+  padding: calc(var(--space) * 1.5) calc(var(--space) * 2);
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Colour only — the Lift verb (§7.1) is M7's, not faked here. */
+  .paper-card {
+    transition: border-color 150ms var(--ease-settle);
+  }
+}
+.paper-card:hover {
+  border-color: var(--copper);
+}
+
+.paper-card__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.paper-card__title {
+  margin-block-start: calc(var(--space) * 0.75);
+  font-size: var(--fs-h2);
+  line-height: 1.25;
+  font-weight: 500;
+  color: var(--ink);
+}
+.paper-card__note {
+  margin-block-start: calc(var(--space) * 0.75);
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.paper-card__foot {
+  margin-block-start: calc(var(--space) * 1.5);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+/* A link on the bare desk stays ink + underline — accent colour would drop
+   below AA on the ground (note 4). */
+.desk-link {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.desk-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* A link on paper may take the accent: copper-deep is AA there (5.5:1). */
+.paper-link {
+  color: var(--copper-deep);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.paper-link:hover {
+  color: var(--ink);
+}
+
+/*
+ * An open document (Sheet layout) — elevation 3.
+ *
+ * M2 keeps this a full-height paper stage rather than rebuilding the document
+ * templates: M4 owns the Unfold/Fold choreography and M6 owns the document
+ * content, so their existing markup fills this box unchanged. Putting that
+ * stage on paper is what resolves the M1 contrast flag for documents — their
+ * muted prose now sits at 5.1:1 instead of 3.5:1 on the bare desk (note 4).
+ */
+.document {
+  position: fixed;
+  inset: 0;
+  padding: calc(var(--space) * 2);
+  /* The HUD reserve is viewport-relative: a fixed 12rem ate most of a short
+     viewport and starved the sheet. */
+  padding-block-end: min(var(--hud-space), 30dvh);
+  /* Short viewports scroll the stage rather than crushing the reading pane to
+     zero — the document templates size their panes with flex-1/min-h-0, which
+     otherwise absorb the whole deficit and become unreachable. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-soft) transparent;
+}
+.document__sheet {
+  block-size: 100%;
+  /* Floor so the inner pane always has room to render and scroll. */
+  min-block-size: 22rem;
+  inline-size: min(80rem, 100%);
+  margin-inline: auto;
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-paper);
+  box-shadow: var(--e3);
+  /* The page's own contained scroll (.panel-scroll) does the scrolling. */
+  overflow: hidden;
 }

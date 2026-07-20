@@ -102,7 +102,7 @@ single conventional commit. Branch: `redesign/inventors-workbench`.
 | --- | ------- | ----------------------------------------------------- | ----------- |
 | M0  | PHI-61  | Baseline audit and decision log                       | Done        |
 | M1  | PHI-62  | Design tokens, typography, two-tone ground            | Done        |
-| M2  | PHI-63  | Zoned desk layout and title-block navigation          | Not started |
+| M2  | PHI-63  | Zoned desk layout and title-block navigation          | Done        |
 | M3  | PHI-64  | Camera store and Slide verb                           | Not started |
 | M4  | PHI-65  | Fold/Unfold and Stack (document transitions)          | Not started |
 | M5  | PHI-66  | WebGL background scene with camera sync               | Not started |
@@ -191,6 +191,95 @@ Per Phil's three M1 implementation notes:
   `/projects/aegisx`; console clean. `vite` still resolves 7.3.5 (pin held).
 - Committed as `feat(tokens): design tokens, typography, two-tone ground`;
   pushed. Holding before M2 (PHI-63).
+
+### 2026-07-20 — M2 (PHI-63): zoned desk layout and title-block navigation
+
+Per Phil's seven M2 notes:
+
+- **Poses are server-side CSS variables (note 1).** `src/lib/zones.ts` holds the §4
+  zone map; `Desk.astro` emits `--cam-x/--cam-y/--cam-zoom` on `<body data-zone>`
+  and `.desk-plane` derives its transform from them. Verified: on `/projects` the
+  plane computes `matrix(0.9,0,0,0.9,-980,360)` and the current zone's centre lands
+  exactly on the viewport centre. Rung 4 is therefore posed with **zero JS**, and
+  M3's camera store animates these same variables — no second positioning system.
+- **The desk is continuous.** Every route renders all five zones; the current one is
+  the `<main>` landmark, the other four are `inert` + `content-visibility: auto`.
+  This is what will let M3's Slide move the *plane* with neighbours leaving past the
+  frame edges. **Consequence to weigh: near-duplicate body content across the five
+  index routes.** Titles/descriptions/canonicals stay unique. Flagged for the M10/M11
+  SEO check — it is inherent to the locked "one continuous desk" architecture.
+- **No camera motion (note 2).** Navigation is a plain route swap; the old
+  directional stage slides were removed and replaced with a short crossfade marked
+  in `global.css` as an explicit placeholder. The Slide verb stays M3's.
+- **Agent canvas re-hosted (note 3).** Home-anchored in `HomeZone`, composited above
+  the ground and below the cards; `engine.ts` now reads `--ink` (graphite) instead of
+  the accent, at a lower alpha (0.22/0.14) since ink is far darker than the colour it
+  replaced. It mounts **only while Home is the posed zone**, so off-zone routes burn
+  no frames (§8). Camera-store wiring waits for M3.
+- **Contrast resolved by composition (note 4).** Rule now encoded in `global.css`:
+  *text on the bare desk uses `--ink` only; muted and accent text lives on paper.*
+  Zone content sits on paper objects (cards, notebook, about sheet) where `--ink-soft`
+  is 5.1:1 and `--copper-deep` 5.5:1. Document routes render on a full-height paper
+  stage, which lifts their prose from 3.5:1 to 5.1:1. Desk-level links stay ink +
+  underline rather than taking the accent.
+- **Alias retirement (note 5).** Grepped every legacy alias for remaining consumers:
+  only `--bg` / `--color-bg` had none (the rebuilt shell owns the ground), so only that
+  one was retired. `--surface/--mist/--line/--signal/--signal-text/--debug` all still
+  have consumers (document templates, `MetricCard`, `NotePane`, the engine) and stay.
+- **Small screens (note 6).** No M9 polish, but nothing trapped: zone width tracks the
+  viewport, and each zone scrolls inside itself. A real defect was found and fixed here
+  — reserving HUD space in the sheet's `max-block-size` was split by the centring, so the
+  last line still slid under the fixed title block; the clearance is now padding *inside*
+  the scroll container, which holds whether the zone scrolls or not.
+- **Geist 700 preloaded (note 7).** The §6 display heading (Geist 700, 56px) now paints
+  above the fold on Home, so M1's 400+500-only rationale expired; `BaseHead` preloads
+  400/500/700. Caveat is still never preloaded (M8, diagram-only).
+- **Settings control hidden (§2).** The old rail, theme toggle and mobile settings
+  disclosure went with `Shell.astro`; the theme-apply script is kept as the stub.
+- **Removed:** `src/layouts/Shell.astro` and `src/lib/panels.ts` (fully unreferenced).
+- **Harness note:** the local preview pane renders with `document.hidden = true`, so
+  `requestAnimationFrame` and `ResizeObserver` never fire there. The agent field's
+  mount is therefore deliberately rAF-free. This also explains why screenshots could
+  not be captured during M1/M2 verification.
+- **Verify:** `astro check` 0 errors · build 18 pages · `vitest` 29/29; poses, keys 1-5,
+  inert/content-visibility, the mobile clearance fix and the off-home mount guard all
+  confirmed in-browser.
+
+**Adversarial review before commit** (independent reviewers over correctness, a11y,
+CSS and spec conformance, each finding then verified by a refuter). Nine real defects
+were confirmed and fixed:
+
+1. **CSP regression (blocker).** `public/_headers` still pinned the `script-src` hash of
+   the *deleted* `Shell.astro` theme snippet. Rewriting it into `BaseHead.astro` changed
+   the hashed body (comments and indentation count), so Cloudflare would have blocked the
+   inline script on all 18 routes — `data-js` never set, every `.js-only` control
+   permanently hidden, case-study chapter styles broken. **`npm run verify` cannot catch
+   this**: `_headers` is only applied by Pages, never by `astro dev`/`preview`. Hash
+   recomputed from the built output and re-pinned; both executable inline scripts now
+   match with no stale pins. The header comment now carries that warning.
+2. **Document routes starved their reading pane (high).** A fixed 12rem HUD reserve plus
+   `block-size:100%; overflow:hidden` collapsed the `flex-1 min-h-0` pane to **0px** at
+   640x360, making article bodies unreachable. The reserve is now viewport-relative
+   (`min(--hud-space, 30dvh)`), the stage scrolls, and the sheet has a 22rem floor.
+   Re-measured: pane 174px, full 709px article reachable.
+3. **Colophon put copper on the bare desk (high)** — 3.81:1, breaking M2's own contrast
+   rule. Now `desk-link` (ink + underline), measured 10.44:1.
+4. **Scroll containers were not keyboard-operable (high).** `.zone__sheet` and `.document`
+   now carry `tabindex="0"` (WCAG 2.1.1); off-zone sheets stay inert.
+5. **Agent field bled 32px past its scroll container (medium)**, forcing horizontal scroll
+   on the landing page. Field is now `inset: 0`; measured `scrollWidth === clientWidth`.
+6. **`aria-current="page"` was claimed on document routes (medium)** for a page the user
+   was not on. Active *styling* now keys off `data-active`; `aria-current="page"` is set
+   only on an exact path match.
+7. Skip-link target was not focusable (low) — `tabindex="-1"` added.
+8. Stale comments pointing at the deleted `Shell.astro` / orphaned `Panel.astro` (low).
+9. The `aria-live` route announcer is server-rendered static text and will not announce on
+   its own (low) — left for M10, which owns the announcer.
+
+**Recommended follow-up chore (not done here):** the CSP-hash class of bug is invisible to
+`npm run verify`. A test that recomputes the hashes over `dist/**/*.html` and diffs them
+against `public/_headers` would close it permanently — `verify` already builds before
+`vitest`, so the artefact is available.
 
 ### 2026-07-20 — CI branch previews (standalone chore, not a milestone)
 

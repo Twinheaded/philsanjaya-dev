@@ -1,6 +1,6 @@
 ---
 import { getCollection, render } from 'astro:content';
-import Shell from '../../layouts/Shell.astro';
+import Sheet from '../../layouts/Sheet.astro';
 import NotePane from '../../components/NotePane.astro';
 
 export async function getStaticPaths() {
@@ -23,7 +23,7 @@ const formatDate = (d: Date) =>
   d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 ---
 
-<Shell
+<Sheet
   title={`${note.data.title} — Philipus Sanjaya`}
   description={note.data.summary ?? `A note by Philipus Sanjaya: ${note.data.title}`}
 >
@@ -45,4 +45,4 @@ const formatDate = (d: Date) =>
       </div>
     </NotePane>
   </article>
-</Shell>
+</Sheet>

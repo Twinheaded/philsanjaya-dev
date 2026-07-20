@@ -1,67 +1,9 @@
 ---
-import Shell from '../layouts/Shell.astro';
-import { SITE } from '../lib/site';
+import Desk from '../layouts/Desk.astro';
 ---
 
-<Shell
+<Desk
   title="About — Philipus Sanjaya"
   description="Philipus Sanjaya: final-semester computer science student (Data Science & AI) at Swinburne, Melbourne, seeking graduate software engineering and data/ML roles."
->
-  <!-- Auto margins on the first/last child centre the group like
-       justify-center while the stage fits it, but collapse to zero when
-       it does not — so short viewports scroll from the top instead of
-       clipping the heading and the contact row off both edges. -->
-  <div class="panel-scroll flex h-full flex-col p-5 md:p-12">
-    <p class="mt-auto font-mono text-xs tracking-[0.08em] text-mist">05 — about</p>
-    <h1 class="mt-2 font-display text-[28px] font-medium">About</h1>
-    <div class="mt-6 max-w-xl space-y-4 text-mist">
-      <p>
-        I'm Philipus Sanjaya — Phil for short — a final-semester Bachelor of Computer Science
-        student (Data Science &amp; AI major) at Swinburne, Melbourne, completing in July 2026. I build agent simulations, ML
-        pipelines, and industrial-control-system security tooling in Python; most recently I
-        owned the AWS cloud pipeline on a smart-grid ICS security capstone and built the
-        multi-agent capture-the-flag simulation in the projects panel.
-      </p>
-      <p>
-        Before this degree I ran e-commerce operations full-time for two years — inventory,
-        marketplaces, logistics, and a small team — which is where I learned that systems break
-        at their handoffs.
-      </p>
-      <p>
-        Current focus: finishing the degree and building this site in public — every decision in
-        the build log, every number with a receipt.
-      </p>
-      <p class="text-ink">
-        I'm looking for graduate software engineering or data/ML roles, available from July 2026.
-      </p>
-    </div>
-    <div class="mt-8 flex flex-wrap gap-4">
-      <a
-        href="mailto:sanjayaphilipus11@gmail.com"
-        class="rounded-[10px] border border-line bg-surface px-5 py-2 text-sm hover:border-signal motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
-        >Email me</a
-      >
-      <a
-        href="https://github.com/Twinheaded"
-        class="rounded-[10px] border border-line bg-surface px-5 py-2 text-sm hover:border-signal motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
-        >GitHub</a
-      >
-      <a
-        href="https://linkedin.com/in/philipus-sanjaya"
-        class="rounded-[10px] border border-line bg-surface px-5 py-2 text-sm hover:border-signal motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
-        >LinkedIn</a
-      >
-      <a
-        href="/resume.pdf"
-        class="rounded-[10px] border border-line bg-surface px-5 py-2 text-sm hover:border-signal motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
-        >Resume (PDF)</a
-      >
-    </div>
-    <p class="mt-6 mb-auto max-w-xl font-mono text-xs text-mist">
-      This site's source is public:
-      <a class="text-signal-text underline underline-offset-4" href={SITE.repoUrl}
-        >github.com/Twinheaded/philsanjaya-dev</a
-      >
-    </p>
-  </div>
-</Shell>
+  zone="workshop"
+/>

@@ -1,0 +1,108 @@
+---
+/**
+ * Sheet 05 — Workshop (§4): the pinned about sheet, contact, and colophon.
+ * Copy is Phil's and is carried over verbatim.
+ */
+import { SITE } from '../../lib/site';
+---
+
+<div>
+  <p class="zone-kicker">05 — Workshop</p>
+  <h1 class="zone-title">Workshop</h1>
+
+  <div class="about-sheet">
+    <p>
+      I'm Philipus Sanjaya — Phil for short — a final-semester Bachelor of Computer
+      Science student (Data Science &amp; AI major) at Swinburne, Melbourne, completing
+      in July 2026. I build agent simulations, ML pipelines, and industrial-control-system
+      security tooling in Python; most recently I owned the AWS cloud pipeline on a
+      smart-grid ICS security capstone and built the multi-agent capture-the-flag
+      simulation in the experiments sheet.
+    </p>
+    <p>
+      Before this degree I ran e-commerce operations full-time for two years — inventory,
+      marketplaces, logistics, and a small team — which is where I learned that systems
+      break at their handoffs.
+    </p>
+    <p>
+      Current focus: finishing the degree and building this site in public — every
+      decision in the build log, every number with a receipt.
+    </p>
+    <p class="about-sheet__lead">
+      I'm looking for graduate software engineering or data/ML roles, available from
+      July 2026.
+    </p>
+  </div>
+
+  <ul class="contact">
+    <li><a class="paper-card paper-card--compact" href="mailto:sanjayaphilipus11@gmail.com">
+      <p class="paper-card__meta">Email</p>
+      <p class="paper-card__title">sanjayaphilipus11@gmail.com</p>
+    </a></li>
+    <li><a class="paper-card paper-card--compact" href="https://github.com/Twinheaded">
+      <p class="paper-card__meta">GitHub</p>
+      <p class="paper-card__title">Twinheaded</p>
+    </a></li>
+    <li><a class="paper-card paper-card--compact" href="https://linkedin.com/in/philipus-sanjaya">
+      <p class="paper-card__meta">LinkedIn</p>
+      <p class="paper-card__title">philipus-sanjaya</p>
+    </a></li>
+    <li><a class="paper-card paper-card--compact" href="/resume.pdf">
+      <p class="paper-card__meta">Document</p>
+      <p class="paper-card__title">Resume (PDF)</p>
+    </a></li>
+  </ul>
+
+  <div class="colophon">
+    <p class="colophon__head">Colophon</p>
+    <p>
+      Astro · Tailwind CSS · Cloudflare Pages · Geist &amp; Geist Mono. Source is public:
+      <!-- The colophon sits on the bare desk, so the link stays ink + underline;
+           copper here would be 3.8:1 (note 4). -->
+      <a class="desk-link" href={SITE.repoUrl}>github.com/Twinheaded/philsanjaya-dev</a>
+    </p>
+  </div>
+</div>
+
+<style>
+  .about-sheet {
+    max-inline-size: 62ch;
+    margin-block-start: calc(var(--space) * 3);
+    padding: calc(var(--space) * 3);
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--e1);
+    color: var(--ink-soft);
+  }
+  .about-sheet > p + p {
+    margin-block-start: calc(var(--space) * 1.5);
+  }
+  .about-sheet__lead {
+    color: var(--ink);
+  }
+
+  .contact {
+    display: grid;
+    gap: calc(var(--space) * 2);
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    margin-block-start: calc(var(--space) * 3);
+  }
+
+  .colophon {
+    max-inline-size: 62ch;
+    margin-block-start: calc(var(--space) * 3);
+    padding-block-start: calc(var(--space) * 2);
+    border-block-start: 1px solid var(--paper-edge);
+    font-family: var(--font-mono);
+    font-size: var(--fs-caption);
+    /* Mono caption sits on the bare desk here, so it stays --ink (note 4). */
+    color: var(--ink);
+  }
+  .colophon__head {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: var(--fs-micro);
+    margin-block-end: calc(var(--space) * 0.75);
+  }
+</style>

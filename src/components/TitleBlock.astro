@@ -1,0 +1,154 @@
+---
+/**
+ * Title block (§9) — the site's only persistent chrome and its entire
+ * navigation. A real drafting title block: paper card at elevation 1, fixed
+ * bottom-left in Layer 2, mono micro type, ruled internal lines.
+ *
+ * Ordinary links, so it works at fallback rung 4 (no JS). It is also the
+ * skip-link target. Keys 1-5 jump between sheets as progressive enhancement.
+ * The REV line is stamped at build time — the "built in public" signature.
+ */
+import { ZONES, zoneForPath } from '../lib/zones';
+import { REV } from '../lib/rev';
+
+const current = zoneForPath(Astro.url.pathname);
+
+// `aria-current="page"` may only mark the page actually being viewed. On a
+// document route (/projects/<slug>) the parent sheet is highlighted, but the
+// user is not on /projects — so that link gets the active *styling* via
+// data-active, without the false "page" claim.
+const path =
+  Astro.url.pathname.length > 1 && Astro.url.pathname.endsWith('/')
+    ? Astro.url.pathname.slice(0, -1)
+    : Astro.url.pathname;
+---
+
+<nav id="sheet-index" class="title-block" aria-label="Sheet index" tabindex="-1">
+  <p class="tb-name">
+    Philipus Sanjaya <span aria-hidden="true">·</span> Inventor's Workbench
+  </p>
+  <p class="tb-caption">Sheet index</p>
+  <ul class="tb-sheets">
+    {
+      ZONES.map((z, i) => (
+        <li>
+          <a
+            href={z.href}
+            class="tb-sheet"
+            data-sheet={String(i + 1)}
+            data-active={z.id === current.id ? '' : undefined}
+            aria-current={path === z.href ? 'page' : undefined}
+          >
+            <span class="tb-num">{z.sheet}</span>
+            <span class="tb-label">{z.label}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+  <p class="tb-rev">
+    REV {REV.sha} · {REV.date} · Scale 1:1 · Built in public
+  </p>
+</nav>
+
+<style>
+  .title-block {
+    position: fixed;
+    bottom: calc(var(--space) * 2);
+    left: calc(var(--space) * 2);
+    z-index: 40;
+    max-inline-size: min(30rem, calc(100vw - var(--space) * 4));
+    padding: calc(var(--space) * 1.5) calc(var(--space) * 2);
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-paper);
+    /* Depth level 4 (HUD) pairs with e1. */
+    box-shadow: var(--e1);
+    font-family: var(--font-mono);
+    font-size: var(--fs-micro);
+    line-height: 1.4;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .tb-name {
+    color: var(--ink);
+  }
+
+  /* Ruled internal lines — structural, drafting-sheet detail (§5). */
+  .tb-caption,
+  .tb-rev {
+    margin-block-start: calc(var(--space) * 0.75);
+    padding-block-start: calc(var(--space) * 0.75);
+    border-block-start: 1px solid var(--paper-edge);
+  }
+
+  .tb-sheets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--space) * 0.5) calc(var(--space) * 2);
+    margin-block-start: calc(var(--space) * 0.75);
+  }
+
+  .tb-sheet {
+    display: inline-flex;
+    gap: calc(var(--space) * 0.75);
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+
+  .tb-num {
+    color: var(--ink);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* §7: the title block never animates, except the active-sheet colour. */
+    .tb-sheet {
+      transition: color 120ms var(--ease-settle);
+    }
+  }
+
+  .tb-sheet:hover,
+  .tb-sheet:hover .tb-num {
+    color: var(--copper-deep);
+  }
+
+  /* Active sheet: copper *and* an underline — colour is never the only
+     signal (§14). Keyed on data-active so document routes can highlight their
+     parent sheet without falsely claiming aria-current="page". */
+  .tb-sheet[data-active],
+  .tb-sheet[data-active] .tb-num {
+    color: var(--copper);
+  }
+  .tb-sheet[data-active] {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+</style>
+
+<script>
+  import { navigate } from 'astro:transitions/client';
+
+  // Keys 1-5 jump to sheets (§9). Progressive enhancement over real links;
+  // ignored while focus is in a field, and while a modifier is held so browser
+  // tab-switching shortcuts still work.
+  document.addEventListener('keydown', (e) => {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (!/^[1-5]$/.test(e.key)) return;
+    const t = e.target as HTMLElement | null;
+    if (
+      t &&
+      (t.tagName === 'INPUT' ||
+        t.tagName === 'TEXTAREA' ||
+        t.tagName === 'SELECT' ||
+        t.isContentEditable)
+    ) {
+      return;
+    }
+    const link = document.querySelector<HTMLAnchorElement>(`.tb-sheet[data-sheet="${e.key}"]`);
+    if (!link) return;
+    e.preventDefault();
+    navigate(link.href);
+  });
+</script>
