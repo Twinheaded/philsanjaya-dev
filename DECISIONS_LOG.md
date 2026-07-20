@@ -190,4 +190,35 @@ Per Phil's three M1 implementation notes:
   `vitest` 29/29 · in-browser render confirmed on `/`, `/projects`,
   `/projects/aegisx`; console clean. `vite` still resolves 7.3.5 (pin held).
 - Committed as `feat(tokens): design tokens, typography, two-tone ground`;
-  pushed to update the branch preview. Holding before M2 (PHI-63).
+  pushed. Holding before M2 (PHI-63).
+
+### 2026-07-20 — CI branch previews (standalone chore, not a milestone)
+
+Context: pushing a redesign branch previously did nothing in CI. `ci.yml`
+triggered only on `push: [main]` + `pull_request`, and the deploy job was gated
+to `refs/heads/main`; the Pages project is **direct-upload** (not Git-connected),
+so no per-branch preview was ever built. Milestones were only reviewable by
+running the site locally.
+
+- **Verify now runs on `redesign/**` pushes** (and, as before, on every PR), so
+  each milestone gets a red/green gate on the branch.
+- **New `preview` job** deploys non-main refs to Cloudflare Pages as *preview*
+  deployments — `wrangler pages deploy dist --project-name=philsanjaya-dev
+  --branch="$PREVIEW_BRANCH"`. Because the project's production branch is `main`,
+  any other `--branch` is a preview, so production is never touched. Reuses the
+  existing `CLOUDFLARE_API_TOKEN` secret and the same secret-missing no-op guard
+  as the production job.
+- **The production `deploy` job is unchanged** — still `push` + `refs/heads/main`,
+  still `--branch=main`.
+- **Fork PRs can never deploy:** the job is guarded on
+  `github.event.pull_request.head.repo.full_name == github.repository` (and
+  secrets are unavailable to forks regardless).
+- Branch name resolves via `${{ github.head_ref || github.ref_name }}` for both
+  event types, passed through an env var and quoted at the call site — the
+  branch contains a `/`, and this avoids expression injection into the shell.
+- Job-level `concurrency: preview-<branch>, cancel-in-progress` so a push and its
+  pull_request `synchronize` event don't deploy the same commit twice.
+- A **draft PR** (`main...redesign/inventors-workbench`) keeps checks and the
+  running diff in one place. It is **not for merge** — the production swap
+  remains gated on Phil's sign-off after M11 staging review.
+- Committed as `chore(ci): branch previews for redesign`.
