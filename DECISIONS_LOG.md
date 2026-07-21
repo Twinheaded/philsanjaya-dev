@@ -103,7 +103,7 @@ single conventional commit. Branch: `redesign/inventors-workbench`.
 | M0  | PHI-61  | Baseline audit and decision log                       | Done        |
 | M1  | PHI-62  | Design tokens, typography, two-tone ground            | Done        |
 | M2  | PHI-63  | Zoned desk layout and title-block navigation          | Done        |
-| M3  | PHI-64  | Camera store and Slide verb                           | Not started |
+| M3  | PHI-64  | Camera store and Slide verb                           | Done        |
 | M4  | PHI-65  | Fold/Unfold and Stack (document transitions)          | Not started |
 | M5  | PHI-66  | WebGL background scene with camera sync               | Not started |
 | M6  | PHI-67  | Experiment document templates and content migration   | Not started |
@@ -280,6 +280,68 @@ were confirmed and fixed:
 `npm run verify`. A test that recomputes the hashes over `dist/**/*.html` and diffs them
 against `public/_headers` would close it permanently — `verify` already builds before
 `vitest`, so the artefact is available.
+
+### 2026-07-20 — M3 (PHI-64): camera store and Slide verb
+
+Per Phil's eight M3 notes:
+
+- **One store, one system (note 1).** `src/lib/camera.ts` is a pure, DOM-free
+  `CameraStore` (injectable clock). `src/scripts/desk.ts` is a module singleton
+  that boots by adopting the server pose from `<body>`'s `--cam-*` and drives
+  those same variables each rAF frame — no second positioning system, no
+  first-frame jump.
+- **SLIDE duration + easing** exactly per §7.2: `clamp(450, 300 + 0.12·d, 800)`
+  ms over `--ease-physical` (a real cubic-bezier evaluator). Zoom-only moves
+  (d=0) sit at the 450 ms floor (note 4).
+- **Retarget-not-queue, incl. popstate (note 3).** `slideTo` always restarts
+  from the live interpolated pose, so nav/back/forward spam produces one clean
+  move. ClientRouter routes popstate through the same transition events, so no
+  special-casing is needed. Unit-tested with a popstate-spam simulation.
+- **Zone lifecycle (note 2).** On tween start `.desk-plane.is-sliding` releases
+  `content-visibility` on every zone (no blank arrivals / no popping departures);
+  it is removed at settle. The document swap is bridged by re-asserting the live
+  pose in `astro:after-swap`, so the swap does not cut to the incoming server
+  pose. On settle, if focus was inside the departing zone it moves to the
+  arriving zone's heading — never stranded in an inert subtree.
+- **Scope (note 5).** SLIDE is zone↔zone only; `isZoneRoute()` gates it, and
+  document routes keep M2's crossfade (Fold is M4).
+- **Agent field to desk space (note 7).** `src/scripts/desk-field.ts` simulates
+  in desk coordinates over the ~5200×3400 desk and projects each mark through the
+  camera every frame with the exact plane projection, on one viewport-fixed
+  canvas beneath the plane (paper occludes it). Graphite `--ink` @ 0.22, density
+  capped at 34, loop parked on `document.hidden` (§8). The field re-seeds per
+  navigation (decorative; acceptable — noted for a future persist pass). The
+  Home-anchored canvas was removed; 404 keeps its own `engine.ts` flee island.
+- **Title block persists (`transition:persist`)** so keyboard focus survives a
+  sheet jump; the active sheet is re-synced on `astro:page-load`.
+- **Touch-ups (note 8).** (a) Mobile zone scroll bottom clearance bumped ~24px
+  (`--hud-space + space·3`, divided by zoom because the plane scales the sheet).
+  (b) Home intro confirmed `--ink` (computed `rgb(35,35,35)`); it was already ink
+  — the muted look in the screenshot was the pre-M2 state.
+- **Verification split (note 6).** The maths is unit-tested (19 camera tests:
+  durations, easing symmetry + no-overshoot, exact end states, retarget-from-live
+  including popstate spam, zoom-only floor, reduced-motion cut). Hard-load poses,
+  the desk-field layer, title-block persist and the Home intro colour were
+  confirmed in-browser. **Motion feel — the actual slide, retarget mid-flight,
+  focus-on-settle, and the field sliding with the desk — is Phil's real-browser
+  call:** the preview pane runs `document.hidden = true`, so rAF/ResizeObserver
+  never tick there.
+- **Adversarial review before commit** — reviewers over controller lifecycle,
+  a11y/focus, field projection and store/CSS, each finding refuted independently.
+  Four real defects found and fixed:
+  1. **A Slide interrupted by diving into a document left the store stuck
+     `animating`** (a document's before-preparation early-returns without touching
+     the store), freezing the *next* zone arrival at a stale pose with
+     `.is-sliding` stuck on. Fixed: a document arrival now snaps the store settled,
+     and after-swap / onPageLoad adopt the destination pose when not mid-slide.
+  2. **Focus restoration missed Home** (its heading is `.home__name`, not
+     `.zone-title`) — the selector is now the landmark's `h1`.
+  3. **Reduced motion never managed focus** (no tween → no settle) — focus is now
+     moved on page-load under reduced motion.
+  4. **The field projected against `dvh` while the plane uses `vh`**, drifting the
+     marks vertically on mobile — the canvas is now `vh`.
+- **Verify:** `astro check` 0 errors · build 18 pages · `vitest` 50/50 (incl. the
+  CSP guard). Reduced motion is an instant cut throughout.
 
 ### 2026-07-20 — CSP hash guard (standalone chore) + SEO decision
 

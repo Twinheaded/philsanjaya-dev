@@ -2,21 +2,23 @@
 /**
  * The desk — layout for the five zone routes (§3, §4).
  *
- * Three layers, back to front:
- *   Layer 0  the two-tone CSS ground (body, from global.css; WebGL lands in M5)
- *   Layer 1  the DOM content plane — every zone, positioned in desk units
- *   Layer 2  the HUD — skip link, title block, route announcer
+ * Four layers, back to front:
+ *   Layer 0    the two-tone CSS ground (body, from global.css; WebGL lands in M5)
+ *   Layer 0.5  the agent field — one viewport-fixed canvas, simulated in desk
+ *              space and projected through the camera each frame (§12, M3 note 7)
+ *   Layer 1    the DOM content plane — every zone, positioned in desk units;
+ *              its opaque paper occludes the field naturally
+ *   Layer 2    the HUD — skip link, title block, route announcer
  *
  * The pose is emitted server-side as `--cam-x` / `--cam-y` / `--cam-zoom` on
- * `<body data-zone>`, and the plane derives its transform from those variables
- * (M2 note 1). So a hard load is already posed with zero JS (rung 4), and M3's
- * camera store animates these same variables rather than a second system.
+ * `<body data-zone>`; the plane and the field both derive from those variables
+ * (note 1). A hard load is already posed with zero JS (rung 4). M3's camera
+ * store (src/scripts/desk.ts) animates these same variables — one positioning
+ * system — and SLIDE is zone<->zone only (note 5).
  *
- * The desk is continuous: every route renders every zone, which is what lets
- * M3's Slide move the *plane* with neighbours leaving past the frame edges.
- * Off-zone content is inert and `content-visibility: auto` (§4).
- *
- * M2 has no camera motion (note 2): navigation is a plain route swap.
+ * The desk is continuous: every route renders every zone, which is what lets the
+ * Slide move the *plane* with neighbours leaving past the frame edges. Off-zone
+ * content is inert and `content-visibility: auto` (§4), released during a slide.
  */
 import type { Page } from 'astro';
 import type { CollectionEntry } from 'astro:content';
@@ -52,6 +54,9 @@ const current = zoneById(zone);
     style={`--cam-x:${current.x}; --cam-y:${current.y}; --cam-zoom:${current.zoom};`}
   >
     <a class="skip-link" href="#sheet-index">Skip to sheet index</a>
+
+    <!-- Layer 0.5 — agent field (desk-space, camera-projected). Decorative. -->
+    <canvas id="desk-field" class="desk-field" aria-hidden="true"></canvas>
 
     <!-- Layer 1 — DOM content plane. -->
     <div class="desk-plane">
@@ -93,5 +98,11 @@ const current = zoneById(zone);
     <!-- Layer 2 — HUD. -->
     <TitleBlock />
     <p class="sr-only" aria-live="polite">Sheet {current.sheet}, {current.label}</p>
+
+    <script>
+      // The camera store + Slide verb. A module singleton that persists across
+      // ClientRouter swaps (M3, PHI-64).
+      import '../scripts/desk';
+    </script>
   </body>
 </html>

@@ -23,7 +23,13 @@ const path =
     : Astro.url.pathname;
 ---
 
-<nav id="sheet-index" class="title-block" aria-label="Sheet index" tabindex="-1">
+<nav
+  id="sheet-index"
+  class="title-block"
+  aria-label="Sheet index"
+  tabindex="-1"
+  transition:persist="title-block"
+>
   <p class="tb-name">
     Philipus Sanjaya <span aria-hidden="true">·</span> Inventor's Workbench
   </p>
@@ -129,6 +135,25 @@ const path =
 
 <script>
   import { navigate } from 'astro:transitions/client';
+  import { zoneForPath } from '../lib/zones';
+
+  // The title block persists across navigations (transition:persist) so keyboard
+  // focus survives a sheet-to-sheet jump. Because the persisted DOM keeps its
+  // old active marks, re-sync them to the current route on every page load.
+  function syncActiveSheet(): void {
+    const path = location.pathname.replace(/(.)\/$/, '$1');
+    const zone = zoneForPath(location.pathname);
+    for (const a of document.querySelectorAll<HTMLAnchorElement>('.tb-sheet')) {
+      const href = a.getAttribute('href') ?? '';
+      const isZone = zoneForPath(href).id === zone.id;
+      if (isZone) a.setAttribute('data-active', '');
+      else a.removeAttribute('data-active');
+      // aria-current="page" only when the user is literally on that route.
+      if (href === path) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    }
+  }
+  document.addEventListener('astro:page-load', syncActiveSheet);
 
   // Keys 1-5 jump to sheets (§9). Progressive enhancement over real links;
   // ignored while focus is in a field, and while a modifier is held so browser

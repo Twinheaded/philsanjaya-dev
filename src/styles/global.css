@@ -253,10 +253,25 @@
  * already posed with zero JS (rung 4) and M3's camera store animates these same
  * variables rather than a second positioning system.
  */
+/* Layer 0.5 — the agent field: one viewport-fixed canvas beneath the plane, so
+   the DOM plane's opaque paper occludes the marks (§12, M3 note 7). */
+.desk-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  /* vw/vh (not dvh) so the canvas's centre matches the DOM plane's 50vw/50vh
+     projection exactly — otherwise the marks drift vertically on mobile where
+     dvh != vh (M3 review). */
+  inline-size: 100vw;
+  block-size: 100vh;
+  pointer-events: none;
+}
+
 .desk-plane {
   position: fixed;
   inset-block-start: 0;
   inset-inline-start: 0;
+  z-index: 1;
   inline-size: 0;
   block-size: 0;
   transform-origin: 0 0;
@@ -266,6 +281,13 @@
       0
     )
     scale(var(--cam-zoom));
+}
+
+/* During a Slide (M3) every zone renders, so the arriving zone is not blank as
+   it enters and the departing one keeps drawing as it leaves (note 2). The
+   desk-nav controller toggles .is-sliding for the tween's duration. */
+.desk-plane.is-sliding .zone {
+  content-visibility: visible;
 }
 
 .zone {
@@ -299,7 +321,11 @@
   scrollbar-color: var(--ink-soft) transparent;
   /* Breathing room so focus rings survive the scroll container's clip. */
   padding: 4px;
-  padding-block-end: calc(var(--hud-space) / var(--cam-zoom));
+  /* Clear the fixed title block with a comfortable visual gap (~24px on top of
+     the HUD reserve; note 8a). Divided by zoom because the plane scales the
+     sheet, so plane-space padding renders at padding x zoom. M9 owns the real
+     compact mobile strip. */
+  padding-block-end: calc((var(--hud-space) + var(--space) * 3) / var(--cam-zoom));
 }
 
 .zone-kicker {
