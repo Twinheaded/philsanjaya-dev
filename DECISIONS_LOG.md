@@ -281,6 +281,25 @@ were confirmed and fixed:
 against `public/_headers` would close it permanently — `verify` already builds before
 `vitest`, so the artefact is available.
 
+### 2026-07-20 — CSP hash guard (standalone chore) + SEO decision
+
+- **`test/csp-headers.test.ts`** now closes the M2 blocker's class of bug. It hashes every
+  *executable* inline script across `dist/**/*.html` (skipping `src=` externals and
+  non-executing types like `application/ld+json`) and diffs the set against the
+  `script-src` pins in `dist/_headers`. It fails on a **missing pin** (would be blocked in
+  production) or a **stale pin** (dead config / drift — exactly the M2 symptom), and guards
+  against a vacuous pass if the extractor ever finds zero scripts. Runs after `astro build`
+  in both `verify` and CI, so `dist/` is fresh. Proven in both directions: green on the
+  correct tree (31 tests), and it fails with an actionable message when a pin is corrupted.
+
+- **SEO decision (near-duplicate zone content) — ACCEPTED.** The continuous-desk
+  architecture (§1.2, §3–§4) requires every route to render all five zones, so the five
+  index routes share near-duplicate body content. This is **inherent to the locked design**
+  and is accepted: titles, descriptions and canonicals stay unique per route, and the
+  copy is real content, not doorway spam. **Re-verify post-launch via Google Search
+  Console at M11** (indexed pages, duplicate-content / canonical warnings); revisit only if
+  Search Console flags a real problem. No pre-launch action.
+
 ### 2026-07-20 — CI branch previews (standalone chore, not a milestone)
 
 Context: pushing a redesign branch previously did nothing in CI. `ci.yml`
