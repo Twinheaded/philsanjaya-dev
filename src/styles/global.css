@@ -132,11 +132,29 @@
   pointer-events: none;
 }
 
-::view-transition-old(root) {
-  animation: vt-fade-out 140ms ease-out both;
-}
+/* Kill the whole-page crossfade — the camera store IS the motion between routes
+   (§7.2/§7.3), so animating the root too would animate the desk twice (M4
+   note 2). The desk is carried by the live camera, kept OUT of the snapshot
+   (note 1). Only the named `unfold` element morphs. */
+::view-transition-group(root),
+::view-transition-old(root),
 ::view-transition-new(root) {
-  animation: vt-fade-in 140ms ease-out both;
+  animation: none;
+}
+
+/* UNFOLD / FOLD (§7.3): the card<->document shared element. On open the card
+   grows into the document and its content resolves in the final stretch (the
+   incoming document fades in late); on close the document folds out, faster. */
+::view-transition-group(unfold) {
+  animation-duration: 320ms;
+  animation-timing-function: var(--ease-physical);
+}
+::view-transition-new(unfold) {
+  animation: vt-fade-in 240ms ease-out both;
+  animation-delay: 120ms;
+}
+::view-transition-old(unfold) {
+  animation: vt-fade-out 180ms ease-out both;
 }
 
 /* Shared markdown prose (case-study chapters, notes, log entries). */
@@ -202,10 +220,10 @@
 }
 
 /*
- * FR-07: reduced motion replaces slides with a ≤150ms fade.
- * Astro's ClientRouter injects `::view-transition-*(*) { animation: none
- * !important }` under this media query; the html prefix (higher
- * specificity) plus !important is required for the mandated fade to win.
+ * Reduced motion (§7, M4 note 7): the camera cuts instantly (the store), and
+ * unfold/fold collapse to a single ≤120ms crossfade. Re-enable a short root
+ * crossfade (the `html` prefix + !important beats ClientRouter's injected
+ * animation:none) and flatten the unfold morph so nothing translates/scales.
  */
 @media (prefers-reduced-motion: reduce) {
   html::view-transition-old(root) {
@@ -213,6 +231,16 @@
   }
   html::view-transition-new(root) {
     animation: vt-fade-in 120ms ease-out both !important;
+  }
+  ::view-transition-group(unfold) {
+    animation: none;
+  }
+  ::view-transition-old(unfold) {
+    animation: vt-fade-out 120ms ease-out both;
+  }
+  ::view-transition-new(unfold) {
+    animation: vt-fade-in 120ms ease-out both;
+    animation-delay: 0ms;
   }
 }
 
@@ -230,20 +258,28 @@
   --hud-space: 12rem;
 }
 
+/* A paper chip so it reads as an intentional drafting label when it appears,
+   with the copper focus ring like every other interactive object (note 8). */
 .skip-link {
   position: absolute;
   inset-inline-start: -9999px;
   z-index: 60;
-}
-.skip-link:focus {
-  inset-block-start: calc(var(--space) * 2);
-  inset-inline-start: calc(var(--space) * 2);
-  padding: var(--space) calc(var(--space) * 2);
+  padding: calc(var(--space) * 0.75) calc(var(--space) * 1.5);
   background: var(--paper);
   border: 1px solid var(--paper-edge);
   border-radius: var(--radius-paper);
   box-shadow: var(--e2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--ink);
+}
+.skip-link:focus {
+  inset-block-start: calc(var(--space) * 2);
+  inset-inline-start: calc(var(--space) * 2);
+  outline: 2px solid var(--copper);
+  outline-offset: 3px;
 }
 
 /*
@@ -253,6 +289,15 @@
  * already posed with zero JS (rung 4) and M3's camera store animates these same
  * variables rather than a second positioning system.
  */
+/* The desk layers (field + plane), grouped so STACK blurs them as one full-size
+   filter layer (§7.4). Positioned so the fixed children still resolve against
+   the viewport. */
+.desk-behind {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
 /* Layer 0.5 — the agent field: one viewport-fixed canvas beneath the plane, so
    the DOM plane's opaque paper occludes the marks (§12, M3 note 7). */
 .desk-field {
@@ -288,6 +333,51 @@
    desk-nav controller toggles .is-sliding for the tween's duration. */
 .desk-plane.is-sliding .zone {
   content-visibility: visible;
+}
+
+/* ---------------------------------------------------------------------------
+ * STACK (§7.4): while a document is open, the desk beneath recedes. Exactly one
+ * filter layer — the plane blurs on desktop; the field is hidden (it would be a
+ * second filter, and is decorative). On mobile / reduced motion / no-blur
+ * fallback the blur is replaced by an opacity scrim. Eased over --t-stack, but
+ * applied instantly on a hard load (no class change to transition) — note 5.
+ * --------------------------------------------------------------------------- */
+body[data-view='document'] .desk-behind {
+  filter: blur(var(--glass-blur)) saturate(0.96);
+}
+.stack-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  background: var(--desk-deep);
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .desk-behind {
+    transition: filter var(--t-stack) var(--ease-settle);
+  }
+  .stack-scrim {
+    transition: opacity var(--t-stack) var(--ease-settle);
+  }
+}
+/* Mobile / fallback: no blur (cheap), an opacity scrim instead (§7.4). */
+@media (max-width: 767px) {
+  body[data-view='document'] .desk-behind {
+    filter: none;
+  }
+  body[data-view='document'] .stack-scrim {
+    opacity: 0.55;
+  }
+}
+/* Reduced motion: scrim, applied instantly (the transition is gated off). */
+@media (prefers-reduced-motion: reduce) {
+  body[data-view='document'] .desk-behind {
+    filter: none;
+  }
+  body[data-view='document'] .stack-scrim {
+    opacity: 0.55;
+  }
 }
 
 .zone {
@@ -427,17 +517,16 @@
 }
 
 /*
- * An open document (Sheet layout) — elevation 3.
- *
- * M2 keeps this a full-height paper stage rather than rebuilding the document
- * templates: M4 owns the Unfold/Fold choreography and M6 owns the document
- * content, so their existing markup fills this box unchanged. Putting that
- * stage on paper is what resolves the M1 contrast flag for documents — their
- * muted prose now sits at 5.1:1 instead of 3.5:1 on the bare desk (note 4).
+ * An open document (Sheet layout) — elevation 3, above the Stacked desk (plane
+ * z1, scrim z2) and below the title-block HUD (z40). M6 owns the document
+ * content; its existing markup fills this box unchanged. The paper stage also
+ * resolves the M1 contrast flag — muted prose sits at 5.1:1 here, not 3.5:1 on
+ * the bare desk (note 4).
  */
 .document {
   position: fixed;
   inset: 0;
+  z-index: 30;
   padding: calc(var(--space) * 2);
   /* The HUD reserve is viewport-relative: a fixed 12rem ate most of a short
      viewport and starved the sheet. */

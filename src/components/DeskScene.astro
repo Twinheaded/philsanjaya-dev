@@ -1,0 +1,74 @@
+---
+/**
+ * The desk behind the content — Layer 0.5 (agent field) + Layer 1 (the DOM plane
+ * with every zone). Shared by both layouts so a document renders the real desk
+ * behind it, ready to Stack (§7.4).
+ *
+ * `open` = a document is on top. Then no zone is the `<main>` landmark (the
+ * document is), and every zone is inert — the desk is a blurred backdrop, not an
+ * interactive surface. Otherwise the active zone is `<main>` and the rest are
+ * inert off-zone content (§4).
+ */
+import type { Page } from 'astro';
+import type { CollectionEntry } from 'astro:content';
+import HomeZone from './zones/HomeZone.astro';
+import ExperimentsZone from './zones/ExperimentsZone.astro';
+import NotesZone from './zones/NotesZone.astro';
+import LogZone from './zones/LogZone.astro';
+import WorkshopZone from './zones/WorkshopZone.astro';
+import { ZONES } from '../lib/zones';
+
+interface Props {
+  /** The posed zone id (the current zone, or a document's parent zone). */
+  current: string;
+  /** A document is open on top, so no zone is the landmark. */
+  open?: boolean;
+  notesPage?: Page<CollectionEntry<'notes'>>;
+  logPage?: Page<CollectionEntry<'buildlog'>>;
+}
+
+const { current, open = false, notesPage, logPage } = Astro.props;
+---
+
+<!-- The desk behind the content: field + plane, wrapped in one full-viewport
+     element so STACK can blur them as a single filter layer (§7.4). Blurring the
+     0x0 plane directly is unreliable — the box has no area to filter. -->
+<div class="desk-behind">
+  <!-- Layer 0.5 — agent field (desk-space, camera-projected). Decorative. -->
+  <canvas id="desk-field" class="desk-field" aria-hidden="true"></canvas>
+
+  <!-- Layer 1 — DOM content plane. -->
+  <div class="desk-plane">
+  {
+    ZONES.map((z) => {
+      const isCurrent = z.id === current;
+      // A zone is the <main> landmark only when it is current AND no document is
+      // open. With a document open every zone is inert backdrop.
+      const isMain = isCurrent && !open;
+      const Tag = isMain ? 'main' : 'section';
+      return (
+        <Tag
+          id={isMain ? 'main' : undefined}
+          class="zone"
+          data-zone-id={z.id}
+          data-current={isCurrent ? '' : undefined}
+          inert={isMain ? undefined : true}
+          aria-label={isMain ? undefined : `Sheet ${z.sheet} ${z.label}`}
+          style={`--zone-x:${z.x}; --zone-y:${z.y};`}
+        >
+          {/* tabindex: a scrollable region must be keyboard-operable (WCAG
+              2.1.1). Off-zone / backdrop sheets are inert, so those stops are
+              inactive. */}
+          <div class="zone__sheet" tabindex="0">
+            {z.id === 'home' && <HomeZone />}
+            {z.id === 'experiments' && <ExperimentsZone />}
+            {z.id === 'notes' && <NotesZone page={notesPage} />}
+            {z.id === 'log' && <LogZone page={logPage} />}
+            {z.id === 'workshop' && <WorkshopZone />}
+          </div>
+        </Tag>
+      );
+    })
+  }
+  </div>
+</div>

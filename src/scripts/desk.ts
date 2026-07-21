@@ -1,23 +1,28 @@
 /**
- * Desk runtime (M3, PHI-64): the camera store wired to routing.
+ * Desk runtime (M3/M4): the camera store wired to routing, plus Fold/Stack.
  *
  * A module singleton that survives ClientRouter swaps. It owns one CameraStore,
- * drives it from a single rAF loop, and writes the pose to the exact CSS vars M2
- * emits (`--cam-x/--cam-y/--cam-zoom` on <body>) — one positioning system
- * (note 1). The same loop renders the desk-space agent field (note 7).
+ * drives it from a single rAF loop, and writes the pose to the CSS vars the
+ * layouts emit (`--cam-x/--cam-y/--cam-zoom` on <body>) — one positioning system
+ * (M3 note 1). The same loop renders the desk-space agent field (M3 note 7).
  *
- * SLIDE is zone<->zone only (note 5). Zone<->document keeps M2's crossfade.
- * Navigation and popstate both retarget the tween from the live pose (notes 3),
- * because ClientRouter routes back/forward through the same transition events.
- * Under reduced motion every move is an instant cut (§7).
+ * Every navigation is a camera move now (M4 note 2): a zone Slide, or a document
+ * push to the parent zone at the document zoom (opening a card into a document).
+ * Nav and popstate both retarget the tween from the live pose (note 3), because
+ * ClientRouter routes back/forward through the same transition events. STACK is
+ * CSS, keyed on `body[data-view]`. Esc folds an open document to its parent.
+ * Focus follows EVERY navigation (M4 note 8). Under reduced motion moves are
+ * instant cuts (§7).
  *
  * The tween runs on rAF, which never ticks while the document is hidden — so the
- * motion cannot be exercised in the headless preview pane (that is where feel is
- * verified in a real browser, note 6). The maths is unit-tested in
- * test/camera.test.ts.
+ * motion cannot be exercised in the headless preview pane (feel is verified in a
+ * real browser, note 6). The maths/state machine are unit-tested in
+ * test/camera.test.ts and test/nav.test.ts.
  */
 
+import { navigate } from 'astro:transitions/client';
 import { CameraStore, type Pose } from '../lib/camera';
+import { isDocumentRoute, isPageRoute, normalisePath, resolvePose } from '../lib/nav';
 import { zoneForPath } from '../lib/zones';
 import { mountDeskField, type DeskField } from './desk-field';
 
@@ -32,8 +37,7 @@ function readServerPose(): Pose {
   return { x: num('--cam-x', 0), y: num('--cam-y', 0), zoom: num('--cam-zoom', 1) };
 }
 
-// Boot: adopt the server-rendered pose as the store's initial state (note 1) —
-// zero first-frame jump, because <body> already carries these exact values.
+// Boot: adopt the server-rendered pose (note 1) — zero first-frame jump.
 const store = new CameraStore(readServerPose(), { reduced });
 
 /** Expose the live pose for other desk layers (the WebGL scene lands in M5). */
@@ -49,19 +53,7 @@ function writePose(): void {
   b.style.setProperty('--cam-zoom', String(p.zoom));
 }
 
-/**
- * Zone routes (Desk) get the Slide; document routes (Sheet) keep the crossfade
- * (note 5). `/projects/<slug>` etc. are documents; `/notes/2` stays a zone.
- */
-function isZoneRoute(pathname: string): boolean {
-  const p = pathname.replace(/\/+$/, '') || '/';
-  return p === '/' || p === '/about' || /^\/(projects|notes|log)(\/\d+)?$/.test(p);
-}
-
-function poseFor(pathname: string): Pose {
-  const z = zoneForPath(pathname);
-  return { x: z.x, y: z.y, zoom: z.zoom };
-}
+const plane = () => document.querySelector('.desk-plane');
 
 // --- The single rAF loop: camera + field. -------------------------------------
 let field: DeskField | null = null;
@@ -75,7 +67,10 @@ function frame(now: number): void {
   else if (wasAnimating) settle();
   wasAnimating = animating;
   field?.frame(now, store.current);
-  if (running) rafId = requestAnimationFrame(frame);
+  // Keep looping while the camera is moving or the field needs redrawing; a
+  // settled document page (field hidden -> not mounted) lets the loop stop.
+  if (running && (animating || field)) rafId = requestAnimationFrame(frame);
+  else running = false;
 }
 
 function startLoop(): void {
@@ -89,97 +84,116 @@ function stopLoop(): void {
   cancelAnimationFrame(rafId);
 }
 
-/** Ran once the camera settles: end the slide cleanly (note 2). */
+/** Ran once the camera settles: end the move cleanly. */
 function settle(): void {
   writePose();
-  document.querySelector('.desk-plane')?.classList.remove('is-sliding');
-  moveFocusToArrivedHeading();
+  plane()?.classList.remove('is-sliding');
 }
 
-// --- Focus (note 2): never strand focus in the departing/inert zone. ----------
-let focusWasInDepartingMain = false;
+// --- Focus (M4 note 8): every navigation lands focus in the arriving content. --
+let pendingFocus = false;
+let departedFrom = ''; // the path we navigated away from (for close -> card)
 
-function moveFocusToArrivedHeading(): void {
-  if (!focusWasInDepartingMain) return;
-  focusWasInDepartingMain = false;
-  // The arriving zone's heading is an <h1> in either class (Home uses
-  // .home__name, the others .zone-title), so match the landmark's h1 directly.
-  const heading = document.querySelector<HTMLElement>('main#main h1');
-  if (heading) {
-    heading.setAttribute('tabindex', '-1');
-    heading.focus({ preventScroll: true });
+function manageFocus(): void {
+  if (document.body.dataset.view === 'document') {
+    // Opened a document: focus its heading.
+    const h = document.querySelector<HTMLElement>('main#main h1') ?? document.getElementById('main');
+    focusEl(h);
+    return;
   }
+  // Arrived at a zone. If we just closed a document, return focus to the card it
+  // came from (note 4); otherwise the arriving zone's heading (note 8).
+  if (departedFrom && isDocumentRoute(departedFrom)) {
+    const card = document.querySelector<HTMLElement>(
+      `main#main a[href="${departedFrom}"]`
+    );
+    if (card) {
+      focusEl(card);
+      return;
+    }
+  }
+  focusEl(document.querySelector<HTMLElement>('main#main h1'));
 }
 
-// --- Navigation intercept. ----------------------------------------------------
-// URL updates at motion start: ClientRouter pushes state as the navigation
-// begins, and we start the tween here, in the same tick.
+function focusEl(el: HTMLElement | null): void {
+  if (!el) return;
+  // Headings are not natively focusable, so give them a programmatic-focus
+  // tabindex. Never do this to elements already in the tab order (anchors,
+  // buttons) — tabindex="-1" would REMOVE them from it (WCAG 2.4.3).
+  if (!el.matches('a[href], button, input, select, textarea, [tabindex]')) {
+    el.setAttribute('tabindex', '-1');
+  }
+  el.focus({ preventScroll: true });
+}
+
+// --- Navigation intercept: start the camera move as the nav begins. -----------
 document.addEventListener('astro:before-preparation', (e) => {
-  const ev = e as Event & { to?: URL };
+  const ev = e as Event & { from?: URL; to?: URL };
   const toPath = ev.to?.pathname ?? location.pathname;
-  // Only act when leaving a desk (a document route has no plane to move).
-  if (!document.querySelector('.desk-plane')) return;
-  if (!isZoneRoute(toPath)) return; // zone -> document: crossfade owns it (note 5)
+  if (!plane()) return; // defensive; every route renders a plane
+  if (!isPageRoute(toPath)) return; // asset/download (e.g. /resume.pdf): no camera
+  pendingFocus = true;
+  // Read the origin from the event, not `location`: on popstate the browser has
+  // already moved `location` to the destination before this fires, so
+  // `location.pathname` would be the destination, breaking close -> card focus.
+  departedFrom = normalisePath((ev.from ?? location).pathname);
 
-  const currentMain = document.querySelector('.zone[data-current]');
-  focusWasInDepartingMain = !!currentMain && currentMain.contains(document.activeElement);
-
-  const target = poseFor(toPath);
+  const target = resolvePose(toPath);
   if (reduced) {
     store.snap(target);
     return;
   }
-  // Release content-visibility on every zone so the arriving one is not blank as
-  // it slides in and the departing one keeps rendering as it leaves (note 2).
-  document.querySelector('.desk-plane')?.classList.add('is-sliding');
+  // Release content-visibility on every zone for the move so neither the
+  // arriving nor the departing zone is blank while it crosses the frame (note 2).
+  plane()?.classList.add('is-sliding');
   store.slideTo(target, performance.now());
   startLoop();
 });
 
-// After the document swaps, re-assert the live pose so the swap does not cut to
-// the incoming server pose, and keep the slide going on the new plane.
+// After the swap, re-assert the live pose so the swap does not cut to the
+// incoming server pose; keep the move going on the new plane.
 document.addEventListener('astro:after-swap', () => {
-  const plane = document.querySelector('.desk-plane');
-  if (!plane) return; // arrived on a document — no desk to pose
-  // A settled arrival (hard nav, or coming back from a document) adopts the
-  // destination pose; a slide in flight keeps its live pose for continuity.
-  if (!store.isAnimating) store.snap(poseFor(location.pathname));
+  const p = plane();
+  if (!p) return;
+  if (!store.isAnimating) store.snap(resolvePose(location.pathname));
   writePose();
-  if (!reduced && store.isAnimating) plane.classList.add('is-sliding');
+  if (!reduced && store.isAnimating) p.classList.add('is-sliding');
 });
 
 // --- Per-page (re)initialisation. ---------------------------------------------
 function onPageLoad(): void {
-  const plane = document.querySelector('.desk-plane');
+  const p = plane();
   const canvas = document.getElementById('desk-field') as HTMLCanvasElement | null;
 
-  // Rebind / tear down the field to the current page's canvas.
+  // The field is desk-wide but hidden behind an open document (Stack), so it is
+  // only mounted on zone routes — no invisible rendering, and the loop can stop.
   field?.destroy();
-  field = canvas ? mountDeskField(canvas) : null;
+  const onDesk = document.body.dataset.view !== 'document';
+  field = canvas && onDesk ? mountDeskField(canvas) : null;
 
-  if (!plane) {
-    // Document route: no desk to animate. Settle the store on this page's pose,
-    // so a slide interrupted by diving into a document (its before-preparation
-    // early-returns without touching the store) cannot leave it stuck animating
-    // and freeze the next zone arrival at a stale pose.
-    store.snap(poseFor(location.pathname));
+  if (!p) {
     stopLoop();
     wasAnimating = false;
     return;
   }
 
-  // When settled (hard load, or a non-slide arrival), adopt this page's pose and
-  // clear any inherited slide state. A slide still in flight is left untouched so
-  // it finishes and settle() cleans up.
+  // Settled arrival (hard load or a non-animating nav): adopt this page's pose
+  // and clear any inherited slide state. A move still in flight is left to finish
+  // and settle() cleans up.
   if (!store.isAnimating) {
-    plane.classList.remove('is-sliding');
-    store.snap(poseFor(location.pathname));
+    p.classList.remove('is-sliding');
+    store.snap(resolvePose(location.pathname));
+    writePose();
+  }
+
+  // Focus follows every client navigation (not the initial hard load, which has
+  // no pending nav) — note 8. preventScroll keeps the camera in charge of motion.
+  if (pendingFocus) {
+    pendingFocus = false;
+    manageFocus();
   }
 
   if (reduced) {
-    writePose();
-    // Reduced motion has no tween, so settle() never runs — manage focus here.
-    moveFocusToArrivedHeading();
     field?.renderStatic(store.current);
     return;
   }
@@ -188,12 +202,44 @@ function onPageLoad(): void {
 
 document.addEventListener('astro:page-load', onPageLoad);
 
+// --- Fold with Esc (note 4): close an open document to its parent zone. --------
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || e.defaultPrevented) return;
+  if (document.body.dataset.view !== 'document') return;
+  const t = e.target as HTMLElement | null;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  e.preventDefault();
+  navigate(zoneForPath(location.pathname).href);
+});
+
+// --- Unfold morph (note 1): the clicked card shares its name with the document,
+// so the browser FLIP-morphs the card into the opening document. Only the clicked
+// card is named, so exactly one shared pair exists across the swap. ------------
+document.addEventListener(
+  'click',
+  (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
+      return;
+    }
+    const link = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('a[href]');
+    if (!link) return;
+    const href = link.getAttribute('href') ?? '';
+    if (!href.startsWith('/') || !isDocumentRoute(href)) return;
+    // Clear any stray name, then tag the clicked card as the morph counterpart.
+    for (const el of document.querySelectorAll<HTMLElement>('[style*="view-transition-name"]')) {
+      if (el !== link) el.style.removeProperty('view-transition-name');
+    }
+    link.style.setProperty('view-transition-name', 'unfold');
+  },
+  true
+);
+
 // Park the loop while hidden (§8); resume on return.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) stopLoop();
-  else if (document.querySelector('.desk-plane') && !reduced) startLoop();
+  else if (plane() && !reduced) startLoop();
 });
 
 // Cold start (astro:page-load also fires on first load, but guard for direct
-// module eval before it): kick the field/loop if we are already on a desk.
+// module eval before it).
 if (document.readyState !== 'loading') onPageLoad();

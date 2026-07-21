@@ -104,7 +104,7 @@ single conventional commit. Branch: `redesign/inventors-workbench`.
 | M1  | PHI-62  | Design tokens, typography, two-tone ground            | Done        |
 | M2  | PHI-63  | Zoned desk layout and title-block navigation          | Done        |
 | M3  | PHI-64  | Camera store and Slide verb                           | Done        |
-| M4  | PHI-65  | Fold/Unfold and Stack (document transitions)          | Not started |
+| M4  | PHI-65  | Fold/Unfold and Stack (document transitions)          | Done        |
 | M5  | PHI-66  | WebGL background scene with camera sync               | Not started |
 | M6  | PHI-67  | Experiment document templates and content migration   | Not started |
 | M7  | PHI-68  | Graphite agents and Lift polish                       | Not started |
@@ -280,6 +280,72 @@ were confirmed and fixed:
 `npm run verify`. A test that recomputes the hashes over `dist/**/*.html` and diffs them
 against `public/_headers` would close it permanently — `verify` already builds before
 `vitest`, so the artefact is available.
+
+### 2026-07-21 — M4 (PHI-65): Fold/Unfold and Stack (documents on the desk)
+
+The big architectural shift: **documents now render the real desk behind them**
+(via a shared `DeskScene.astro`), so opening one is a camera push, not a page to
+a separate stage. Per Phil's eight notes:
+
+- **Documents on the desk (§7.3/§7.4).** `DeskScene.astro` (field + plane, wrapped
+  in `.desk-behind`) is shared by both layouts. `Desk.astro` = zone routes
+  (`data-view=zone`); `Sheet.astro` = document routes: the desk behind (posed at
+  the parent zone), a `.stack-scrim`, and the open `<main class="document">` at
+  elevation 3. A document renders the desk as an inert backdrop — no zone is the
+  `<main>` landmark, the document is.
+- **One tween = the camera push (note 2).** `src/lib/nav.ts` `resolvePose()`:
+  documents resolve to the parent zone position at `DOC_ZOOM` (1.45), so opening a
+  card is the M3 store Sliding/zooming in. **Every** navigation is now a camera
+  move (zone↔zone, zone↔document, document↔document); the old "document = snap, no
+  plane" special case is gone. Unit-tested (11 nav tests) incl. never-sticks
+  across dive→Back→number-key and open/close spam (note 3).
+- **The View Transition is scoped (note 1).** The whole-page root crossfade is
+  **killed** — the camera carries the desk, kept out of the snapshot, so nothing
+  animates twice (note 2). Only a named `unfold` element morphs: the clicked card
+  is tagged `view-transition-name: unfold` on click and the document `<main>`
+  carries it statically, so the card FLIP-morphs into the opening document (§7.3).
+- **STACK (§7.4, note 4).** Exactly one filter layer: `.desk-behind` blurs
+  (`blur(8px) saturate(0.96)`) on desktop; mobile / reduced-motion / fallback use a
+  `--desk-deep` opacity scrim instead. **The blur is on the full-viewport
+  `.desk-behind` wrapper, not the 0×0 plane** — blurring a zero-area box is
+  unreliable; verified the wrapper is 1280×720 and the filter renders. Esc folds
+  the document to its parent zone (verified end-state).
+- **Hard-load lands open (note 5).** A document route server-renders
+  `data-view=document` + pose 1.45, so the Stack + open document are present on
+  first paint with zero fly-in, and the article is readable with JS off (rung 4);
+  the inert backdrop zones are removed from the tab order and a11y tree.
+- **Focus follows every navigation (note 8).** Dropped M3's "only if focus was in
+  the departing zone" rule: every client nav moves focus — document heading on
+  open, originating card on close, zone `h1` otherwise — while the initial hard
+  load does not steal focus (a `pendingFocus` flag set only by
+  `astro:before-preparation`). Fixes Phil's repro (press 3 → Tab hit the skip
+  link). The skip link is now a paper chip with the copper focus ring.
+- **Reduced motion (note 7).** Camera cuts instantly (store); unfold/fold collapse
+  to a ≤120ms crossfade; the Stack scrim applies with no transition; focus still
+  managed (on page-load).
+- **Perf:** the agent field is not mounted behind an open document (hidden anyway),
+  and the rAF loop stops on a settled document page.
+- **Verification split (note 6).** Mechanics proven: 63 tests (added 13 nav);
+  in-browser hard-load-lands-open+stacked, zone pages un-regressed (centred, not
+  blurred), single `<main>`, inert backdrop, Esc→parent, blur renders on the
+  full-size wrapper, console clean. **The choreography — the unfold morph, the
+  camera push feel, focus landing after a live nav, the reduced crossfade — is
+  Phil's real-browser call** (the preview pane runs `document.hidden=true`).
+- **Adversarial review before commit** — three real defects found and fixed, all
+  in the focus/routing paths the headless pane cannot exercise:
+  1. **Back-button close focused the zone heading, not the originating card
+     (high).** On popstate the browser has already moved `location` before
+     `astro:before-preparation`, so `departedFrom = location.pathname` captured the
+     *destination*. Now read the origin from the event (`ev.from`) — correct for
+     links, Esc and popstate alike.
+  2. **`focusEl` stamped `tabindex="-1"` on the originating card (an anchor),
+     dropping it from the Tab order (WCAG 2.4.3).** Now only headings (not
+     natively-focusable elements) get the programmatic-focus tabindex.
+  3. **Asset links (`/resume.pdf`, OG images) were classified as document
+     routes**, tagging them with the `unfold` name and driving a spurious camera
+     move. `isDocumentRoute` now excludes any path with a file extension, and the
+     nav handler ignores non-page routes (`isPageRoute`).
+- **Verify:** `astro check` 0 errors · build 18 pages · `vitest` 63/63.
 
 ### 2026-07-20 — M3 (PHI-64): camera store and Slide verb
 

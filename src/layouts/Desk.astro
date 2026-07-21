@@ -4,32 +4,25 @@
  *
  * Four layers, back to front:
  *   Layer 0    the two-tone CSS ground (body, from global.css; WebGL lands in M5)
- *   Layer 0.5  the agent field — one viewport-fixed canvas, simulated in desk
- *              space and projected through the camera each frame (§12, M3 note 7)
- *   Layer 1    the DOM content plane — every zone, positioned in desk units;
- *              its opaque paper occludes the field naturally
+ *   Layer 0.5  the agent field — one viewport-fixed canvas (DeskScene)
+ *   Layer 1    the DOM content plane — every zone, positioned in desk units
  *   Layer 2    the HUD — skip link, title block, route announcer
  *
  * The pose is emitted server-side as `--cam-x` / `--cam-y` / `--cam-zoom` on
- * `<body data-zone>`; the plane and the field both derive from those variables
- * (note 1). A hard load is already posed with zero JS (rung 4). M3's camera
- * store (src/scripts/desk.ts) animates these same variables — one positioning
- * system — and SLIDE is zone<->zone only (note 5).
+ * `<body data-zone>`; the plane and field derive from those variables (note 1).
+ * A hard load is already posed with zero JS (rung 4). The camera store
+ * (src/scripts/desk.ts) animates these same variables — one positioning system.
  *
- * The desk is continuous: every route renders every zone, which is what lets the
- * Slide move the *plane* with neighbours leaving past the frame edges. Off-zone
- * content is inert and `content-visibility: auto` (§4), released during a slide.
+ * The desk is continuous: every route renders every zone (via DeskScene), which
+ * is what lets the Slide move the *plane* with neighbours leaving past the frame
+ * edges, and what lets a document (Sheet.astro) Stack the real desk behind it.
  */
 import type { Page } from 'astro';
 import type { CollectionEntry } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
+import DeskScene from '../components/DeskScene.astro';
 import TitleBlock from '../components/TitleBlock.astro';
-import HomeZone from '../components/zones/HomeZone.astro';
-import ExperimentsZone from '../components/zones/ExperimentsZone.astro';
-import NotesZone from '../components/zones/NotesZone.astro';
-import LogZone from '../components/zones/LogZone.astro';
-import WorkshopZone from '../components/zones/WorkshopZone.astro';
-import { ZONES, zoneById } from '../lib/zones';
+import { zoneById } from '../lib/zones';
 
 interface Props {
   title: string;
@@ -51,46 +44,12 @@ const current = zoneById(zone);
   </head>
   <body
     data-zone={current.id}
+    data-view="zone"
     style={`--cam-x:${current.x}; --cam-y:${current.y}; --cam-zoom:${current.zoom};`}
   >
     <a class="skip-link" href="#sheet-index">Skip to sheet index</a>
 
-    <!-- Layer 0.5 — agent field (desk-space, camera-projected). Decorative. -->
-    <canvas id="desk-field" class="desk-field" aria-hidden="true"></canvas>
-
-    <!-- Layer 1 — DOM content plane. -->
-    <div class="desk-plane">
-      {
-        ZONES.map((z) => {
-          const isCurrent = z.id === current.id;
-          // The current zone is the page's <main> landmark; the rest are inert
-          // so keyboard focus never lands on off-screen content.
-          const Tag = isCurrent ? 'main' : 'section';
-          return (
-            <Tag
-              id={isCurrent ? 'main' : undefined}
-              class="zone"
-              data-zone-id={z.id}
-              data-current={isCurrent ? '' : undefined}
-              inert={isCurrent ? undefined : true}
-              aria-label={isCurrent ? undefined : `Sheet ${z.sheet} ${z.label}`}
-              style={`--zone-x:${z.x}; --zone-y:${z.y};`}
-            >
-              {/* tabindex: a scrollable region must be keyboard-operable, or
-                  content above the first focusable child is stranded (WCAG
-                  2.1.1). Off-zone sheets are inert, so those stops are inactive. */}
-              <div class="zone__sheet" tabindex="0">
-                {z.id === 'home' && <HomeZone />}
-                {z.id === 'experiments' && <ExperimentsZone />}
-                {z.id === 'notes' && <NotesZone page={notesPage} />}
-                {z.id === 'log' && <LogZone page={logPage} />}
-                {z.id === 'workshop' && <WorkshopZone />}
-              </div>
-            </Tag>
-          );
-        })
-      }
-    </div>
+    <DeskScene current={current.id} notesPage={notesPage} logPage={logPage} />
 
     <!-- Route extras (structured data, etc.). -->
     <slot />
@@ -100,8 +59,8 @@ const current = zoneById(zone);
     <p class="sr-only" aria-live="polite">Sheet {current.sheet}, {current.label}</p>
 
     <script>
-      // The camera store + Slide verb. A module singleton that persists across
-      // ClientRouter swaps (M3, PHI-64).
+      // The camera store + Slide/Fold/Stack verbs. A module singleton that
+      // persists across ClientRouter swaps (M3/M4).
       import '../scripts/desk';
     </script>
   </body>

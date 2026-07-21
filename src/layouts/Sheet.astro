@@ -1,16 +1,23 @@
 ---
 /**
- * An open document on the desk — layout for the detail routes
+ * An open document on the desk (§7.3, §7.4) — layout for the detail routes
  * (/projects/<slug>, /notes/<slug>, /log/<slug>, 404).
  *
- * M2 scope: the document renders as a paper sheet at elevation 3 over the desk
- * ground, with its own contained scroll, and keeps the title block as the only
- * chrome. The Unfold/Fold choreography and the Stack blur beneath are M4's —
- * this is deliberately a static open document, not a faked transition.
+ * The real desk renders behind (DeskScene, posed at the parent zone at the
+ * document zoom) and Stacks — blurred on desktop, scrim on mobile/fallback
+ * (global.css, keyed on `body[data-view="document"]`). The document itself is a
+ * paper sheet at elevation 3 with its own contained scroll, carrying the shared
+ * `view-transition-name: unfold` so a card morphs into it (§7.3). The camera
+ * push to this pose is the M3 store (desk.ts), not a second animation (note 2).
+ *
+ * A hard load lands here already open and stacked, posed, with zero fly-in and
+ * fully readable with JS off (note 5, rung 4).
  */
 import BaseHead from '../components/BaseHead.astro';
+import DeskScene from '../components/DeskScene.astro';
 import TitleBlock from '../components/TitleBlock.astro';
 import { zoneForPath } from '../lib/zones';
+import { DOC_ZOOM } from '../lib/nav';
 
 interface Props {
   title: string;
@@ -29,13 +36,19 @@ const parent = zoneForPath(Astro.url.pathname);
   <body
     data-zone={parent.id}
     data-view="document"
-    style={`--cam-x:${parent.x}; --cam-y:${parent.y}; --cam-zoom:1;`}
+    style={`--cam-x:${parent.x}; --cam-y:${parent.y}; --cam-zoom:${DOC_ZOOM};`}
   >
     <a class="skip-link" href="#sheet-index">Skip to sheet index</a>
 
-    <!-- tabindex: the stage scrolls on short viewports, and a scrollable region
-         must be reachable by keyboard (WCAG 2.1.1). -->
-    <main id="main" class="document" tabindex="0">
+    <!-- The desk behind, Stacked (blur/scrim via CSS). Inert backdrop. -->
+    <DeskScene current={parent.id} open />
+
+    <!-- Stack scrim — used on mobile / reduced-motion / fallback instead of blur. -->
+    <div class="stack-scrim" aria-hidden="true"></div>
+
+    <!-- The open document (elevation 3). tabindex: the stage scrolls on short
+         viewports and must be keyboard-reachable (WCAG 2.1.1). -->
+    <main id="main" class="document" tabindex="-1" style="view-transition-name: unfold">
       <div class="document__sheet">
         <slot />
       </div>
@@ -43,5 +56,10 @@ const parent = zoneForPath(Astro.url.pathname);
 
     <TitleBlock />
     <p class="sr-only" aria-live="polite">Document open, sheet {parent.sheet} {parent.label}</p>
+
+    <script>
+      // The camera store + Slide/Fold/Stack verbs (M3/M4). Persists across swaps.
+      import '../scripts/desk';
+    </script>
   </body>
 </html>
