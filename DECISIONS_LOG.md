@@ -372,6 +372,49 @@ push progress**, driven from the same rAF tick as the camera, in BOTH open paths
   clock, 0.6 flip, catch-up ramp, and trace-asserted order+timing for both gate
   orderings and same-zone on-time/late/mid-ramp swaps.
 
+### 2026-07-23 — FIX B: luminance parity for lights-on (Phil's YAVG data)
+
+Phil measured the lights-on fade at −5% whole-desk (YAVG 151.1 → 143.6),
+concentrated in the periphery — the GL "pool" was tighter than the CSS pool.
+Root causes found: **three's fog depth is the view-plane z, constant across a
+head-on ground plane** — fog *cannot* produce a radial vignette here, so the M5
+scene rendered one flat tone (no pool at all); and three's physically-based
+diffuse divides the light sum by π, so the lit level sat at ~0.36× naive
+expectation.
+
+- **The vignette is now a camera-synced vertex grade.** The ground plane is
+  subdivided (96×64) and `syncCamera` repaints per-vertex colors from the SAME
+  radial profile the CSS ground uses (ellipse 145%×125% at 50%,38%; pool→desk
+  at 46%→deep), projected through the live camera — the pool tracks the
+  viewport exactly as the CSS pool does, at every pose and zoom. Tones via a
+  1024-entry LUT (sRGB-mixed like CSS, then EOTF to linear); repaint costs
+  **0.23ms** per moved frame. No texture maps (§8) — the grade is a geometry
+  attribute. Fog is retired (inert for this geometry); §8's "fog vignette"
+  intent is carried by the grade.
+- **Lights are white and π-compensated** (`π/(0.55+0.85·cosθ)` over the §8
+  ambient/key balance) so a white-albedo ground renders its grade tone exactly
+  — the warmth lives in the token palette, and the fade is hue-neutral over the
+  gradient it covers. `outputColorSpace`/`toneMapping` pinned explicitly.
+- **Slabs keep the approved M5 look** (review): their albedos are premixed down
+  by the old warm rig's lit factors (0.399/0.341/0.274 per channel) so the
+  π-compensated rig doesn't blow them out to full token tone (a paper slab
+  would have read as a foreground document card).
+- **Lights-on gating (Phil point 4):** `is-lit` is added in a rAF after the
+  first render — the fade never starts on a blank frame; hidden tabs defer the
+  fade until visible. `requestIdleCallback` now carries `{timeout: 2000}` (a
+  hidden tab gets no idle periods — init would never run there).
+- **Measured** (1280×720, dpr 1.5, `?debug=scene` harness — render +
+  `readPixels`, no rAF needed): home zoom 1: **ΔY +0.8…+1.2 at six points**
+  (pool centre, mid-field, corners, edges), whole-desk **+0.38%** (was −5%);
+  experiments zone 0.9 panned: ΔY 0…+1; notes zone 0.95: ground points
+  +1.0/+1.2. The uniform ~+1 is the standard material's flat specular sheen —
+  on the bright side, nothing dims. **Flag:** at slab-heavy poses (/notes) the
+  whole-frame delta is dominated by slabs-as-content (M5-approved tones over a
+  slab-free gradient) — identical to the approved M5 fade, not a calibration
+  error; if slabs should sit closer to the ground, that is one constant.
+- Review also fixed: stale `devicePixelRatio` (now re-read in `resize()`).
+- **Verify:** 0 errors · 18 pages · vitest 104/104.
+
 ### 2026-07-22 — M4 tune fix: gate Beat 2 on swap AND arrival (Phil's frame data)
 
 Phil's video frames showed the unfold beginning ~150–250ms into Beat 1 — the
