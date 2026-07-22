@@ -96,10 +96,20 @@ export interface CameraStoreOptions {
   duration?: (from: Pose, to: Pose) => number;
 }
 
+/** One leg of a camera sequence: tween to `pose`, then hold `settle` ms before
+ *  the next leg. The last leg's `settle` is ignored. */
+export interface Step {
+  pose: Pose;
+  settle: number;
+}
+
 /**
- * The store. `current` is the live pose; `slideTo(target, now)` starts (or
- * retargets) a tween; `tick(now)` advances it and returns whether it is still
- * animating. No rAF, no DOM, no wall-clock — the caller owns all three.
+ * The store. `current` is the live pose. `slideTo(target, now)` runs a single
+ * tween; `sequenceTo(steps, now)` runs a multi-beat plan with settle holds (the
+ * two-beat cross-zone unfold, §7.3). `tick(now)` advances and returns whether it
+ * is still animating. Interruption is retarget-not-queue at *every* phase —
+ * travelling or settling — so nav/Esc/Back spam never sticks (M4-tune note 6).
+ * No rAF, no DOM, no wall-clock — the caller owns all three.
  */
 export class CameraStore {
   current: Pose;
@@ -110,6 +120,13 @@ export class CameraStore {
   private durationMs = 0;
   private animating = false;
 
+  // Sequence state.
+  private plan: Step[] = [];
+  private step = -1;
+  private holding = false;
+  private holdUntil = 0;
+  private finalPose: Pose;
+
   private readonly reduced: boolean;
   private readonly easing: (x: number) => number;
   private readonly durationOf: (from: Pose, to: Pose) => number;
@@ -118,6 +135,7 @@ export class CameraStore {
     this.current = { ...initial };
     this.from = { ...initial };
     this.to = { ...initial };
+    this.finalPose = { ...initial };
     this.reduced = opts.reduced ?? false;
     this.easing = opts.easing ?? easePhysical;
     this.durationOf = opts.duration ?? slideDuration;
@@ -127,9 +145,24 @@ export class CameraStore {
     return this.animating;
   }
 
-  /** The target the camera is currently moving toward (or resting at). */
+  /** The final pose of the current plan (or the resting pose). */
   get target(): Pose {
-    return { ...this.to };
+    return { ...this.finalPose };
+  }
+
+  /** Zero-based index of the leg currently running, or -1 when idle. */
+  get stepIndex(): number {
+    return this.step;
+  }
+
+  /** Legs in the active plan (0 when idle). */
+  get stepCount(): number {
+    return this.plan.length;
+  }
+
+  /** True while the camera is holding at a settle point between legs. */
+  get isSettling(): boolean {
+    return this.holding;
   }
 
   /** Instantly cut to a pose — reduced motion, boot adoption, or hard reset. */
@@ -137,44 +170,87 @@ export class CameraStore {
     this.current = { ...target };
     this.from = { ...target };
     this.to = { ...target };
+    this.finalPose = { ...target };
     this.animating = false;
+    this.plan = [];
+    this.step = -1;
+    this.holding = false;
   }
 
   /**
-   * Move toward `target`. Retargets from the *live* current pose (§7), so a call
-   * mid-tween continues seamlessly from wherever the camera is now. Under
-   * reduced motion it is an instant cut. A target equal to the current pose is a
-   * no-op (no zero-length tween churn).
+   * Move toward `target` in one tween. Retargets from the *live* current pose,
+   * so a call mid-move continues from wherever the camera is now. Reduced motion
+   * cuts instantly; a target equal to the current pose is a no-op.
    */
   slideTo(target: Pose, now: number): void {
+    this.sequenceTo([{ pose: target, settle: 0 }], now);
+  }
+
+  /**
+   * Run a multi-beat plan: tween to each leg's pose in turn, holding `settle` ms
+   * between legs. Reduced motion cuts straight to the final pose (one cut, never
+   * two — note 7). A single-leg plan whose pose equals the current pose is a
+   * no-op. Retargets from the live pose, clearing any plan in flight.
+   */
+  sequenceTo(steps: Step[], now: number): void {
+    if (steps.length === 0) return;
+    const last = steps[steps.length - 1].pose;
     if (this.reduced) {
-      this.snap(target);
+      this.snap(last);
       return;
     }
-    if (samePose(target, this.current)) {
-      this.to = { ...target };
-      this.animating = false;
+    if (steps.length === 1 && samePose(steps[0].pose, this.current)) {
+      this.snap(steps[0].pose);
       return;
     }
+    this.plan = steps.map((s) => ({ pose: { ...s.pose }, settle: s.settle }));
+    this.finalPose = { ...last };
+    this.beginStep(0, now);
+  }
+
+  private beginStep(i: number, now: number): void {
+    this.step = i;
+    this.holding = false;
     this.from = { ...this.current };
-    this.to = { ...target };
+    this.to = { ...this.plan[i].pose };
     this.startedAt = now;
-    this.durationMs = this.durationOf(this.from, this.to);
+    this.durationMs = samePose(this.from, this.to) ? 0 : this.durationOf(this.from, this.to);
     this.animating = true;
   }
 
   /**
-   * Advance to time `now`. Returns true while still animating. Idempotent once
-   * settled, so the caller can stop its rAF loop when this returns false.
+   * Advance to time `now`. Returns true while still animating (including during a
+   * settle hold), false once the whole plan is done.
    */
   tick(now: number): boolean {
     if (!this.animating) return false;
+
+    if (this.holding) {
+      if (now < this.holdUntil) return true;
+      this.beginStep(this.step + 1, now);
+      return this.tick(now); // start the next leg at the same instant
+    }
+
     const elapsed = now - this.startedAt;
-    if (elapsed >= this.durationMs || this.durationMs <= 0) {
+    if (this.durationMs <= 0 || elapsed >= this.durationMs) {
       this.current = { ...this.to };
+      const hasNext = this.step < this.plan.length - 1;
+      if (hasNext) {
+        const settle = this.plan[this.step].settle;
+        if (settle > 0) {
+          this.holding = true;
+          this.holdUntil = now + settle;
+          return true;
+        }
+        this.beginStep(this.step + 1, now);
+        return this.tick(now);
+      }
       this.animating = false;
+      this.plan = [];
+      this.step = -1;
       return false;
     }
+
     const eased = this.easing(elapsed / this.durationMs);
     this.current = {
       x: lerp(this.from.x, this.to.x, eased),

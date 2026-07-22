@@ -8,11 +8,14 @@
  * the same M3 Slide, not a separate system (M4 note 2).
  */
 
-import type { Pose } from './camera';
-import { zoneForPath } from './zones';
+import type { Pose, Step } from './camera';
+import { zoneById, zoneForPath } from './zones';
 
 /** The open-document zoom (§7.3). */
 export const DOC_ZOOM = 1.45;
+
+/** The two-beat settle hold (§7.3 amended). The tunable token, 120–180ms. */
+export const SETTLE_MS = 150;
 
 /** Normalise a pathname: strip a trailing slash (except root). */
 export function normalisePath(pathname: string): string {
@@ -56,4 +59,34 @@ export function resolvePose(pathname: string): Pose {
     return { x: zone.x, y: zone.y, zoom: DOC_ZOOM };
   }
   return { x: zone.x, y: zone.y, zoom: zone.zoom };
+}
+
+function zonePose(zoneId: string): Pose {
+  const z = zoneById(zoneId);
+  return { x: z.x, y: z.y, zoom: z.zoom };
+}
+
+/**
+ * The camera plan for a navigation (§7.3 two-beat cross-zone unfold).
+ *
+ * Opening a document whose parent zone differs from the zone currently in view
+ * travels in two beats — a normal SLIDE to the parent zone's pose, a settle
+ * hold, then the UNFOLD zoom to the document. Closing to a zone that is not the
+ * document's parent is the mirror: fold out to the parent, settle, slide on.
+ * Same-zone opens/closes and plain zone moves are a single tween.
+ */
+export function planCamera(fromPath: string, toPath: string, settleMs = SETTLE_MS): Step[] {
+  const fromZone = zoneForPath(fromPath).id;
+  const toZone = zoneForPath(toPath).id;
+  const dest = resolvePose(toPath);
+
+  if (isDocumentRoute(toPath) && toZone !== fromZone) {
+    // Two-beat OPEN: travel to the parent zone, settle, then unfold.
+    return [{ pose: zonePose(toZone), settle: settleMs }, { pose: dest, settle: 0 }];
+  }
+  if (isDocumentRoute(fromPath) && !isDocumentRoute(toPath) && fromZone !== toZone) {
+    // Two-beat CLOSE: fold out to the parent zone, settle, then slide on.
+    return [{ pose: zonePose(fromZone), settle: settleMs }, { pose: dest, settle: 0 }];
+  }
+  return [{ pose: dest, settle: 0 }];
 }

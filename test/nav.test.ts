@@ -7,7 +7,15 @@
 
 import { describe, expect, it } from 'vitest';
 import { CameraStore, slideDuration, type Pose } from '../src/lib/camera';
-import { DOC_ZOOM, isDocumentRoute, isPageRoute, isZoneRoute, resolvePose } from '../src/lib/nav';
+import {
+  DOC_ZOOM,
+  SETTLE_MS,
+  isDocumentRoute,
+  isPageRoute,
+  isZoneRoute,
+  planCamera,
+  resolvePose,
+} from '../src/lib/nav';
 
 const round = (p: Pose): Pose => ({
   x: Math.round(p.x),
@@ -75,6 +83,56 @@ describe('resolvePose', () => {
     expect(Math.hypot(to.x - from.x, to.y - from.y)).toBe(0);
     // Zero translation distance -> the 450ms slide floor (note 4 territory).
     expect(slideDuration(from, to)).toBe(450);
+  });
+});
+
+describe('planCamera — the two-beat cross-zone unfold (§7.3 amended)', () => {
+  it('cross-zone open travels via the parent zone with a settle beat', () => {
+    // Home -> EXP.001: SLIDE to Experiments, settle, UNFOLD.
+    const plan = planCamera('/', '/projects/aegisx');
+    expect(plan).toHaveLength(2);
+    expect(round(plan[0].pose)).toEqual(resolvePose('/projects')); // parent zone pose
+    expect(plan[0].settle).toBe(SETTLE_MS);
+    expect(round(plan[1].pose)).toEqual(round(resolvePose('/projects/aegisx'))); // 1.45
+    expect(plan[1].settle).toBe(0);
+  });
+
+  it('same-zone open is a single unfold (today’s behaviour, note 1)', () => {
+    const plan = planCamera('/projects', '/projects/aegisx');
+    expect(plan).toHaveLength(1);
+    expect(round(plan[0].pose)).toEqual(round(resolvePose('/projects/aegisx')));
+  });
+
+  it('Esc close to the parent zone is a single fold-in-place', () => {
+    const plan = planCamera('/projects/aegisx', '/projects');
+    expect(plan).toHaveLength(1);
+    expect(round(plan[0].pose)).toEqual(resolvePose('/projects'));
+  });
+
+  it('Back close to a different zone folds out, settles, then slides on', () => {
+    // /projects/aegisx -> / : fold to Experiments, settle, slide to Home.
+    const plan = planCamera('/projects/aegisx', '/');
+    expect(plan).toHaveLength(2);
+    expect(round(plan[0].pose)).toEqual(resolvePose('/projects'));
+    expect(plan[0].settle).toBe(SETTLE_MS);
+    expect(round(plan[1].pose)).toEqual(resolvePose('/'));
+  });
+
+  it('a plain zone move is a single tween', () => {
+    expect(planCamera('/', '/notes')).toHaveLength(1);
+  });
+
+  it('the settle beat is a tunable parameter', () => {
+    expect(planCamera('/', '/projects/aegisx', 180)[0].settle).toBe(180);
+  });
+
+  it('Home -> EXP.001 total time is a plausible ~1.1–1.5s (clamp + settle)', () => {
+    const plan = planCamera('/', '/projects/aegisx');
+    const beat1 = slideDuration(resolvePose('/'), plan[0].pose); // 516
+    const beat2 = slideDuration(plan[0].pose, plan[1].pose); // 450 floor (zoom-only)
+    const total = beat1 + plan[0].settle + beat2;
+    expect(total).toBeGreaterThan(1000);
+    expect(total).toBeLessThan(1500);
   });
 });
 

@@ -52,6 +52,7 @@
   --t-lift-in: 180ms;
   --t-lift-out: 240ms;
   --t-stack:   300ms;
+  --t-settle:  150ms;  /* two-beat cross-zone unfold settle hold (§7.3), 120–180ms */
 
   /* Rhythm */
   --space:         8px;    /* base unit; spacing in multiples */

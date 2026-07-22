@@ -281,6 +281,61 @@ were confirmed and fixed:
 against `public/_headers` would close it permanently — `verify` already builds before
 `vitest`, so the artefact is available.
 
+### 2026-07-22 — M4 tune: two-beat cross-zone unfold (Phil's parity feedback)
+
+Opening a document from a *different* zone flew the camera diagonally across the
+desk in one move. Amended §7.3 of the handoff with a two-beat rule and implemented
+it:
+
+- **`CameraStore` gained a sequence primitive.** `sequenceTo(steps, now)` plays a
+  plan of `{pose, settle}` legs — tween, wall-clock settle hold, tween — and
+  retargets from the *live* pose at every phase (travelling or settling), so
+  keys/Esc/Back/another-card never stick. `slideTo` is now `sequenceTo` of one
+  leg; all 19 prior camera tests still pass. 6 new sequence tests cover the holds
+  and interruptions (note 6).
+- **`planCamera(fromPath, toPath, settle)`** (pure, in `nav.ts`, 7 tests): a
+  cross-zone document open → `[parentZonePose (settle), docPose(1.45)]`; a
+  cross-zone close → `[parentZonePose (settle), destPose]`; everything else a
+  single tween. Settle token `--t-settle` (150ms; range 120–180).
+- **The document is hidden during Beat 1.** `desk.ts` arms a two-beat open in
+  `before-preparation`, and in `astro:before-swap` stamps
+  `data-unfold="traveling"` on the *incoming* body (before it goes live, so the
+  document is hidden from the first painted frame). Beat 1 therefore reads as a
+  plain Slide to the parent zone. At Beat 2 (the rAF loop detects the plan leaving
+  the settle) the runtime measures the parent zone's card, sets `--unfold-ox/oy`
+  as the transform-origin, and removes the attribute — the document unfolds from
+  that card (note 4). Focus is deferred to this moment so it coincides.
+- **One navigation, one history entry** — the URL pushes straight to the document;
+  the beats are camera-only (no visit to `/projects`).
+- **Morph origin (note 4):** cross-zone opens are *not* tagged with the browser
+  `view-transition-name` (that would morph from the card left behind on the old
+  zone); they use the JS reveal from the parent card. Same-zone opens keep the
+  browser FLIP morph.
+- **Close (note 5):** Esc → single fold to the parent zone (focus its card);
+  Back → `planCamera` yields the two-beat close (fold out, settle, slide),
+  focus per note 8.
+- **Reduced motion (note 7):** `before-preparation` snaps to the final pose (no
+  sequence, no traveling state) → the M4 single ≤120ms root crossfade. Never two
+  cuts. Unit-tested (`sequenceTo` under reduced snaps to the last leg).
+- **Verification split (note 6):** the state machine is proven (`sequenceTo` +
+  `planCamera`, 45 camera/nav tests); the choreography feel — the settle beat, the
+  unfold origin, the retimed reveal — is Phil's real-browser call.
+- **Adversarial review before commit** found two real defects (both invisible in
+  the headless pane), fixed:
+  1. **Reveal raced the fetch (high).** `maybeRevealUnfold` was gated on camera
+     progress but not on the swap. On a slow/un-prefetched fetch the camera reached
+     Beat 2 while still on the origin page, so the reveal fired against the
+     outgoing DOM — clearing the arm flag so `before-swap` never hid the incoming
+     document (it swapped in fully visible) and focus was lost. Fixed: the reveal
+     now also requires the live body to be the stamped incoming document
+     (`data-unfold === 'traveling'`), so a plan that reaches Beat 2 early simply
+     waits for the swap.
+  2. **Beat-1 hidden document stayed in the a11y tree (high).** `opacity:0` +
+     `pointer-events:none` don't remove `<main class="document">` from the tab
+     order or the screen-reader buffer, so during the ~600ms slide a keyboard/AT
+     user could enter the invisible document. Fixed: the travelling document is
+     `visibility:hidden`.
+
 ### 2026-07-21 — M4 (PHI-65): Fold/Unfold and Stack (documents on the desk)
 
 The big architectural shift: **documents now render the real desk behind them**

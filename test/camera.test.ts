@@ -185,3 +185,103 @@ describe('CameraStore tween', () => {
     expect(c.isAnimating).toBe(false);
   });
 });
+
+describe('CameraStore.sequenceTo — the two-beat plan (M4-tune)', () => {
+  const DOC_EXP: Pose = { x: 1800, y: 0, zoom: 1.45 };
+  const SETTLE = 150;
+  const plan = [
+    { pose: EXPERIMENTS, settle: SETTLE },
+    { pose: DOC_EXP, settle: 0 },
+  ];
+
+  it('plays both legs and lands exactly on the final pose', () => {
+    const c = new CameraStore(HOME);
+    c.sequenceTo(plan, 0);
+    expect(c.stepCount).toBe(2);
+    expect(c.target).toEqual(DOC_EXP);
+    // Tick as the rAF loop would — the settle hold is wall-clock, so it must be
+    // traversed by ticks, not one giant jump.
+    const beat1 = slideDuration(HOME, EXPERIMENTS);
+    const beat2 = slideDuration(EXPERIMENTS, DOC_EXP);
+    c.tick(beat1); // beat 1 done -> hold begins
+    c.tick(beat1 + SETTLE); // hold released -> beat 2 begins
+    expect(c.tick(beat1 + SETTLE + beat2)).toBe(false); // beat 2 done
+    expect(c.current).toEqual(DOC_EXP);
+    expect(c.isAnimating).toBe(false);
+    expect(c.stepIndex).toBe(-1);
+  });
+
+  it('holds at the settle point between the beats', () => {
+    const c = new CameraStore(HOME);
+    c.sequenceTo(plan, 0);
+    const beat1 = slideDuration(HOME, EXPERIMENTS);
+    c.tick(beat1); // beat 1 just completed -> entering the hold
+    expect(c.current).toEqual(EXPERIMENTS);
+    expect(c.isSettling).toBe(true);
+    // Still holding partway through the settle: pose does not move.
+    c.tick(beat1 + SETTLE / 2);
+    expect(c.current).toEqual(EXPERIMENTS);
+    expect(c.isSettling).toBe(true);
+    // After the settle, beat 2 begins.
+    c.tick(beat1 + SETTLE + 1);
+    expect(c.isSettling).toBe(false);
+    expect(c.stepIndex).toBe(1);
+  });
+
+  it('interrupting BEAT 1 (travelling) retargets from the live pose', () => {
+    const c = new CameraStore(HOME);
+    c.sequenceTo(plan, 0);
+    const beat1 = slideDuration(HOME, EXPERIMENTS);
+    c.tick(beat1 / 2);
+    const live = { ...c.current };
+    expect(live.x).toBeGreaterThan(0);
+    expect(live.x).toBeLessThan(EXPERIMENTS.x);
+    // A number-key to Notes mid-travel.
+    c.slideTo(NOTES, beat1 / 2);
+    c.tick(beat1 / 2); // same instant: no jump
+    expect(c.current.x).toBeCloseTo(live.x, 6);
+    c.tick(beat1 / 2 + 2000);
+    expect(c.current).toEqual(NOTES);
+    expect(c.isAnimating).toBe(false);
+  });
+
+  it('interrupting the SETTLE hold retargets from the settled pose', () => {
+    const c = new CameraStore(HOME);
+    c.sequenceTo(plan, 0);
+    const beat1 = slideDuration(HOME, EXPERIMENTS);
+    c.tick(beat1 + SETTLE / 2); // mid-settle at EXPERIMENTS
+    expect(c.isSettling).toBe(true);
+    c.slideTo(HOME, beat1 + SETTLE / 2); // Back, mid-settle
+    expect(c.isSettling).toBe(false);
+    c.tick(beat1 + SETTLE / 2); // no jump
+    expect(c.current).toEqual(EXPERIMENTS);
+    c.tick(beat1 + SETTLE / 2 + 2000);
+    expect(c.current).toEqual(HOME);
+    expect(c.isAnimating).toBe(false);
+  });
+
+  it('spamming keys/Esc/Back across both phases still settles cleanly', () => {
+    const c = new CameraStore(HOME);
+    let now = 0;
+    const seq = [plan, [{ pose: NOTES, settle: 0 }], plan, [{ pose: HOME, settle: 0 }]];
+    for (const s of seq) {
+      c.sequenceTo(s as never, now);
+      const before = { ...c.current };
+      c.tick(now); // same instant, no movement
+      expect(c.current.x).toBeCloseTo(before.x, 9);
+      now += 50;
+      c.tick(now);
+    }
+    c.tick(now + 3000);
+    expect(c.current).toEqual(HOME);
+    expect(c.isAnimating).toBe(false);
+  });
+
+  it('reduced motion cuts straight to the final pose (one cut, never two — note 7)', () => {
+    const c = new CameraStore(HOME, { reduced: true });
+    c.sequenceTo(plan, 0);
+    expect(c.isAnimating).toBe(false);
+    expect(c.current).toEqual(DOC_EXP);
+    expect(c.stepCount).toBe(0);
+  });
+});

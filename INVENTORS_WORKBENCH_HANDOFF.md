@@ -207,6 +207,26 @@ Reference behavior (from the motion video): *the whole surface scales and transl
 - **Fold (close), ~420ms:** morph back first (0–180ms), camera pull-out 120–420ms; focus returns to the originating card.
 - **Parity checklist (M4 verification):** plane moves, not the card · neighbors exit frame edges · content resolves only in the final ~40% · no opacity flash of the desk · reverse is symmetric and faster · 60fps in a Performance trace.
 
+**Two-beat cross-zone unfold (amended post-M4, 2026-07-22).** When the document's
+parent zone differs from the zone currently in view, a single unfold would fly
+diagonally across the desk. Instead it plays in two beats, as one navigation with
+one history entry (the URL pushes to the document at t=0; Beat 1 is choreography,
+not a route visit):
+- **Beat 1 — SLIDE** to the parent zone's §4 pose (the normal distance-scaled
+  `clamp(450, 300+0.12·d, 800)`), with the document hidden so it reads as a plain
+  zone Slide. Then a **settle hold** of `--t-settle` (default 150ms; token, tunable
+  120–180ms).
+- **Beat 2 — UNFOLD** from the parent zone's card (zoom to ≈1.45). The morph
+  origin is the *parent zone's* card, not the featured card that triggered the
+  open on another zone. Home→EXP.001 lands in roughly 1.1–1.5s total.
+- **Same-zone opens keep the single unfold** (Beat 2 only).
+- **Close:** Esc folds in place (stay at the parent zone, focus its card); Back
+  folds then Slides retracing history, focus per §14/note-8.
+- **Interruption:** every phase — travelling and settling — retargets from the
+  live pose, so keys/Esc/Back/another-card never leave the camera stuck.
+- **Reduced motion:** the whole sequence collapses to one ≤120ms crossfade —
+  never two cuts.
+
 ### 7.4 STACK — depth while a document is open
 - Desk plane (and WebGL scene) beneath: `blur(var(--glass-blur)) saturate(0.96)` + `scale(0.985)`, `--t-stack`; document at elevation 3.
 - Exactly one `backdrop-filter`/`filter` layer at a time. On mobile and rung-2 fallback: replace blur with an opacity scrim (`--desk-deep` at 0.55) — cheaper, same hierarchy.

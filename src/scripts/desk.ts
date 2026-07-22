@@ -22,11 +22,25 @@
 
 import { navigate } from 'astro:transitions/client';
 import { CameraStore, type Pose } from '../lib/camera';
-import { isDocumentRoute, isPageRoute, normalisePath, resolvePose } from '../lib/nav';
+import {
+  isDocumentRoute,
+  isPageRoute,
+  normalisePath,
+  planCamera,
+  resolvePose,
+  SETTLE_MS,
+} from '../lib/nav';
 import { zoneForPath } from '../lib/zones';
 import { mountDeskField, type DeskField } from './desk-field';
 
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// The two-beat settle hold, from the --t-settle token (falls back to SETTLE_MS).
+const SETTLE = (() => {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--t-settle').trim();
+  const ms = raw.endsWith('ms') ? parseFloat(raw) : Number.NaN;
+  return Number.isFinite(ms) ? ms : SETTLE_MS;
+})();
 
 function readServerPose(): Pose {
   const s = getComputedStyle(document.body);
@@ -66,6 +80,7 @@ function frame(now: number): void {
   if (animating) writePose();
   else if (wasAnimating) settle();
   wasAnimating = animating;
+  maybeRevealUnfold();
   field?.frame(now, store.current);
   // Keep looping while the camera is moving or the field needs redrawing; a
   // settled document page (field hidden -> not mounted) lets the loop stop.
@@ -88,6 +103,45 @@ function stopLoop(): void {
 function settle(): void {
   writePose();
   plane()?.classList.remove('is-sliding');
+}
+
+// --- Two-beat cross-zone unfold (§7.3 amended). During Beat 1 the incoming
+// document is hidden (body[data-unfold=traveling]) so the parent zone slides in
+// like a normal Slide; at Beat 2 the document unfolds from the parent zone's
+// card. `pendingTravelReveal` is armed for a cross-zone OPEN only. -------------
+let pendingTravelReveal = false;
+
+function maybeRevealUnfold(): void {
+  if (!pendingTravelReveal) return;
+  // Wait for the swap: only reveal once the LIVE body is the stamped incoming
+  // document. The camera runs on rAF while `before-swap` waits on the async
+  // fetch, so on a slow load Beat 2 can arrive before the swap — without this
+  // guard the reveal would fire against the outgoing page, drop focus, and leave
+  // `before-swap` unable to hide the document (it swaps in fully visible).
+  if (document.body.dataset.unfold !== 'traveling') return;
+  // Reveal once the plan has left Beat 1 (travelling) and its settle hold — i.e.
+  // Beat 2 has begun (stepIndex !== 0) or the plan has finished.
+  if (store.isSettling || store.stepIndex === 0) return;
+  pendingTravelReveal = false;
+
+  const body = document.body;
+  // Morph origin (note 4): the parent zone's card for THIS document, not the
+  // featured card left behind on the previous zone.
+  const card = document.querySelector<HTMLElement>(
+    `.zone[data-current] a[href="${normalisePath(location.pathname)}"]`
+  );
+  if (card) {
+    const r = card.getBoundingClientRect();
+    body.style.setProperty('--unfold-ox', `${Math.round(r.left + r.width / 2)}px`);
+    body.style.setProperty('--unfold-oy', `${Math.round(r.top + r.height / 2)}px`);
+  }
+  body.removeAttribute('data-unfold'); // the document unfolds in (CSS transition)
+
+  // Focus was deferred to the reveal so it coincides with the document appearing.
+  if (pendingFocus) {
+    pendingFocus = false;
+    manageFocus();
+  }
 }
 
 // --- Focus (M4 note 8): every navigation lands focus in the arriving content. --
@@ -133,21 +187,39 @@ document.addEventListener('astro:before-preparation', (e) => {
   if (!plane()) return; // defensive; every route renders a plane
   if (!isPageRoute(toPath)) return; // asset/download (e.g. /resume.pdf): no camera
   pendingFocus = true;
+  pendingTravelReveal = false;
   // Read the origin from the event, not `location`: on popstate the browser has
   // already moved `location` to the destination before this fires, so
   // `location.pathname` would be the destination, breaking close -> card focus.
-  departedFrom = normalisePath((ev.from ?? location).pathname);
+  const fromPath = normalisePath((ev.from ?? location).pathname);
+  departedFrom = fromPath;
 
-  const target = resolvePose(toPath);
   if (reduced) {
-    store.snap(target);
+    // One instant cut to the final pose — never two cuts (note 7).
+    store.snap(resolvePose(toPath));
     return;
   }
-  // Release content-visibility on every zone for the move so neither the
-  // arriving nor the departing zone is blank while it crosses the frame (note 2).
+
+  const plan = planCamera(fromPath, toPath, SETTLE);
+  // A two-beat OPEN travels to the parent zone first, so the document must stay
+  // hidden until Beat 2 (armed here, applied to the incoming body in before-swap).
+  pendingTravelReveal = plan.length > 1 && isDocumentRoute(toPath);
+
+  // Release content-visibility on every zone for the move so neither the arriving
+  // nor the departing zone is blank while it crosses the frame (note 2).
   plane()?.classList.add('is-sliding');
-  store.slideTo(target, performance.now());
+  store.sequenceTo(plan, performance.now());
   startLoop();
+});
+
+// Hide the incoming document until Beat 2 of a two-beat open, so Beat 1 reads as
+// a plain Slide to the parent zone. Set on the parsed incoming body, before it
+// becomes live, so the document is hidden from the very first painted frame.
+document.addEventListener('astro:before-swap', (e) => {
+  const ev = e as Event & { newDocument?: Document };
+  if (pendingTravelReveal && ev.newDocument) {
+    ev.newDocument.body.dataset.unfold = 'traveling';
+  }
 });
 
 // After the swap, re-assert the live pose so the swap does not cut to the
@@ -187,8 +259,9 @@ function onPageLoad(): void {
   }
 
   // Focus follows every client navigation (not the initial hard load, which has
-  // no pending nav) — note 8. preventScroll keeps the camera in charge of motion.
-  if (pendingFocus) {
+  // no pending nav) — note 8. For a two-beat open it is deferred to the reveal
+  // (maybeRevealUnfold) so it coincides with the document appearing.
+  if (pendingFocus && !pendingTravelReveal) {
     pendingFocus = false;
     manageFocus();
   }
@@ -212,9 +285,10 @@ document.addEventListener('keydown', (e) => {
   navigate(zoneForPath(location.pathname).href);
 });
 
-// --- Unfold morph (note 1): the clicked card shares its name with the document,
-// so the browser FLIP-morphs the card into the opening document. Only the clicked
-// card is named, so exactly one shared pair exists across the swap. ------------
+// --- Unfold morph (note 1): for a SAME-ZONE open the clicked card shares its
+// name with the document, so the browser FLIP-morphs the card into it. A
+// cross-zone open is NOT tagged — its morph originates from the parent zone's
+// card at Beat 2 (maybeRevealUnfold, note 4), not the card clicked here. -------
 document.addEventListener(
   'click',
   (e) => {
@@ -225,6 +299,8 @@ document.addEventListener(
     if (!link) return;
     const href = link.getAttribute('href') ?? '';
     if (!href.startsWith('/') || !isDocumentRoute(href)) return;
+    // Cross-zone opens use the two-beat JS reveal, not the browser morph.
+    if (zoneForPath(href).id !== document.body.dataset.zone) return;
     // Clear any stray name, then tag the clicked card as the morph counterpart.
     for (const el of document.querySelectorAll<HTMLElement>('[style*="view-transition-name"]')) {
       if (el !== link) el.style.removeProperty('view-transition-name');

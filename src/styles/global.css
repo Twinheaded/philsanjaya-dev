@@ -380,6 +380,42 @@ body[data-view='document'] .desk-behind {
   }
 }
 
+/* ---------------------------------------------------------------------------
+ * TWO-BEAT cross-zone unfold (§7.3 amended). Opening a document from a different
+ * zone travels to the parent zone first (Beat 1); during that travel the desk
+ * runtime marks the incoming document body[data-unfold=traveling], so the
+ * document is hidden and the desk is NOT yet stacked — Beat 1 reads as a plain
+ * Slide. At Beat 2 the attribute is removed and the document unfolds from the
+ * parent zone's card position (--unfold-ox/oy, set by the runtime, note 4).
+ * --------------------------------------------------------------------------- */
+body[data-view='document'] .document {
+  transform-origin: var(--unfold-ox, 50%) var(--unfold-oy, 50%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  body[data-view='document'] .document {
+    transition:
+      opacity 260ms var(--ease-settle),
+      transform 320ms var(--ease-physical);
+  }
+}
+/* Beat 1 (travelling): the document is hidden, the desk unblurred, no scrim.
+   visibility:hidden (not just opacity) so the not-yet-shown document is out of
+   the tab order and the a11y tree during the slide — opacity:0 alone leaves it
+   focusable and screen-reader-readable. It switches instantly (not transitioned)
+   so removing the attribute lets the opacity/transform reveal play. */
+body[data-view='document'][data-unfold='traveling'] .document {
+  visibility: hidden;
+  opacity: 0;
+  transform: scale(0.86);
+  pointer-events: none;
+}
+body[data-view='document'][data-unfold='traveling'] .desk-behind {
+  filter: none;
+}
+body[data-view='document'][data-unfold='traveling'] .stack-scrim {
+  opacity: 0;
+}
+
 .zone {
   position: absolute;
   inset-block-start: calc(var(--zone-y) * 1px);
