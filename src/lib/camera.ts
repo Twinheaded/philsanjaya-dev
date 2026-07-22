@@ -165,6 +165,16 @@ export class CameraStore {
     return this.holding;
   }
 
+  /**
+   * Raw (un-eased) time progress [0,1] of the leg in flight at `now` — the phase
+   * clock for progress-driven choreography (the §7.3 reveal is a pure function
+   * of this). 1 when idle, when holding at a settle, or for a zero-duration leg.
+   */
+  progressAt(now: number): number {
+    if (!this.animating || this.holding || this.durationMs <= 0) return 1;
+    return Math.min(1, Math.max(0, (now - this.startedAt) / this.durationMs));
+  }
+
   /** Instantly cut to a pose — reduced motion, boot adoption, or hard reset. */
   snap(target: Pose): void {
     this.current = { ...target };

@@ -142,16 +142,17 @@
   animation: none;
 }
 
-/* UNFOLD / FOLD (§7.3): the card<->document shared element. On open the card
-   grows into the document and its content resolves in the final stretch (the
-   incoming document fades in late); on close the document folds out, faster. */
+/* UNFOLD / FOLD (§7.3). OPEN is no longer a VT animation at all — the reveal is
+   progress-locked to the camera push (the desk runtime drives --unfold-t; see
+   the data-unfolding rules below), and the incoming document is captured hidden,
+   so the new-side snapshot must stay inert. CLOSE keeps the VT: the outgoing
+   document (the only side named `unfold`) folds out with a fast fade. */
 ::view-transition-group(unfold) {
   animation-duration: 320ms;
   animation-timing-function: var(--ease-physical);
 }
 ::view-transition-new(unfold) {
-  animation: vt-fade-in 240ms ease-out both;
-  animation-delay: 120ms;
+  animation: none;
 }
 ::view-transition-old(unfold) {
   animation: vt-fade-out 180ms ease-out both;
@@ -403,34 +404,46 @@ body[data-view='document'] .desk-behind {
 }
 
 /* ---------------------------------------------------------------------------
- * TWO-BEAT cross-zone unfold (§7.3 amended). Opening a document from a different
- * zone travels to the parent zone first (Beat 1); during that travel the desk
- * runtime marks the incoming document body[data-unfold=traveling], so the
- * document is hidden and the desk is NOT yet stacked — Beat 1 reads as a plain
- * Slide. At Beat 2 the attribute is removed and the document unfolds from the
- * parent zone's card position (--unfold-ox/oy, set by the runtime, note 4).
+ * UNFOLD (§7.3 amended + FIX A). EVERY document open hides the incoming
+ * document (body[data-unfold=traveling]) — a cross-zone open through Beat 1's
+ * travel, a same-zone open through the first 60% of its push — so the move reads
+ * as desk motion until the reveal. The runtime then swaps the attribute for
+ * body[data-unfolding] and drives --unfold-t from the push's progress: the
+ * document unfolds from the parent zone's card position (--unfold-ox/oy, note 4)
+ * across the final ~40% of the push.
  * --------------------------------------------------------------------------- */
 body[data-view='document'] .document {
   transform-origin: var(--unfold-ox, 50%) var(--unfold-oy, 50%);
 }
-@media (prefers-reduced-motion: no-preference) {
-  body[data-view='document'] .document {
-    transition:
-      opacity 260ms var(--ease-settle),
-      transform 320ms var(--ease-physical);
-  }
+/* The reveal window (FIX A): while body[data-unfolding], the document's
+   opacity/scale are a pure function of --unfold-t — written by the desk runtime
+   every tween tick, 0 until the push passes 60%, ramping to 1 at its end. NO
+   time-based transition here: the reveal must ride the camera's clock, never its
+   own. The marker is removed when the reveal completes, so the rest state (and
+   any hard load) carries no transform at all. */
+body[data-view='document'][data-unfolding] .document {
+  opacity: var(--unfold-t, 0);
+  transform: scale(calc(0.86 + 0.14 * var(--unfold-t, 0)));
+  /* No mis-clicks on a faint, scaling target during the ~180ms ramp (review);
+     interactivity arrives with the completed reveal (the marker's removal). */
+  pointer-events: none;
 }
-/* Beat 1 (travelling): the document is hidden, the desk unblurred, no scrim.
-   visibility:hidden (not just opacity) so the not-yet-shown document is out of
-   the tab order and the a11y tree during the slide — opacity:0 alone leaves it
-   focusable and screen-reader-readable. It switches instantly (not transitioned)
-   so removing the attribute lets the opacity/transform reveal play. */
-body[data-view='document'][data-unfold='traveling'] .document {
+/* Pre-reveal (either flavour): the document is hidden. visibility:hidden (not
+   just opacity) so the not-yet-shown document is out of the tab order and the
+   a11y tree — opacity:0 alone leaves it focusable and screen-reader-readable.
+   It switches instantly (not transitioned) so the data-unfolding window starts
+   cleanly. */
+body[data-view='document'][data-unfold] .document {
   visibility: hidden;
   opacity: 0;
   transform: scale(0.86);
   pointer-events: none;
 }
+/* `traveling` only (before the push): the desk is NOT yet stacked — no blur, no
+   scrim, so Beat 1 reads as a plain Slide. Once the push starts (`pushing`)
+   these no longer match: the blur/scrim ride their --t-stack transition from
+   push start and finish before the settle (review), while the document itself
+   stays hidden until the 60% reveal. */
 body[data-view='document'][data-unfold='traveling'] .desk-behind {
   filter: none;
 }

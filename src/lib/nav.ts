@@ -66,6 +66,42 @@ function zonePose(zoneId: string): Pose {
   return { x: z.x, y: z.y, zoom: z.zoom };
 }
 
+/** The push fraction where the reveal begins (§7.3: the document resolves in
+ *  the final ~40% of the push). */
+export const REVEAL_START = 0.6;
+
+/**
+ * Reveal amount as a pure function of push progress (§7.3): 0 while the camera
+ * covers the first 60% of the push, then a linear ramp to 1 at the push's end.
+ * The runtime drives this from the same tween tick as the camera — the reveal is
+ * phase-locked to the push, never on its own clock — so it holds in BOTH the
+ * same-zone unfold and cross-zone Beat 2 (they are the same push).
+ */
+export function revealAmount(pushProgress: number): number {
+  if (pushProgress <= REVEAL_START) return 0;
+  if (pushProgress >= 1) return 1;
+  return (pushProgress - REVEAL_START) / (1 - REVEAL_START);
+}
+
+/** The reveal window's duration on the §7.2 zoom-only floor push: the final 40%
+ *  of 450ms. Every reveal push (document zoom) is zoom-only, so this IS the
+ *  window length of an on-time reveal. */
+export const REVEAL_RAMP_MS = 180;
+
+/**
+ * The driven reveal amount at a tick: the push-progress mapping, capped by a
+ * time ramp from when the reveal began. For an on-time swap the two ramps
+ * coincide (the reveal window is REVEAL_RAMP_MS of the push) and the cap is a
+ * no-op — the reveal stays a pure function of push progress. For a swap landing
+ * late (after the push crossed 60%, or after it finished entirely) the cap turns
+ * a single-frame pop into a full rAF-driven ramp — min() always follows the
+ * slower of the two, so the reveal never completes before the push does.
+ */
+export function revealTick(pushProgress: number, msSinceBegin: number): number {
+  const cap = Math.max(0, Math.min(1, msSinceBegin / REVEAL_RAMP_MS));
+  return Math.min(revealAmount(pushProgress), cap);
+}
+
 /**
  * The Beat-2 gate for a two-beat cross-zone open (§7.3 amended). Beat 2 — the
  * zoom push to 1.45 AND the document reveal, together — starts at

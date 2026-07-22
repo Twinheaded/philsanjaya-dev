@@ -332,6 +332,46 @@ against `public/_headers` would close it permanently — `verify` already builds
   the scene — atmosphere, the light pool, whether it swims — is Phil's real-browser
   call (note 6), especially since the preview pane's rAF is intermittent here.
 
+### 2026-07-23 — FIX A: phase-lock the reveal to push progress (Phil's frame data)
+
+Phil's frames: travel ✓, settle ✓, zoom ✓ — but the document resolved in the
+first ~30% of the push (the CSS transition/VT morph ran on their own clocks from
+push start). §7.3 wants the final ~40%. The reveal is now a **pure function of
+push progress**, driven from the same rAF tick as the camera, in BOTH open paths.
+
+- **`revealAmount(p)`** (`nav.ts`, pure): 0 for p ≤ 0.6, linear to 1 at p = 1.
+  **`CameraStore.progressAt(now)`**: the raw un-eased phase clock of the leg in
+  flight (1 when idle/holding). The runtime writes `--unfold-t` every tick;
+  `body[data-unfolding] .document` derives opacity/scale from it. The time-based
+  `.document` transition and the same-zone card VT-morph tagging are **deleted**
+  (the document keeps `view-transition-name: unfold` only for the close
+  fold-out). Same-zone opens now stamp/hide/reveal exactly like cross-zone.
+- **`revealTick(p, msSinceBegin)`** caps the driven amount with a 180ms time
+  ramp — for an on-time swap the cap coincides with the push window (the reveal
+  window IS 180ms of the 450ms zoom-only floor) so the reveal stays purely
+  progress-locked; a swap landing after the push finished gets a full rAF-driven
+  ramp instead of a single-frame pop (adversarial review).
+- **Stack timing decoupled from the reveal** (review): `data-unfold` now has two
+  flavours — `traveling` (pre-push: desk NOT stacked) and `pushing` (push
+  running: blur/scrim ride `--t-stack` from push start, ending before settle;
+  only the document stays hidden to 60%). The Beat-2 gate still keys on
+  `traveling`, semantics unchanged.
+- **Motion debug trace** (`lib/motion-trace.ts` + `?debug=motion` /
+  `localStorage debug:motion=1`): one `console.table` per move — beat1
+  start/arrive, settle end, gate open (+ released by swap or settle), push
+  start, reveal start/end, settled; interrupted moves flush separately. Numbers
+  instead of videos; tests assert phase ORDER **and TIMING**.
+- Review also fixed: stale `wasAnimating` (settle detection now reads
+  `store.isAnimating` pre-tick — a hide during the first tween frame no longer
+  strands the desk at the pre-nav pose) and `pointer-events: none` during the
+  ramp. **Accepted as shipped-parity limitations:** live reduced-motion toggle
+  still needs a reload (boot-time const since M3); a paginated-away card falls
+  back to a centre origin; interrupting mid-ramp pops the outgoing document to
+  full opacity for the fetch window.
+- **Verify:** 0 errors · 18 pages · vitest **104/104** (was 80): mapping, phase
+  clock, 0.6 flip, catch-up ramp, and trace-asserted order+timing for both gate
+  orderings and same-zone on-time/late/mid-ramp swaps.
+
 ### 2026-07-22 — M4 tune fix: gate Beat 2 on swap AND arrival (Phil's frame data)
 
 Phil's video frames showed the unfold beginning ~150–250ms into Beat 1 — the
