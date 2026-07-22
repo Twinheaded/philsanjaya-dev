@@ -33,6 +33,7 @@ import {
 } from '../lib/nav';
 import { zoneForPath } from '../lib/zones';
 import { mountDeskField, type DeskField } from './desk-field';
+import { initDeskScene, wakeDeskScene } from './desk-scene';
 
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -82,6 +83,11 @@ function frame(now: number): void {
   else if (wasAnimating) settle();
   wasAnimating = animating;
   tickTwoBeat(now); // may start Beat 2's zoom tween (store.slideTo)
+  // Keep the WebGL scene's loop awake for the whole camera move — Beat 2 of a
+  // two-beat open fires from here (not from a nav), so waking only at nav start
+  // could let the scene park during the swap hold and miss the zoom. Cheap: wake
+  // no-ops when the scene loop is already running.
+  if (store.isAnimating) wakeDeskScene();
   field?.frame(now, store.current);
   // Keep looping while the camera is moving, the field needs redrawing, or a
   // two-beat open is still holding for its gate. Re-read store.isAnimating AFTER
@@ -206,6 +212,7 @@ document.addEventListener('astro:before-preparation', (e) => {
   const toPath = ev.to?.pathname ?? location.pathname;
   if (!plane()) return; // defensive; every route renders a plane
   if (!isPageRoute(toPath)) return; // asset/download (e.g. /resume.pdf): no camera
+  wakeDeskScene(); // the camera is about to move — wake the WebGL render loop
   pendingFocus = true;
   twoBeat = null; // interrupt-safe: a new nav abandons any held two-beat
   // Read the origin from the event, not `location`: on popstate the browser has
@@ -362,3 +369,6 @@ document.addEventListener('visibilitychange', () => {
 // Cold start (astro:page-load also fires on first load, but guard for direct
 // module eval before it).
 if (document.readyState !== 'loading') onPageLoad();
+
+// Layer 0 (§8): load the WebGL scene after first idle; it persists across swaps.
+initDeskScene();

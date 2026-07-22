@@ -105,7 +105,7 @@ single conventional commit. Branch: `redesign/inventors-workbench`.
 | M2  | PHI-63  | Zoned desk layout and title-block navigation          | Done        |
 | M3  | PHI-64  | Camera store and Slide verb                           | Done        |
 | M4  | PHI-65  | Fold/Unfold and Stack (document transitions)          | Done        |
-| M5  | PHI-66  | WebGL background scene with camera sync               | Not started |
+| M5  | PHI-66  | WebGL background scene with camera sync               | Done        |
 | M6  | PHI-67  | Experiment document templates and content migration   | Not started |
 | M7  | PHI-68  | Graphite agents and Lift polish                       | Not started |
 | M8  | PHI-69  | Exploded architecture diagrams                        | Not started |
@@ -280,6 +280,57 @@ were confirmed and fixed:
 `npm run verify`. A test that recomputes the hashes over `dist/**/*.html` and diffs them
 against `public/_headers` would close it permanently — `verify` already builds before
 `vitest`, so the artefact is available.
+
+### 2026-07-22 — M5 (PHI-66): WebGL background scene (Layer 0)
+
+- **`src/scripts/desk-scene.ts`** — a persistent module that dynamically imports
+  `three` after first idle and builds the §8 scene: a matte ground plane in
+  `--desk`, five abstract slab volumes near the periphery (raised toward the
+  camera so their sides foreshorten off-axis), warm ambient (0.55) + one
+  directional light, and `THREE.Fog` toward `--desk-deep` for the edge vignette
+  (no texture maps, no shadow maps). Colours are read from the CSS tokens.
+- **Sync contract (§3).** The `PerspectiveCamera` (FOV 35°) is driven from the
+  *same* store as the DOM plane via `cameraPose()`. It looks head-on at the
+  ground, so the **scale locks to the plane** (distance
+  `D = viewportHeight / (2·zoom·tan(FOV/2))` — same `zoom` the plane uses, so no
+  swim); the x/y pan is scaled by **parallax 0.85** so the background drifts
+  slightly less than the content — the depth cue. (three y is up, desk y is down,
+  so y is negated.)
+- **Layering:** the WebGL canvas is Layer 0 (`z-index:0`), the agent field 1, the
+  plane 2, inside `.desk-behind` — so STACK blurs the scene with the rest, and the
+  plane's opaque paper occludes it.
+- **Loading / lights-on (§8):** first paint is rung 2 (the CSS ground); `three`
+  loads post-idle (`requestIdleCallback`) and the canvas fades in over 600ms
+  (`.is-lit`). The canvas `transition:persist`s, so three initialises **once** and
+  survives ClientRouter swaps.
+- **Budget (§8/§14 perf pass, budget miss).** `three` is correctly **lazy**
+  (dynamic import; not in the initial route JS, which stays tiny). But the chunk
+  is **~188KB gz, over the 160KB target by ~15%.** This is essentially three's
+  floor: `WebGLRenderer` imports the monolithic `ShaderLib` (every built-in
+  shader), so the material choice does not move the bundle — verified the raw size
+  is identical with MeshStandard vs MeshLambert. Getting under 160KB would need a
+  lighter WebGL library, a product decision for Phil. Mitigations: it is off the
+  critical path (post-idle), so LCP / INP / initial-JS (the user-facing §14
+  budgets) are unaffected. **Flagged for Phil.**
+- **Perf loop (§8):** `setPixelRatio(min(dpr, 1.5))`; the render loop only draws
+  when the camera pose changes, and **parks after 2s of no movement** and on
+  `document.hidden`; resize via `ResizeObserver`. The desk runtime calls
+  `wakeDeskScene()` when a navigation starts.
+- **Failure (§8):** a failed dynamic import or init logs once, disposes, and stays
+  on rung 2 — never a blank background.
+- **Review fixes (two MEDIUM, both fixed before commit).** (1) *Dispose-on-fail was
+  dead code:* `mount()`'s catch called `scene?.destroy()`, but `scene` is still
+  null when `build()` throws (the assignment never completed), so a partial
+  WebGL context + geometries leaked. `build()` now holds its allocations in
+  tracking refs and disposes them itself before re-throwing. (2) *Scene parked
+  mid-unfold:* the loop parks on `document.hidden` and after 2s idle, so during
+  the two-beat swap-hold it could sleep through the Beat-2 zoom and then snap
+  (swim). The runtime now re-wakes the scene each frame while
+  `store.isAnimating`, so it tracks the whole Beat-2 push.
+- **Verify:** `astro check` 0 errors · build 18 pages · `vitest` 80/80. The
+  camera-sync scale-lock is deterministic (the projection formula); the *feel* of
+  the scene — atmosphere, the light pool, whether it swims — is Phil's real-browser
+  call (note 6), especially since the preview pane's rAF is intermittent here.
 
 ### 2026-07-22 — M4 tune fix: gate Beat 2 on swap AND arrival (Phil's frame data)
 

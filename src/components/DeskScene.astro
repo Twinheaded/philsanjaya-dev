@@ -34,6 +34,14 @@ const { current, open = false, notesPage, logPage } = Astro.props;
      element so STACK can blur them as a single filter layer (§7.4). Blurring the
      0x0 plane directly is unreliable — the box has no area to filter. -->
 <div class="desk-behind">
+  <!-- Layer 0 — WebGL scene (§8). Persists across swaps so three inits once;
+       fades in ("lights on") once ready. Falls back to the CSS ground. -->
+  <canvas
+    id="desk-scene"
+    class="desk-scene"
+    transition:persist="desk-scene"
+    aria-hidden="true"></canvas>
+
   <!-- Layer 0.5 — agent field (desk-space, camera-projected). Decorative. -->
   <canvas id="desk-field" class="desk-field" aria-hidden="true"></canvas>
 

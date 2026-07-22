@@ -298,12 +298,34 @@
   z-index: 0;
 }
 
+/* Layer 0 — the WebGL scene (§8): one viewport-fixed canvas behind the field and
+   plane. Painted at rung 2 (the CSS ground) first; the scene fades in over ~600ms
+   once three is loaded and the first frame is drawn (.is-lit). If it never loads
+   or fails, it stays transparent and the CSS ground shows through. */
+.desk-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  inline-size: 100vw;
+  block-size: 100vh;
+  pointer-events: none;
+  opacity: 0;
+}
+.desk-scene.is-lit {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .desk-scene {
+    transition: opacity 600ms var(--ease-settle);
+  }
+}
+
 /* Layer 0.5 — the agent field: one viewport-fixed canvas beneath the plane, so
    the DOM plane's opaque paper occludes the marks (§12, M3 note 7). */
 .desk-field {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: 1;
   /* vw/vh (not dvh) so the canvas's centre matches the DOM plane's 50vw/50vh
      projection exactly — otherwise the marks drift vertically on mobile where
      dvh != vh (M3 review). */
@@ -316,7 +338,7 @@
   position: fixed;
   inset-block-start: 0;
   inset-inline-start: 0;
-  z-index: 1;
+  z-index: 2;
   inline-size: 0;
   block-size: 0;
   transform-origin: 0 0;
