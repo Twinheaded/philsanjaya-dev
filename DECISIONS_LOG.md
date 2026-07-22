@@ -395,6 +395,14 @@ the camera.
   component ref, M8), metric `note` (optional; **`source` stays required** —
   ADR 0004 untouched). All three EXP-label renderers (Home card, Experiments
   card, title block) read `expNo` (review caught HomeZone still on `order`).
+- **Documented deviation — `problem`/`idea`/`result` are body sections, not
+  frontmatter fields.** §10 sketches them as frontmatter additions; they are
+  implemented as canonical `##` sections in the markdown body instead, because
+  Astro renders body markdown natively (links, emphasis, the AEGISX SVG) —
+  multi-paragraph YAML strings would need a second markdown pipeline (a new
+  dependency) or lose formatting, and FR-24's "content is a markdown file"
+  reads better with prose in the body. The template still renders the §10
+  order; the section set is enforced by the migration. Flagged to Phil.
 - **Content migration (voice rule absolute):** prose byte-identical; only
   headings moved (`Approach`→`Idea`, `Architecture`→`###` under Idea,
   `Results`→`Result`, aegisx `Planned vs delivered`→`###` under Result) and
