@@ -248,7 +248,7 @@ Purpose: real-perspective depth and light — the *room* the desk sits in. It mu
 - **No texture maps, no wood grain** — flat materials + lighting only (`MeshStandardMaterial`, high roughness). **No shadow maps** — depth cues come from lighting, the parallax offset, and the DOM's CSS shadows. This is a deliberate perf + aesthetic call.
 - **Camera:** `PerspectiveCamera`, FOV ~35°, pose derived from the store (§3) with parallax 0.85. FOV/height mapping from `zoom` should be tuned so DOM and scene feel locked (verify by toggling Layer 0 on/off — content must not appear to swim).
 - **Loading — the "lights on" moment:** first paint is rung 2 (CSS ground) with content fully visible. `three` is dynamically imported after first idle; the scene fades in over ~600ms. The site is never blocked on WebGL.
-- **Performance budget:** `three` import ≤ ~160KB gz, loaded post-idle · `setPixelRatio(min(devicePixelRatio, 1.5))` · render loop pauses when the camera has been idle > 2s and agents (§12) are idle, and on `document.hidden` · resize observed, not polled.
+- **Performance budget:** `three` import ≤ 200KB gz, post-idle (measured floor: `WebGLRenderer` ships the full `ShaderLib` regardless of material — ~188KB gz as built; amended from ≤ ~160KB per Phil's ruling, 2026-07-23) · `setPixelRatio(min(devicePixelRatio, 1.5))` · render loop pauses when the camera has been idle > 2s and agents (§12) are idle, and on `document.hidden` · resize observed, not polled.
 - **Failure:** any init error → dispose cleanly, remain on rung 2, log once. Never a blank background.
 
 ---
@@ -330,7 +330,7 @@ The steering-agent simulation persists — it is the site's "future being built,
 
 **Performance**
 - First paint = rung 2 with full content (no WebGL on the critical path); LCP is DOM text/hero, < 2.0s on Fast 3G simulated; CLS < 0.02; INP < 200ms including verb interruptions.
-- JS budgets: initial route JS (excl. `three`) ≤ 90KB gz; `three` chunk ≤ 160KB gz, post-idle.
+- JS budgets: initial route JS (excl. `three`) ≤ 90KB gz; `three` chunk ≤ 200KB gz, post-idle (amended from 160 — see §8; three's measured floor is ~188KB gz).
 - 60fps Performance-trace during Slide and Unfold on a mid-tier laptop profile; no long tasks > 120ms during transitions.
 
 **SEO / resilience**

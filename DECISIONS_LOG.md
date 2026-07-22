@@ -372,6 +372,17 @@ push progress**, driven from the same rAF tick as the camera, in BOTH open paths
   clock, 0.6 flip, catch-up ramp, and trace-asserted order+timing for both gate
   orderings and same-zone on-time/late/mid-ramp swaps.
 
+### 2026-07-23 — Budget ruling: `three` accepted at 188KB gz; §8/§14 ceiling → ≤200KB
+
+Phil accepted the M5 budget flag: the `three` chunk ships at **~188KB gz** —
+its measured floor, since `WebGLRenderer` imports the monolithic `ShaderLib`
+(every built-in shader) and the material choice does not move the bundle.
+Handoff §8 and §14 amended from ≤ ~160KB to **≤ 200KB gz, post-idle**, with the
+floor documented. Rationale: the chunk is off the critical path (post-idle
+dynamic import), so LCP/INP/initial-JS — the user-facing §14 budgets — are
+unaffected; getting under 160 would require a different WebGL library for a
+~28KB win on a lazy asset. No lighter-lib follow-up opened.
+
 ### 2026-07-23 — FIX B: luminance parity for lights-on (Phil's YAVG data)
 
 Phil measured the lights-on fade at −5% whole-desk (YAVG 151.1 → 143.6),
