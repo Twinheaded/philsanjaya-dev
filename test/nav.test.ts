@@ -10,6 +10,7 @@ import { CameraStore, slideDuration, type Pose } from '../src/lib/camera';
 import {
   DOC_ZOOM,
   SETTLE_MS,
+  beat2Gate,
   isDocumentRoute,
   isPageRoute,
   isZoneRoute,
@@ -133,6 +134,35 @@ describe('planCamera — the two-beat cross-zone unfold (§7.3 amended)', () => 
     const total = beat1 + plan[0].settle + beat2;
     expect(total).toBeGreaterThan(1000);
     expect(total).toBeLessThan(1500);
+  });
+});
+
+describe('beat2Gate — Beat 2 fires at max(swap, arrival + settle)', () => {
+  const SETTLE = 150;
+  const ARRIVED = 1000; // Beat 1 settled at the parent zone at t=1000
+
+  it('never opens before Beat 1 has settled', () => {
+    expect(beat2Gate(-1, 5000, SETTLE, true)).toBe(false); // not arrived
+  });
+
+  it('fast fetch (swap during travel): reveal deferred until arrival + settle', () => {
+    // swapReady already true, but the settle must still elapse.
+    expect(beat2Gate(ARRIVED, ARRIVED + 1, SETTLE, true)).toBe(false);
+    expect(beat2Gate(ARRIVED, ARRIVED + SETTLE - 1, SETTLE, true)).toBe(false);
+    expect(beat2Gate(ARRIVED, ARRIVED + SETTLE, SETTLE, true)).toBe(true);
+  });
+
+  it('slow fetch (swap after settle): holds past the settle, fires when swap lands', () => {
+    // Settle has long elapsed, but the swap has not completed -> still held.
+    expect(beat2Gate(ARRIVED, ARRIVED + 900, SETTLE, false)).toBe(false);
+    // The instant the swap lands (swapReady true), and settle is satisfied, fire.
+    expect(beat2Gate(ARRIVED, ARRIVED + 900, SETTLE, true)).toBe(true);
+  });
+
+  it('is the conjunction: both the settle AND the swap are required', () => {
+    expect(beat2Gate(ARRIVED, ARRIVED + SETTLE, SETTLE, false)).toBe(false); // swap missing
+    expect(beat2Gate(ARRIVED, ARRIVED + 10, SETTLE, true)).toBe(false); // settle missing
+    expect(beat2Gate(ARRIVED, ARRIVED + SETTLE, SETTLE, true)).toBe(true); // both
   });
 });
 

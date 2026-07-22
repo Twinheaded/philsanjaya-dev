@@ -281,6 +281,45 @@ were confirmed and fixed:
 against `public/_headers` would close it permanently — `verify` already builds before
 `vitest`, so the artefact is available.
 
+### 2026-07-22 — M4 tune fix: gate Beat 2 on swap AND arrival (Phil's frame data)
+
+Phil's video frames showed the unfold beginning ~150–250ms into Beat 1 — the
+document grew while the desk was still travelling, with no perceptible settle. The
+mirror of the earlier race: the previous fix gated only the *reveal* on the
+swapped-in document, but the camera's Beat-2 *zoom* still ran on the store's own
+clock, so a fast fetch opened the document mid-slide.
+
+- **The gate is a conjunction, arbitrated by the controller.** Beat 2 — the zoom
+  push to 1.45 AND the reveal, together — now starts at
+  `max(swap complete, travel leg + settle leg complete)`. Because that combines a
+  store-internal event (travel+settle) with an external one (the swap), the store
+  can't own it: the two-beat OPEN no longer uses `sequenceTo`. `desk.ts` runs
+  Beat 1 as a plain `slideTo(parentPose)`, records `arrivedAt` when it settles,
+  and `tickTwoBeat` fires Beat 2 (`slideTo(docPose)` + reveal) only once
+  `beat2Gate(arrivedAt, now, SETTLE, swapReady)` holds. The camera *holds* at the
+  parent pose until the gate opens — a slow fetch reads as a longer settle.
+- **`beat2Gate` is a pure predicate** (`nav.ts`), tested in both orderings
+  (fast-fetch: reveal deferred to arrival+settle; slow-fetch: held until the swap
+  lands) plus the conjunction and the not-yet-arrived cases.
+- The rAF loop stays alive while a two-beat is holding for its gate
+  (`animating || field || (twoBeat && !fired)`); `after-swap`/`onPageLoad` no
+  longer snap a held two-beat to the document pose (it must not jump to 1.45).
+- **Interrupts** during Beat 1 or the hold reset `twoBeat = null` at the next
+  `before-preparation` and retarget the store from the live pose — Esc/Back/number
+  key/another card never stick. `sequenceTo` is retained for the two-beat CLOSE
+  (fold + slide, no swap to coordinate). Reduced motion still snaps to the final
+  pose (one ≤120ms cut). §7.3 of the handoff updated with the gate rule.
+- **Robustness:** `after-swap` also stamps `data-unfold=traveling` on the live
+  body (not just `before-swap` on the parsed incoming body), so the document stays
+  hidden even on a swap path that skips the View Transition.
+- **Adversarial review caught a BLOCKER I introduced:** `frame()` read the
+  loop-continue flag from the `animating` captured *before* `tickTwoBeat` ran — so
+  on the exact frame Beat 2 fires (which starts the zoom tween *and* clears the
+  gate), the loop stopped and the zoom-to-1.45 never ticked, freezing the camera
+  at the parent zoom on every cross-zone open. Fixed by re-reading
+  `store.isAnimating` after `tickTwoBeat`. (This is why the rAF loop reschedule
+  now uses the fresh state, not the stale const.)
+
 ### 2026-07-22 — M4 tune: two-beat cross-zone unfold (Phil's parity feedback)
 
 Opening a document from a *different* zone flew the camera diagonally across the

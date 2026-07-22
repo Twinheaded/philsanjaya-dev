@@ -67,6 +67,26 @@ function zonePose(zoneId: string): Pose {
 }
 
 /**
+ * The Beat-2 gate for a two-beat cross-zone open (§7.3 amended). Beat 2 — the
+ * zoom push to 1.45 AND the document reveal, together — starts at
+ * `max(swap complete, travel leg + settle leg complete)`. Both conditions must
+ * hold: the camera must have arrived at the parent zone and held the settle, and
+ * the document swap must have landed. So a fast fetch waits out the settle, and a
+ * slow fetch simply holds at the settled zone pose until the swap lands.
+ *
+ * `arrivedAt` is the time Beat 1 settled at the parent zone (< 0 until then).
+ */
+export function beat2Gate(
+  arrivedAt: number,
+  now: number,
+  settleMs: number,
+  swapReady: boolean
+): boolean {
+  if (arrivedAt < 0) return false; // Beat 1 has not settled yet
+  return swapReady && now >= arrivedAt + settleMs;
+}
+
+/**
  * The camera plan for a navigation (§7.3 two-beat cross-zone unfold).
  *
  * Opening a document whose parent zone differs from the zone currently in view

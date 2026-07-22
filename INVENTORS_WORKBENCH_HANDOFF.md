@@ -219,6 +219,11 @@ not a route visit):
 - **Beat 2 — UNFOLD** from the parent zone's card (zoom to ≈1.45). The morph
   origin is the *parent zone's* card, not the featured card that triggered the
   open on another zone. Home→EXP.001 lands in roughly 1.1–1.5s total.
+- **Beat 2 is gated on `max(swap complete, travel + settle complete)`.** The zoom
+  push to 1.45 and the reveal fire *together*, and neither begins on the camera's
+  own clock: a fast document fetch waits out the settle (so the document never
+  opens mid-slide); a slow fetch holds at the settled parent pose — reading as a
+  longer settle — and fires the instant the swap lands.
 - **Same-zone opens keep the single unfold** (Beat 2 only).
 - **Close:** Esc folds in place (stay at the parent zone, focus its card); Back
   folds then Slides retracing history, focus per §14/note-8.
