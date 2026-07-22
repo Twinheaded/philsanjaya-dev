@@ -106,7 +106,7 @@ single conventional commit. Branch: `redesign/inventors-workbench`.
 | M3  | PHI-64  | Camera store and Slide verb                           | Done        |
 | M4  | PHI-65  | Fold/Unfold and Stack (document transitions)          | Done        |
 | M5  | PHI-66  | WebGL background scene with camera sync               | Done        |
-| M6  | PHI-67  | Experiment document templates and content migration   | Not started |
+| M6  | PHI-67  | Experiment document templates and content migration   | Done        |
 | M7  | PHI-68  | Graphite agents and Lift polish                       | Not started |
 | M8  | PHI-69  | Exploded architecture diagrams                        | Not started |
 | M9  | PHI-70  | Mobile vertical roll                                  | Not started |
@@ -371,6 +371,45 @@ push progress**, driven from the same rAF tick as the camera, in BOTH open paths
 - **Verify:** 0 errors · 18 pages · vitest **104/104** (was 80): mapping, phase
   clock, 0.6 flip, catch-up ramp, and trace-asserted order+timing for both gate
   orderings and same-zone on-time/late/mid-ramp swaps.
+
+### 2026-07-23 — M6 (PHI-67): experiment document templates + content migration
+
+Every experiment now renders as a §10 physical document; the M2-era chaptered
+case-study deck (tabs, hash slides, chapter script, align island, MetricCard
+grid, hero autoplay) is **retired** — one scrolling paper, all motion owned by
+the camera.
+
+- **Template** (`projects/[slug].astro` + `src/components/document/`): §9-styled
+  title block (`DocTitleBlock` — EXP.00N, status dot, title, mono stack chips,
+  period) → abstract (frontmatter `summary` + `question`) → the body's Problem /
+  Idea / Result sections → figure plates (`FigurePlate` — FIG.01 architecture is
+  the reserved hatched plate until M8's §11 diagram; FIG.02 wraps the FR-38 lazy
+  hero, click-to-play now) → **honest metrics as a ruled mono table**
+  (`MetricsTable` — `source` always renders, `value: pending` stays an em-dash
+  row per FR-22) → links. The whole document scrolls in the one sanctioned
+  `.panel-scroll` (keyboard-operable) — an adversarial-review BLOCKER catch:
+  the first cut dropped the inner scroller and the sheet's `overflow:hidden`
+  clipped everything below the first screenful.
+- **Schema:** `expNo` (required int — the STABLE document number, deliberately
+  separate from `order`, which stays the desk sort), `diagram` (optional §11
+  component ref, M8), metric `note` (optional; **`source` stays required** —
+  ADR 0004 untouched). All three EXP-label renderers (Home card, Experiments
+  card, title block) read `expNo` (review caught HomeZone still on `order`).
+- **Content migration (voice rule absolute):** prose byte-identical; only
+  headings moved (`Approach`→`Idea`, `Architecture`→`###` under Idea,
+  `Results`→`Result`, aegisx `Planned vs delivered`→`###` under Result) and
+  `TODO(phil-voice)` comment blocks added — every gap flagged for Phil, nothing
+  reworded, no invented claims. `Reflection` kept (not a §10 section — Phil
+  rules on placement). AEGISX's inline SVG stays for M8's §11 redraw.
+- **Simpler documents (§10):** notes = index card, log = notebook page — one
+  mono micro meta row (`doc-cardhead`) over a ruled line; LOG.NN numbering;
+  commit chips keep FR-23. Both migrated off legacy aliases, as were `prose-md`
+  and the retired page. `MetricCard.astro` deleted. Aliases stay for the
+  remaining consumers (scrollbars, agent island, AEGISX SVG, 404).
+- **Verify:** 0 errors · 18 pages · 104/104 · in-pane: all five EXP documents
+  render the full template (title block, sections, plates, table, links), scroll
+  end-to-end, notes/log render their card/page variants; rung 4 throughout
+  (server HTML, no runtime needed).
 
 ### 2026-07-23 — Budget ruling: `three` accepted at 188KB gz; §8/§14 ceiling → ≤200KB
 

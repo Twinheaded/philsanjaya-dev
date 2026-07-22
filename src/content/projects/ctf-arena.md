@@ -2,6 +2,7 @@
 title: CTF Arena
 slug: ctf-arena
 order: 1
+expNo: 1
 tags: [ai-for-games, simulation]
 stack: [Python, pyglet, GOAP, 'A*', FSM, steering]
 period: '2026'
@@ -22,6 +23,12 @@ hero: /media/ctf-arena-demo.webm
 heroPoster: /media/ctf-arena-poster.webp
 ---
 
+<!-- TODO(phil-voice) — §10 restructure notes (M6, agent-scaffolded; copy untouched):
+     · Problem is ~4 sentences — within §10's 2–4 range; bless or trim to taste.
+     · "Approach" + "Architecture" now scaffold the Idea section (heading-only
+       change) — smooth the seam if it reads stitched.
+     · Reflection is not a §10 section — fold into Result, keep, or cut. -->
+
 ## Problem
 
 The COS30002 brief asks for four families of game AI — architecture, graph search,
@@ -33,7 +40,7 @@ competitive performance over independent, individually-greedy agents? The hypoth
 predicted a higher win rate and faster captures, with the largest gains on
 chokepoint-heavy maps.
 
-## Approach
+## Idea
 
 A clean ablation. Both conditions run the same FSM, planner, pathfinding, and steering;
 the Coordinated team adds a coordinator that assigns roles, while the Independent
@@ -44,7 +51,7 @@ master seed through a headless harness that runs at roughly 90× real time. The 
 carries 135 pytest tests — including same-seed replay tests that pin determinism — and 53
 functional requirements tracked through 18 Linear issues.
 
-## Architecture
+### Architecture
 
 Each tick runs a fixed pipeline: sense → coordinate → plan → path → steer → resolve. A
 six-state FSM executes *how* an agent acts; a STRIPS-style GOAP planner decides *what* it
@@ -56,7 +63,7 @@ it to a role template, and assigns roles to the nearest agents through a shared
 blackboard. The wander behaviour drifting behind this site's home page is the same maths,
 ported to TypeScript.
 
-## Results
+## Result
 
 Across 150 head-to-head matches the coordinated team won 134, lost 2, and drew 14 — a
 0.985 win rate over decisive matches (Wilson 95% CI 0.957–1.000, binomial p = 1.07e-37)

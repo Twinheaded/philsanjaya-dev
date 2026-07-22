@@ -2,6 +2,7 @@
 title: Market sentiment
 slug: market-sentiment
 order: 3
+expNo: 3
 tags: [machine-learning, nlp]
 stack: [Python, TensorFlow/Keras, scikit-learn, XGBoost, FinBERT]
 period: '2025'
@@ -29,6 +30,15 @@ metrics:
     source: refactored codebase README (private repo) — pending verification
 ---
 
+<!-- TODO(phil-voice) — §10 restructure notes (M6, agent-scaffolded; copy untouched):
+     · "Approach" + "Architecture" now scaffold the Idea section — smooth the seam.
+     · The metrics table now renders BELOW the write-up (§10 order), so "the
+       accuracy cards above" and "it renders above as a pending card" in
+       Result/Reflection point the wrong way — reword.
+     · "This chapter spent weeks deliberately empty" (Result, first sentence)
+       names the retired chapter deck — the document has sections now; reword.
+     · Reflection is not a §10 section — fold into Result, keep, or cut. -->
+
 ## Problem
 
 COS30018 Task C.7: predict stock price movement, and test whether news sentiment adds
@@ -37,7 +47,7 @@ classifier trained with sentiment features removed against an enhanced model wit
 full set — plus a separate regression pipeline forecasting actual prices. The honest
 question underneath: when the run is over, what can the code still prove?
 
-## Approach
+## Idea
 
 News comes from Alpha Vantage's NEWS_SENTIMENT feed (clients for Finnhub and NewsAPI
 were written but never wired into the pipeline — capability, not usage). Each article's
@@ -49,7 +59,7 @@ OHLCV, eleven sentiment aggregates, seven technical indicators, nine lags, and t
 interaction terms — sentiment × 10-day volatility, sentiment × log-volume, and a
 sentiment-agreement score computed as the inverse of the tools' disagreement.
 
-## Architecture
+### Architecture
 
 Two pipelines, deliberately separated — that separation *is* the refactor, receipted in
 the git history: three standalone scripts collapsed into one argparse CLI
@@ -61,7 +71,7 @@ regression side builds configurable LSTM/GRU stacks — default two GRU layers o
 units reading 60-day windows to forecast five days — with a hybrid twist: a SARIMA model
 fit on the network's training residuals, added back onto its forecast.
 
-## Results
+## Result
 
 This chapter spent weeks deliberately empty: the pipeline demonstrably ran — 667
 days of multi-tool sentiment for IBM and Coca-Cola sit in the caches with real

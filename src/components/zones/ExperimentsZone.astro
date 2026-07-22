@@ -11,7 +11,8 @@ const experiments = (
   await getCollection('projects', ({ data }) => data.status === 'published')
 ).sort((a, b) => a.data.order - b.data.order);
 
-const expNo = (order: number) => `EXP.${String(order).padStart(3, '0')}`;
+/** The card shows the document's stable EXP number (§10), not its sort slot. */
+const expNo = (n: number) => `EXP.${String(n).padStart(3, '0')}`;
 ---
 
 <div>
@@ -26,7 +27,7 @@ const expNo = (order: number) => `EXP.${String(order).padStart(3, '0')}`;
             <a class="paper-card" href={`/projects/${p.data.slug}`}>
               <p class="paper-card__meta">
                 <span class="status-dot" aria-hidden="true" />
-                {expNo(p.data.order)}
+                {expNo(p.data.expNo)}
               </p>
               <p class="paper-card__title">{p.data.title}</p>
               <p class="paper-card__note">{p.data.summary}</p>
@@ -49,14 +50,9 @@ const expNo = (order: number) => `EXP.${String(order).padStart(3, '0')}`;
     margin-block-start: calc(var(--space) * 3);
   }
 
-  /* Forest green, strictly a live/status marker (§5). */
+  /* .status-dot itself is global (shared with the §10 title block); the card
+     only spaces it. */
   .status-dot {
-    display: inline-block;
-    inline-size: 6px;
-    block-size: 6px;
     margin-inline-end: calc(var(--space) * 0.75);
-    border-radius: 50%;
-    background: var(--status);
-    vertical-align: middle;
   }
 </style>

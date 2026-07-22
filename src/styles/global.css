@@ -158,8 +158,11 @@
   animation: vt-fade-out 180ms ease-out both;
 }
 
-/* Shared markdown prose (case-study chapters, notes, log entries). */
+/* Shared markdown prose (experiment documents, notes, log entries). M6
+   migrated this off the legacy aliases: muted prose is --ink-soft ON PAPER
+   (5.1:1, M2 note 4), links carry the copper accent. */
 .prose-md h2 {
+  margin-top: 2rem;
   font-family: var(--font-display);
   font-size: 28px;
   font-weight: 500;
@@ -173,7 +176,7 @@
 .prose-md p {
   margin-top: 0.75rem;
   max-width: 42rem;
-  color: var(--mist);
+  color: var(--ink-soft);
 }
 .prose-md ul,
 .prose-md ol {
@@ -181,16 +184,215 @@
   max-width: 42rem;
   padding-left: 1.25rem;
   list-style: disc;
-  color: var(--mist);
+  color: var(--ink-soft);
 }
 .prose-md a {
-  color: var(--signal-text);
+  color: var(--copper-deep);
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 .prose-md code {
   font-family: var(--font-mono);
   font-size: 0.875em;
+}
+
+/* ---------------------------------------------------------------------------
+ * §10 — document furniture: the drafting title block, captioned figure
+ * plates (M8 fills the architecture plate per §11), and the honest-metrics
+ * ruled mono table. All of it sits on the paper sheet, so muted ink is safe
+ * (M2 note 4). The status dot is the forest-green live marker (§5), shared
+ * with the zone cards.
+ * --------------------------------------------------------------------------- */
+.status-dot {
+  display: inline-block;
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--status);
+  vertical-align: middle;
+}
+
+/* The simpler documents (§10): notes are index cards, log entries notebook
+   pages — one mono micro meta row over a ruled line. */
+.doc-cardhead__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 0.5) var(--space);
+  margin-block-start: calc(var(--space) * 1.5);
+  padding-block-end: calc(var(--space) * 0.5);
+  border-block-end: 1px solid var(--paper-edge);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.doc-titleblock {
+  margin-block-start: calc(var(--space) * 2);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-paper);
+}
+.doc-titleblock__meta,
+.doc-titleblock__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--space) * 0.75) var(--space);
+  padding: calc(var(--space) * 0.75) var(--space);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+.doc-titleblock__meta {
+  border-block-end: 1px solid var(--paper-edge);
+  text-transform: uppercase;
+}
+.doc-titleblock__foot {
+  border-block-start: 1px solid var(--paper-edge);
+}
+.doc-titleblock__status {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space) * 0.5);
+}
+.doc-titleblock__title {
+  padding: calc(var(--space) * 1.25) var(--space);
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3.5vw, 2.25rem);
+  font-weight: 500;
+  line-height: 1.15;
+}
+.doc-titleblock__stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 0.5);
+}
+.doc-chip {
+  padding: 1px 6px;
+  border: 1px solid var(--paper-edge);
+  border-radius: 4px;
+}
+
+.doc__abstract {
+  margin-block-start: calc(var(--space) * 2.5);
+  max-inline-size: 42rem;
+  font-size: 1.0625rem;
+}
+.doc__question {
+  margin-block-start: calc(var(--space) * 0.75);
+  max-inline-size: 42rem;
+  color: var(--ink-soft);
+}
+.doc__body {
+  margin-block-start: calc(var(--space) * 1.5);
+}
+.doc__section {
+  margin-block-start: calc(var(--space) * 4);
+}
+.doc__h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.doc__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 0.75) calc(var(--space) * 2);
+  margin-block-start: var(--space);
+  list-style: none;
+  padding: 0;
+}
+
+/* Figure plates (§10/§11): the reserved empty state hatches so it reads as a
+   deliberate placeholder, never a broken image box. */
+.fig-plate {
+  margin-block-start: calc(var(--space) * 4);
+}
+.fig-plate__empty {
+  display: grid;
+  place-items: center;
+  min-block-size: 10rem;
+  border: 1px dashed var(--ink-soft);
+  border-radius: var(--radius-paper);
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 14px,
+    color-mix(in srgb, var(--paper-edge) 60%, transparent) 14px 15px
+  );
+}
+.fig-plate__reserved {
+  padding: 2px 8px;
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.fig-plate__body {
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-paper);
+  padding: var(--space);
+}
+.fig-plate__body :is(video, img) {
+  inline-size: 100%;
+  max-block-size: 48vh;
+  border-radius: 6px;
+  object-fit: contain;
+}
+.fig-plate__caption {
+  margin-block-start: calc(var(--space) * 0.75);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+/* Honest metrics (§10.5): a ruled mono table. The wrapper scrolls sideways on
+   narrow screens (inside the sheet — never the page). */
+.metrics-wrap {
+  margin-block-start: var(--space);
+  overflow-x: auto;
+}
+.metrics-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.metrics-table th,
+.metrics-table td {
+  padding: calc(var(--space) * 0.75) var(--space) calc(var(--space) * 0.75) 0;
+  border-block-end: 1px solid var(--paper-edge);
+  text-align: left;
+  vertical-align: top;
+}
+.metrics-table thead th {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-block-end-color: var(--ink-soft);
+}
+.metrics-table tbody th {
+  font-weight: 400;
+  color: var(--ink);
+}
+.metrics-table__source {
+  color: var(--ink-soft);
+}
+.metrics-table__pending {
+  color: var(--ink-soft);
+}
+.metrics-table__note {
+  display: block;
+  color: var(--ink-soft);
 }
 
 /*

@@ -1,0 +1,34 @@
+---
+/**
+ * §10.1 — the experiment document's title block, mirroring the §9 drafting
+ * style: a ruled frame of mono micro fields around the display title —
+ * EXP number, status (with the forest-green live dot), title, stack chips,
+ * date range. Every field comes from frontmatter; no invented copy.
+ */
+interface Props {
+  expNo: number;
+  title: string;
+  period: string;
+  status: string;
+  stack: string[];
+}
+const { expNo, title, period, status, stack } = Astro.props;
+const exp = `EXP.${String(expNo).padStart(3, '0')}`;
+---
+
+<header class="doc-titleblock">
+  <p class="doc-titleblock__meta">
+    <span>{exp}</span>
+    <span class="doc-titleblock__status">
+      <span class="status-dot" aria-hidden="true"></span>
+      {status}
+    </span>
+  </p>
+  <h1 class="doc-titleblock__title">{title}</h1>
+  <p class="doc-titleblock__foot">
+    <span class="doc-titleblock__stack">
+      {stack.map((s) => <span class="doc-chip">{s}</span>)}
+    </span>
+    <span class="doc-titleblock__period">{period}</span>
+  </p>
+</header>

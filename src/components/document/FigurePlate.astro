@@ -1,0 +1,32 @@
+---
+/**
+ * §10/§11 — a captioned figure frame, drafting-plate style. M6 ships the
+ * frame; M8 fills it with the exploded architecture diagram (§11). The empty
+ * state reads as a deliberate reserved plate (hatched, labelled) — never a
+ * broken box. Captions are mechanical drafting text, not voice copy.
+ */
+interface Props {
+  /** FIG index within this document (FIG.01, FIG.02 …). */
+  no: number;
+  caption: string;
+  /** Render the reserved (empty) plate instead of the slot. */
+  empty?: boolean;
+}
+const { no, caption, empty = false } = Astro.props;
+const fig = `FIG.${String(no).padStart(2, '0')}`;
+---
+
+<figure class="fig-plate">
+  {
+    empty ? (
+      <div class="fig-plate__empty" role="img" aria-label={`${caption} — plate reserved`}>
+        <span class="fig-plate__reserved">plate reserved</span>
+      </div>
+    ) : (
+      <div class="fig-plate__body">
+        <slot />
+      </div>
+    )
+  }
+  <figcaption class="fig-plate__caption">{fig} — {caption}</figcaption>
+</figure>

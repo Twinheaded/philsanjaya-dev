@@ -28,12 +28,13 @@ const formatDate = (d: Date) =>
   description={note.data.summary ?? `A note by Philipus Sanjaya: ${note.data.title}`}
 >
   <article class="flex h-full min-h-0 flex-col p-5 md:p-12">
-    <header class="shrink-0">
-      <a href="/notes" class="font-mono text-xs text-mist hover:text-ink">&larr; notes</a>
-      <p class="mt-4 font-mono text-xs tracking-[0.08em] text-mist">
-        03 — note · <time datetime={note.data.date.toISOString().slice(0, 10)}
-          >{formatDate(note.data.date)}</time
-        >
+    <!-- An index card (§10): mono micro meta over a ruled line, then the body. -->
+    <header class="doc-cardhead shrink-0">
+      <a href="/notes" class="font-mono text-xs text-ink-soft hover:text-ink">&larr; notes</a>
+      <p class="doc-cardhead__meta">
+        <span>note</span>
+        <time datetime={note.data.date.toISOString().slice(0, 10)}>{formatDate(note.data.date)}</time>
+        {note.data.tags.length > 0 && <span>{note.data.tags.join(' · ')}</span>}
       </p>
       <h1 class="mt-2 max-w-2xl font-display text-[28px] leading-tight font-medium">
         {note.data.title}

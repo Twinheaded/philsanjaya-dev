@@ -15,7 +15,8 @@ const featured = (await getCollection('projects', ({ data }) => data.status === 
   .sort((a, b) => a.data.order - b.data.order)
   .slice(0, 3);
 
-const expNo = (order: number) => `EXP.${String(order).padStart(3, '0')}`;
+/** The card shows the document's stable EXP number (§10), not its sort slot. */
+const expNo = (n: number) => `EXP.${String(n).padStart(3, '0')}`;
 ---
 
 <div class="home">
@@ -40,7 +41,7 @@ const expNo = (order: number) => `EXP.${String(order).padStart(3, '0')}`;
       featured.map((p) => (
         <li>
           <a class="paper-card" href={`/projects/${p.data.slug}`}>
-            <p class="paper-card__meta">{expNo(p.data.order)}</p>
+            <p class="paper-card__meta">{expNo(p.data.expNo)}</p>
             <p class="paper-card__title">{p.data.title}</p>
             <p class="paper-card__note">{p.data.summary}</p>
           </a>

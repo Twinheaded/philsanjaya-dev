@@ -71,10 +71,11 @@
 
   /* ---------------------------------------------------------------------- *
    * Legacy aliases — original token names mapped onto the workbench palette.
-   * Kept so un-migrated consumers (the document templates under src/pages,
-   * MetricCard, NotePane and the agent island) compile and adopt the new system.
-   * Retire each alias when its last consumer is rebuilt — grep first. Do NOT add
-   * new usages of these names.
+   * Kept so un-migrated consumers compile and adopt the new system. Remaining
+   * consumers after M6 rebuilt the document templates: NotePane/.panel-scroll
+   * scrollbars, the agent island, the AEGISX in-content SVG (redrawn per §11
+   * in M8), and the 404. Retire each alias when its last consumer is rebuilt —
+   * grep first. Do NOT add new usages of these names.
    * ---------------------------------------------------------------------- */
   /* --bg retired in M2: the rebuilt shell paints the ground from --desk. */
   --surface:     var(--paper);       /* cards / panels → paper */

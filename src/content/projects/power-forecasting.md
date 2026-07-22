@@ -2,6 +2,7 @@
 title: Power forecasting
 slug: power-forecasting
 order: 4
+expNo: 4
 tags: [machine-learning, data-science]
 stack: [Python, scikit-learn, TensorFlow/Keras, pandas]
 period: '2026'
@@ -20,6 +21,13 @@ metrics:
     source: notebook cell 53 — R² advantage over MLP 0.1016
 ---
 
+<!-- TODO(phil-voice) — §10 restructure notes (M6, agent-scaffolded; copy untouched):
+     · "Approach" now scaffolds the Idea section (heading-only change).
+     · The metrics table now renders BELOW the write-up (§10 order), so "the
+       metric cards above cite the exact cells" in Result points the wrong
+       way — reword.
+     · Reflection is not a §10 section — fold into Result, keep, or cut. -->
+
 ## Problem
 
 COS40007 Portfolio Assessment 3: predict Zone 1 power consumption for Tetouan City —
@@ -29,7 +37,7 @@ two zones' consumption columns were dropped as leakage (they correlate with Zone
 0.83 and 0.75), so the models had to earn their accuracy from nine honest features
 rather than copy a neighbouring meter.
 
-## Approach
+## Idea
 
 Three models on an identical, seeded 80/20 split with a
 train-fit-only scaler: a 200-tree Random Forest, a scikit-learn MLP (64, 32), and a
@@ -38,7 +46,7 @@ in total — swept across batch sizes 16, 32, and 64. The sweep was real, not de
 batch 16 won (R² 0.7477 over 0.7288 and 0.7348), consistent with smaller batches'
 noisier gradients acting as implicit regularisation.
 
-## Results
+## Result
 
 The Random Forest won, and it wasn't close: test R² 0.9779 (RMSE 1,056.55, MAE 706.47,
 five-fold CV 0.9745 ± 0.0013) against the best ANN's 0.7477 — a 0.23 R² gap — with the

@@ -2,6 +2,7 @@
 title: AEGISX cloud pipeline
 slug: aegisx
 order: 2
+expNo: 2
 tags: [ics-security, cloud]
 stack: [Python, AWS Kinesis, Lambda, S3, Athena, SNS, SQS, CloudFormation]
 period: '2025–2026'
@@ -29,6 +30,14 @@ metrics:
     source: Reflection Report, individual challenges — commit history
 ---
 
+<!-- TODO(phil-voice) — §10 restructure notes (M6, agent-scaffolded; copy untouched):
+     · Problem runs long; §10 wants 2–4 sentences — condense or bless as-is.
+     · "Approach" + "Architecture" (incl. the inline SVG) now scaffold the Idea
+       section — the SVG is redrawn to the §11 style in M8.
+     · "Planned vs delivered" sits as a subsection of Result — it is honest
+       results material; move or retitle if you disagree.
+     · Reflection is not a §10 section — fold into Result, keep, or cut. -->
+
 ## Problem
 
 AEGISX is a two-semester capstone: a smart-grid industrial-control-system security
@@ -43,7 +52,7 @@ monitoring pipeline that floods, drops, or stalls is itself a security failure.
 Live inference deliberately stays on-premises: in an ICS,
 detection belongs next to the process. The cloud is the memory and the megaphone.
 
-## Approach
+## Idea
 
 Being the only cloud person meant no peer to review AWS judgement calls, so the
 discipline had to be structural. Teammates' modules were treated as APIs to consume,
@@ -57,7 +66,7 @@ infrastructure is captured as a CloudFormation template of intended state, and t
 handover includes a migration runbook written for fresh-account deployment to the
 client.
 
-## Architecture
+### Architecture
 
 <svg viewBox="0 0 760 330" role="img" aria-label="AEGISX delivered architecture: on-premise Modbus monitoring streams scored events through a boto3 producer into Kinesis; a Lambda validator writes to a Hive-partitioned S3 data lake queried by Athena, publishes aggregated SNS alerts, and dead-letters failures to SQS. SageMaker retraining is a scaffold pending the model handoff; the CloudFront access path is documented but not deployed; the demo dashboard reads S3 locally, read-only" style="width: 100%; max-width: 720px; font-family: var(--font-mono); font-size: 11px;">
   <defs>
@@ -134,7 +143,7 @@ configurable confidence threshold — and records that fail repeatedly land in a
 dead-letter queue. IAM is least-privilege throughout. What the diagram does not show is
 as deliberate as what it does: live LSTM inference never moved to the cloud.
 
-## Results
+## Result
 
 The pipeline's defining results came from two live incidents, each now an ADR. The
 first was the alert flood: the handler published one SNS email per event, and combined
@@ -155,7 +164,7 @@ two aggregated alerts — the tamper and the above-threshold anomaly, with the
 below-threshold anomaly correctly staying silent. By the handover demo the lake held
 162,095 normal, 20,634 anomaly, and 1,982 tamper events, with quarantine at zero.
 
-## Planned vs delivered
+### Planned vs delivered
 
 The Semester 1 roadmap and the delivered system differ, and the differences are the
 engineering. Greengrass edge ingestion became the direct boto3 producer: weeks of
