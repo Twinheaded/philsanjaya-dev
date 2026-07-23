@@ -5,6 +5,8 @@
  * EXP number, status (with the forest-green live dot), title, stack chips,
  * date range. Every field comes from frontmatter; no invented copy.
  */
+import InkUnderline from '../InkUnderline.astro';
+
 interface Props {
   expNo: number;
   title: string;
@@ -24,7 +26,7 @@ const exp = `EXP.${String(expNo).padStart(3, '0')}`;
       {status}
     </span>
   </p>
-  <h1 class="doc-titleblock__title">{title}</h1>
+  <h1 class="doc-titleblock__title">{title}<InkUnderline /></h1>
   <p class="doc-titleblock__foot">
     <span class="doc-titleblock__stack">
       {stack.map((s) => <span class="doc-chip">{s}</span>)}

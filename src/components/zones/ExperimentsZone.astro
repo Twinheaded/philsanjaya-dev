@@ -13,11 +13,12 @@ const experiments = (
 
 /** The card shows the document's stable EXP number (§10), not its sort slot. */
 const expNo = (n: number) => `EXP.${String(n).padStart(3, '0')}`;
+import InkUnderline from '../InkUnderline.astro';
 ---
 
 <div>
   <p class="zone-kicker">02 — Experiments</p>
-  <h1 class="zone-title">Experiments</h1>
+  <h1 class="zone-title">Experiments<InkUnderline /></h1>
 
   {
     experiments.length > 0 ? (

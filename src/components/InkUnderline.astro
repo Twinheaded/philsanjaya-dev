@@ -1,0 +1,12 @@
+---
+/**
+ * The ink-reveal flourish (§7 — THE only one): a hand-drawn annotation
+ * underline beneath a document/zone title. Statically visible at rung 4; with
+ * JS, polish.ts adds `.ink-draw` once per session per zone and the stroke
+ * draws in over 500ms via stroke-dashoffset. Decorative, aria-hidden.
+ */
+---
+
+<svg class="ink-underline" viewBox="0 0 200 8" preserveAspectRatio="none" aria-hidden="true">
+  <path pathLength="100" d="M2 5.5 C 30 3.5, 58 6.5, 86 4.5 S 150 6.2, 198 3.8"></path>
+</svg>

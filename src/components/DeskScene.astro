@@ -46,8 +46,14 @@ const { current, open = false, notesPage, logPage } = Astro.props;
     transition:persist="desk-scene"
     aria-hidden="true"></canvas>
 
-  <!-- Layer 0.5 — agent field (desk-space, camera-projected). Decorative. -->
-  <canvas id="desk-field" class="desk-field" aria-hidden="true"></canvas>
+  <!-- Layer 0.5 — agent field (desk-space, camera-projected). Decorative.
+       Persists (M7): the graphite marks accumulate on the bitmap and must
+       survive route swaps instead of resetting to a blank sheet. -->
+  <canvas
+    id="desk-field"
+    class="desk-field"
+    transition:persist="desk-field"
+    aria-hidden="true"></canvas>
 
   <!-- Layer 1 — DOM content plane. -->
   <div class="desk-plane">

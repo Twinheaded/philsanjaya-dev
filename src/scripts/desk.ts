@@ -429,9 +429,11 @@ function onPageLoad(): void {
 
   // The field is desk-wide but hidden behind an open document (Stack), so it is
   // only mounted on zone routes — no invisible rendering, and the loop can stop.
+  // Reduced motion parks the field entirely (M7 note 4): an empty desk, no
+  // ambient animation — the canvas persists but nothing mounts or draws.
   field?.destroy();
   const onDesk = document.body.dataset.view !== 'document';
-  field = canvas && onDesk ? mountDeskField(canvas) : null;
+  field = canvas && onDesk && !reduced ? mountDeskField(canvas) : null;
 
   if (!p) {
     stopLoop();
@@ -456,10 +458,7 @@ function onPageLoad(): void {
     manageFocus();
   }
 
-  if (reduced) {
-    field?.renderStatic(store.current);
-    return;
-  }
+  if (reduced) return; // no loop: cuts are instant, the field is parked (M7)
   startLoop();
 }
 
@@ -493,3 +492,6 @@ if (document.readyState !== 'loading') onPageLoad();
 
 // Layer 0 (§8): load the WebGL scene after first idle; it persists across swaps.
 initDeskScene();
+
+// M7 polish: cursor tilt + the ink-reveal flourish (delegated, binds once).
+import './polish';

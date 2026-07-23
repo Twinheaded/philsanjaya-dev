@@ -107,7 +107,7 @@ single conventional commit. Branch: `redesign/inventors-workbench`.
 | M4  | PHI-65  | Fold/Unfold and Stack (document transitions)          | Done        |
 | M5  | PHI-66  | WebGL background scene with camera sync               | Done        |
 | M6  | PHI-67  | Experiment document templates and content migration   | Done        |
-| M7  | PHI-68  | Graphite agents and Lift polish                       | Not started |
+| M7  | PHI-68  | Graphite agents and Lift polish                       | Done        |
 | M8  | PHI-69  | Exploded architecture diagrams                        | Not started |
 | M9  | PHI-70  | Mobile vertical roll                                  | Not started |
 | M10 | PHI-71  | Accessibility and performance hardening               | Not started |
@@ -371,6 +371,58 @@ push progress**, driven from the same rAF tick as the camera, in BOTH open paths
 - **Verify:** 0 errors · 18 pages · vitest **104/104** (was 80): mapping, phase
   clock, 0.6 flip, catch-up ramp, and trace-asserted order+timing for both gate
   orderings and same-zone on-time/late/mid-ramp swaps.
+
+### 2026-07-24 — M7 (PHI-68): graphite agents + Lift polish + the flourish
+
+The agent field re-materialised as **charcoal strokes** (§12), the LIFT verb
+landed on every interactive (§7.1), and the ink-reveal underline is the site's
+ONLY flourish (§7).
+
+- **Strokes, not dots** (`desk-field.ts` rewritten; pure maths in
+  `lib/graphite.ts`, invariants in `test/graphite.test.ts`): per-segment
+  pressure alpha (slower = pressed harder) and width jitter (per-pencil
+  personality), round caps, softness baked into alpha — **no shadowBlur**.
+  Marks ACCUMULATE and fade by **destination-out** on a wall-clock cadence
+  (500ms — frame-counting would fade 2× fast on 120Hz, review), applied in
+  device space (a partial dpr-rounded edge column raised its stall floor,
+  review). **8-bit multiplicative fading stalls** below `ceil(0.5/F)` — the
+  rolling scrub bands zero that residue so trails vanish to NOTHING; the scrub
+  rides the fade cadence (a per-frame `getImageData` forced a GPU readback
+  every frame and software-rasterised the canvas — review HIGH), sweeping the
+  buffer ~4× faster than a stroke can decay. Fade ≈13–20s to the floor.
+- **The field travels with the camera and persists.** Pose changes re-project
+  the bitmap (one affine blit; resample softening reads as smudge). The canvas
+  `transition:persist`s and pencils/lastCam live at module level — and the
+  review caught a BLOCKER: `canvas.width = w` **resets the buffer even when
+  unchanged**, so every remount wiped the marks; resize now guards on a real
+  size change. Behind an open document the unmounted field is CSS-hidden (its
+  frozen bitmap sat at the pre-open pose); marks return re-projected on close.
+- **Density is Phil's token pair** (`--field-count` 30, `--field-trail-alpha`
+  0.16 in tokens.css). **Reduced motion parks the field** — never mounted, an
+  empty desk (honest: static marks would be invented history).
+- **LIFT (§7.1):** cards hover-lift −4px with the e1→e2 shadow crossfading on a
+  `::after` opacity layer (per spec), ≤1.2° cursor tilt via `--tilt-x/y`
+  (polish.ts, per-EVENT pointerType guard — `(pointer: fine)` describes the
+  primary pointer, a hybrid laptop's finger still fires pointermove, review);
+  gated `@media (hover:hover) and (prefers-reduced-motion: no-preference)`;
+  `:active` press = scale 0.99 everywhere; commit chips get a 2px mini-lift;
+  the copper `:focus-visible` ring is global (M2). **Hybrid sticky-hover**
+  (review): polish.ts stamps `html[data-input]` on pointerdown and touch
+  cancels the hover lift — touch gets the press state, never hover. Text links
+  keep colour/underline states (lift is for object-like interactives — logged
+  as the interpretation of "every interactive"). NotesZone's card scatter
+  moved to the independent `rotate` property (review HIGH: a scoped
+  `transform` beat the global lift/press at equal specificity).
+- **Ink-reveal** (`InkUnderline.astro` + polish.ts): a copper annotation
+  underline under document/zone titles, drawn via `stroke-dashoffset` over
+  500ms, **once per session per zone** (documents share the parent zone key;
+  in-memory set primary, sessionStorage the cross-reload layer — review),
+  skipped under reduced motion (the static underline stands, also at rung 4).
+- **Verify:** 0 errors · 18 pages · vitest **114/114** (graphite invariants:
+  scrub-covers-stall, ~20s window on any refresh rate, sweep-outpaces-decay,
+  pressure/width envelopes, wrap guard). Review: 9 confirmed findings fixed
+  pre-commit (1 BLOCKER, 2 HIGH, 2 MEDIUM, 4 LOW). Whether the marks read as
+  pencil work is Phil's call.
 
 ### 2026-07-24 — Lights-on follow-up: rung telemetry + parity-locked warm-up
 

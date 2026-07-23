@@ -17,11 +17,12 @@ const featured = (await getCollection('projects', ({ data }) => data.status === 
 
 /** The card shows the document's stable EXP number (§10), not its sort slot. */
 const expNo = (n: number) => `EXP.${String(n).padStart(3, '0')}`;
+import InkUnderline from '../InkUnderline.astro';
 ---
 
 <div class="home">
   <p class="zone-kicker">01 — Home</p>
-  <h1 class="home__name">Philipus Sanjaya</h1>
+  <h1 class="home__name">Philipus Sanjaya<InkUnderline /></h1>
   <p class="home__intro">
     Final-semester Computer Science student (Data Science &amp; AI) at Swinburne,
     Melbourne, completing July 2026. I build agent simulations, ML pipelines, and

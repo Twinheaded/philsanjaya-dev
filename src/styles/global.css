@@ -536,6 +536,13 @@
   block-size: 100vh;
   pointer-events: none;
 }
+/* Behind an open document the field is unmounted (no frames run), so the
+   persisted bitmap would sit frozen at the pre-open pose while the camera
+   pushed on without it — hide it; the marks return, re-projected, when the
+   document folds closed (M7 review). */
+body[data-view='document'] .desk-field {
+  visibility: hidden;
+}
 
 .desk-plane {
   position: fixed;
@@ -729,14 +736,111 @@ body[data-view='document'][data-unfold='traveling'] .stack-scrim {
 .paper-card--compact {
   padding: calc(var(--space) * 1.5) calc(var(--space) * 2);
 }
-@media (prefers-reduced-motion: no-preference) {
-  /* Colour only — the Lift verb (§7.1) is M7's, not faked here. */
-  .paper-card {
-    transition: border-color 150ms var(--ease-settle);
-  }
+/* LIFT (§7.1, M7): hover raises the card −4px; the shadow crossfades e1→e2 on
+   a second shadow layer (the ::after's opacity — compositor-friendly, per
+   spec); polish.ts adds the ≤1.2° cursor tilt on fine pointers. Gated on
+   hover-capable devices — touch never lifts, it gets the press state. The
+   copper focus ring is global (§7.1). */
+.paper-card {
+  position: relative;
+}
+.paper-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: var(--radius-paper);
+  box-shadow: var(--e2);
+  opacity: 0;
 }
 .paper-card:hover {
   border-color: var(--copper);
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .paper-card {
+    transition:
+      border-color 150ms var(--ease-settle),
+      transform var(--t-lift-out) var(--ease-settle);
+  }
+  .paper-card::after {
+    transition: opacity var(--t-lift-out) var(--ease-settle);
+  }
+  .paper-card:hover {
+    transform: perspective(600px) translateY(-4px) rotateX(var(--tilt-x, 0deg))
+      rotateY(var(--tilt-y, 0deg));
+    transition-duration: 150ms, var(--t-lift-in);
+  }
+  .paper-card:hover::after {
+    opacity: 1;
+    transition-duration: var(--t-lift-in);
+  }
+  /* Hybrid devices (review): a tap sets sticky :hover, but rule §13 is "touch
+     gets the press state, never hover" — polish.ts stamps the live input
+     modality and touch cancels the lift. */
+  html[data-input='touch'] .paper-card:hover {
+    transform: none;
+  }
+  html[data-input='touch'] .paper-card:hover::after {
+    opacity: 0;
+  }
+}
+/* Press (§13): every pointer — settle back onto the desk at e1. */
+.paper-card:active {
+  transform: scale(0.99);
+}
+.paper-card:active::after {
+  opacity: 0;
+}
+
+/* Small interactive chips (commit chips etc.) get a quiet 2px lift. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  a.chip {
+    display: inline-block;
+    transition:
+      transform var(--t-lift-out) var(--ease-settle),
+      border-color 150ms var(--ease-settle),
+      color 150ms var(--ease-settle);
+  }
+  a.chip:hover {
+    transform: translateY(-2px);
+    transition-duration: var(--t-lift-in), 150ms, 150ms;
+  }
+}
+a.chip:active {
+  transform: none;
+}
+
+/* The ink-reveal flourish (§7 — THE only one): a hand-drawn annotation
+   underline. Statically visible (rung 4, and for anyone who has seen it this
+   session); .ink-draw plays the 500ms draw-in once per session per zone
+   (polish.ts). Skipped under reduced motion. */
+.ink-underline {
+  display: block;
+  inline-size: min(100%, 14rem);
+  block-size: 8px;
+  margin-block-start: 4px;
+  overflow: visible;
+}
+.ink-underline path {
+  fill: none;
+  stroke: var(--copper);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: 100 100;
+  stroke-dashoffset: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ink-underline.ink-draw path {
+    animation: ink-draw 500ms var(--ease-settle) both;
+  }
+}
+@keyframes ink-draw {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .paper-card__meta {

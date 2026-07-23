@@ -2,6 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import Sheet from '../../layouts/Sheet.astro';
 import NotePane from '../../components/NotePane.astro';
+import InkUnderline from '../../components/InkUnderline.astro';
 import { SITE } from '../../lib/site';
 
 export async function getStaticPaths() {
@@ -41,7 +42,7 @@ const formatDate = (d: Date) =>
         <span>{entry.data.milestone}</span>
       </p>
       <h1 class="mt-2 max-w-2xl font-display text-[28px] leading-tight font-medium">
-        {entry.data.title}
+        {entry.data.title}<InkUnderline />
       </h1>
       {
         entry.data.commits.length > 0 && (

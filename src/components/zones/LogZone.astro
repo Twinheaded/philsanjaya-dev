@@ -20,11 +20,12 @@ const entries = page ? page.data : all.slice(0, 4);
 
 const formatDate = (d: Date) =>
   d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+import InkUnderline from '../InkUnderline.astro';
 ---
 
 <div>
   <p class="zone-kicker">04 — Log</p>
-  <h1 class="zone-title">Build log</h1>
+  <h1 class="zone-title">Build log<InkUnderline /></h1>
 
   {
     entries.length > 0 ? (

@@ -51,6 +51,12 @@
   --ease-settle:   cubic-bezier(0.2, 0, 0, 1);      /* Lift in, small settles */
   --t-lift-in: 180ms;
   --t-lift-out: 240ms;
+
+  /* §12 field density — Phil's tuning pair (M7). Count is the agent cap;
+     trail alpha is the graphite darkness of a fresh stroke. The desk must
+     read as organised, not scribbled, at every pose. */
+  --field-count: 30;
+  --field-trail-alpha: 0.16;
   --t-stack:   300ms;
   --t-settle:  150ms;  /* two-beat cross-zone unfold settle hold (§7.3), 120–180ms */
 

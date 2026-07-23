@@ -29,11 +29,12 @@ function tilt(id: string): string {
 
 const formatDate = (d: Date) =>
   d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+import InkUnderline from '../InkUnderline.astro';
 ---
 
 <div>
   <p class="zone-kicker">03 — Notes</p>
-  <h1 class="zone-title">Notes</h1>
+  <h1 class="zone-title">Notes<InkUnderline /></h1>
 
   {
     notes.length > 0 ? (
@@ -76,7 +77,12 @@ const formatDate = (d: Date) =>
   }
 
   .index-card {
-    transform: rotate(var(--tilt, 0deg));
+    /* The independent `rotate` property, NOT transform: a scoped transform
+       would win the cascade against the global LIFT hover/press transforms
+       (equal specificity, later order) and freeze the card (M7 review).
+       Individual transform properties compose with the transform list, so the
+       scatter survives the lift and the press. */
+    rotate: var(--tilt, 0deg);
   }
 
   .zone-pager {
