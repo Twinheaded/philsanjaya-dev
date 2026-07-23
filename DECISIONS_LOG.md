@@ -372,6 +372,39 @@ push progress**, driven from the same rAF tick as the camera, in BOTH open paths
   clock, 0.6 flip, catch-up ramp, and trace-asserted order+timing for both gate
   orderings and same-zone on-time/late/mid-ramp swaps.
 
+### 2026-07-24 — Lights-on follow-up: rung telemetry + parity-locked warm-up
+
+Diagnosis first (Phil's ask): on the deployed preview the scene **initialises
+healthily** — three loads post-idle, the GL context is live, and `readPixels`
+returns the calibrated tones; the fade was (correctly) deferred while the tab is
+hidden, because the `is-lit` gate is a rAF and rAF never fires hidden. No init
+bug. Two additions:
+
+- **The rung is observable forever:** the scene canvas carries `data-rung` —
+  `"2"` (CSS ground) from the markup, flipped to `"1"` by lights-on, reset on
+  dispose — and exactly one `console.info` line states the live rung (or the
+  fallback + reason). Parity made rungs 1/2 visually identical at rest; silent
+  init failure is now a two-second check.
+- **Warm-up (light redistributes, never changes quantity):** the grade starts
+  FLATTENED — every vertex at the viewport-area mean of the gradient (a
+  constant: the profile lives in normalized viewport coords) — and eases to
+  full pool/vignette contrast over 900ms (`--ease-settle`), started at
+  lights-on. Mixing toward the mean preserves the whole-desk mean **by
+  construction** at every instant; measured with the harness at contrast
+  0/.25/.5/.75/1: mean within **+0.32…+0.41%** of the CSS gradient mean (bar
+  ≤1.5%), c=0 frame perfectly uniform. Slabs ride the same ease as **opacity**
+  (review: albedo-mixing left their side faces visible at c=0 — side normals
+  get a different light sum; a transparent slab is exactly the ground behind
+  it). Verified uniform at the slab-heavy /notes pose too. Reduced motion: no
+  warm-up, full contrast immediately — decided ONCE at lights-on in both
+  directions (review: a preference flip between build and lights-on could
+  strand a flat room).
+- Also fixed (review): `setContrast` now invalidates + wakes the loop so the
+  live canvas matches the debug value; and a zero-size init self-heal —
+  `build()` in a never-displayed tab runs before first layout (rect 0×0) and
+  the ResizeObserver correction never fires hidden (RO callbacks are rendering
+  steps), so `frame()`/the harness force `resize()` when the size is stale.
+
 ### 2026-07-23 — M6 (PHI-67): experiment document templates + content migration
 
 Every experiment now renders as a §10 physical document; the M2-era chaptered

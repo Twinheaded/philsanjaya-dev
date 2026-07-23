@@ -36,9 +36,13 @@ const { current, open = false, notesPage, logPage } = Astro.props;
 <div class="desk-behind">
   <!-- Layer 0 — WebGL scene (§8). Persists across swaps so three inits once;
        fades in ("lights on") once ready. Falls back to the CSS ground. -->
+  <!-- data-rung: which §3 rung is live — "2" (CSS ground) until the scene's
+       lights-on flips it to "1". Observable in two seconds, since luminance
+       parity made the two rungs visually identical at rest. -->
   <canvas
     id="desk-scene"
     class="desk-scene"
+    data-rung="2"
     transition:persist="desk-scene"
     aria-hidden="true"></canvas>
 

@@ -19,7 +19,7 @@
  */
 
 import type { Material, Scene, WebGLRenderer } from 'three';
-import type { Pose } from '../lib/camera';
+import { cubicBezier, type Pose } from '../lib/camera';
 import { cameraPose } from './desk';
 
 const PARALLAX = 0.85;
@@ -50,6 +50,20 @@ const DESK_H = 3400;
  * adds a few flat percent).
  */
 const LIGHT_GAIN = 1.0;
+/**
+ * Lights-on warm-up (§8 follow-up): the grade starts FLATTENED — every vertex
+ * at the viewport-mean tone, same average luminance — and eases to full
+ * pool/vignette contrast over ~900ms, slabs riding the same ease. Light
+ * REDISTRIBUTES; the whole-desk mean is invariant at every instant by
+ * construction (mixing toward the area mean preserves the mean in linear
+ * space). Under prefers-reduced-motion there is no warm-up: full contrast
+ * immediately.
+ */
+const WARMUP_MS = 900;
+/** The --ease-settle curve (§5) — a lift-in, for the room waking. */
+const easeSettle = cubicBezier(0.2, 0, 0, 1);
+const reducedMotion = (): boolean =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 /** Ground subdivisions for the vertex grade (the gradient is slow — linear
  *  interpolation across a ~90-unit quad is far below 1 ΔY of error). */
 const GRADE_SEGS_X = 96;
@@ -113,6 +127,7 @@ async function mount(): Promise<void> {
     THREE = await import('three');
   } catch {
     console.warn('desk scene: three failed to load; staying on the CSS ground');
+    console.info('desk scene: rung 2 — CSS ground fallback (three failed to load)');
     return;
   }
 
@@ -122,6 +137,7 @@ async function mount(): Promise<void> {
     // build() disposes its own partial allocation before throwing, so there is
     // nothing to clean up here — just log and stay on the CSS ground.
     console.warn('desk scene: init failed; staying on the CSS ground', err);
+    console.info('desk scene: rung 2 — CSS ground fallback (init failed)');
     scene = null;
   }
 }
@@ -167,6 +183,7 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
       mesh.material?.dispose();
     });
     canvas.classList.remove('is-lit');
+    canvas.dataset.rung = '2'; // the CSS ground is the active rung again
     delete (window as unknown as Record<string, unknown>).__deskScene;
   };
 
@@ -257,6 +274,36 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
       }
     }
 
+    // The FLAT warm-up tone: the viewport-area mean of the grade in linear
+    // space. The profile lives in NORMALIZED viewport coords (the CSS ellipse
+    // radii are viewport fractions), so this is a constant — pose- and
+    // aspect-independent. Mixing every vertex toward it keeps the whole-desk
+    // mean exact at every warm-up instant.
+    const flat: [number, number, number] = [0, 0, 0];
+    {
+      let n = 0;
+      for (let iy = 0; iy < 16; iy++) {
+        for (let ix = 0; ix < 24; ix++) {
+          const nx = (ix + 0.5) / 24;
+          const ny = (iy + 0.5) / 16;
+          const g = Math.hypot((nx - POOL_CX) / POOL_RX, (ny - POOL_CY) / POOL_RY);
+          const li = 3 * Math.min(LUT_N - 1, Math.round(g * (LUT_N - 1)));
+          flat[0] += gradeLut[li];
+          flat[1] += gradeLut[li + 1];
+          flat[2] += gradeLut[li + 2];
+          n++;
+        }
+      }
+      flat[0] /= n;
+      flat[1] /= n;
+      flat[2] /= n;
+    }
+
+    // Warm-up state: contrast 0 = flat room, 1 = full pool/vignette. Reduced
+    // motion never warms up — full contrast from the first frame.
+    let contrast = reducedMotion() ? 1 : 0;
+    let warmupStart = -1; // performance.now() when lights-on started the ease
+
     // 3–5 abstract slabs near the periphery, raised toward the camera so an
     // off-axis perspective shows their sides — low-contrast warm stone tones.
     // The albedos are premixed DOWN by the M5 warm rig's lit factors
@@ -271,16 +318,31 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
       const c = new THREE.Color(hex); // hex setter → linear working space
       return c.setRGB(c.r * M5_SLAB_LIT[0], c.g * M5_SLAB_LIT[1], c.b * M5_SLAB_LIT[2]);
     };
+    // The slabs ride the warm-up as OPACITY (review): mixing their albedo
+    // toward the flat tone left their SIDE faces visible at contrast 0 (side
+    // normals get a different light sum than the +z ground, so no albedo makes
+    // them match). A transparent slab IS the ground behind it — exactly, at
+    // every pose — and fades monotonically into the accepted rest look.
     const slabMat = new THREE.MeshStandardMaterial({
       color: slabTone(paper),
       roughness: 0.95,
       metalness: 0,
+      transparent: true,
     });
     const slabDeepMat = new THREE.MeshStandardMaterial({
       color: slabTone(deskDeep),
       roughness: 1,
       metalness: 0,
+      transparent: true,
     });
+
+    /** Push the current contrast into the slab materials (the ground's mix
+     *  happens per vertex in syncCamera). */
+    function applyContrast(): void {
+      slabMat.opacity = contrast;
+      slabDeepMat.opacity = contrast;
+    }
+    applyContrast();
     const slabs: Array<[number, number, number, number, number, Material]> = [
       // x, y, w, h, depth(z), material
       [-2200, 900, 1300, 700, 220, slabMat],
@@ -357,9 +419,10 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
         const ny = 0.5 - (pos.getY(i) - cy) / visH;
         const g = Math.hypot((nx - POOL_CX) / POOL_RX, (ny - POOL_CY) / POOL_RY);
         const li = 3 * Math.min(LUT_N - 1, Math.round(g * (LUT_N - 1)));
-        arr[i * 3] = gradeLut[li];
-        arr[i * 3 + 1] = gradeLut[li + 1];
-        arr[i * 3 + 2] = gradeLut[li + 2];
+        // Warm-up mix (mean-invariant): flat room tone -> full grade.
+        arr[i * 3] = flat[0] + (gradeLut[li] - flat[0]) * contrast;
+        arr[i * 3 + 1] = flat[1] + (gradeLut[li + 1] - flat[1]) * contrast;
+        arr[i * 3 + 2] = flat[2] + (gradeLut[li + 2] - flat[2]) * contrast;
       }
       col.needsUpdate = true;
     }
@@ -369,9 +432,24 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
         running = false;
         return;
       }
+      // Self-heal a zero-size init: build() can run before a background tab's
+      // first layout (rect 0x0), and the ResizeObserver's correction is part
+      // of the rendering steps — which never ran while hidden. Cheap no-op
+      // whenever the size is real.
+      if (vh === 0) resize();
+      // Advance the lights-on warm-up: contrast eases 0 -> 1 over WARMUP_MS.
+      // `warming` stays true for the final c = 1 frame so it renders.
+      let warming = false;
+      if (warmupStart >= 0) {
+        const raw = (now - warmupStart) / WARMUP_MS;
+        contrast = raw >= 1 ? 1 : easeSettle(raw);
+        if (raw >= 1) warmupStart = -1;
+        applyContrast();
+        warming = true;
+      }
       const p = cameraPose();
       const key = `${p.x.toFixed(1)},${p.y.toFixed(1)},${p.zoom.toFixed(3)}`;
-      if (key !== lastKey) {
+      if (key !== lastKey || warming) {
         lastKey = key;
         idleSince = now;
         syncCamera(p);
@@ -403,11 +481,28 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
     // fade from a rAF callback — rAF runs just before the paint that composites
     // the rendered canvas, so the crossfade can never begin on a blank frame
     // (the measured mid-fade dip). While the tab is hidden, rAF (and so the
-    // fade) defers until the scene is actually visible.
+    // fade AND the warm-up) defers until the scene is actually visible. The
+    // rung flip + one console.info make the state observable in two seconds —
+    // parity made rung 1 and rung 2 identical at rest, so a silent init
+    // failure would otherwise be invisible.
     syncCamera(cameraPose());
     renderer.render(world, camera);
     litRaf = requestAnimationFrame(() => {
       canvas.classList.add('is-lit');
+      canvas.dataset.rung = '1';
+      console.info('desk scene: rung 1 — Layer 0 live (lights on)');
+      // Decide the warm-up ONCE, here, in both directions (review): a
+      // reduced-motion flip between build and lights-on must neither strand a
+      // flat room (contrast 0, no warm-up ever) nor dip an already-full scene.
+      if (reducedMotion()) {
+        if (contrast !== 1) {
+          contrast = 1;
+          applyContrast();
+          lastKey = ''; // force the woken loop to render the corrected frame
+        }
+      } else if (contrast < 1) {
+        warmupStart = performance.now();
+      }
       wake();
     });
 
@@ -426,6 +521,7 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
         syncCamera,
         /** Render once and sample RGBA at normalized viewport points (y down). */
         sample(points: Array<[number, number]>): number[][] {
+          resize(); // hidden panes never ran the ResizeObserver correction
           syncCamera(cameraPose());
           renderer.render(world, camera);
           const gl = renderer.getContext();
@@ -445,8 +541,20 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
             return [px[0], px[1], px[2], px[3]];
           });
         },
+        /** Force a warm-up contrast (0..1) for mid-fade parity measurement —
+         *  cancels a running warm-up; set back to 1 when done. */
+        setContrast(c: number): void {
+          warmupStart = -1;
+          contrast = Math.max(0, Math.min(1, c));
+          applyContrast();
+          // Keep the LIVE canvas in sync on visible tabs (review): the loop
+          // only renders on pose change, so invalidate and wake it.
+          lastKey = '';
+          wake();
+        },
         /** Render once and return the whole-frame mean [R,G,B]. */
         mean(): number[] {
+          resize(); // hidden panes never ran the ResizeObserver correction
           syncCamera(cameraPose());
           renderer.render(world, camera);
           const gl = renderer.getContext();
