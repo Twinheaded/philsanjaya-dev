@@ -535,6 +535,19 @@
   inline-size: 100vw;
   block-size: 100vh;
   pointer-events: none;
+  /* Between bakes the COMPOSITOR carries the graphite bitmap (perf fix): the
+     transform is the camera delta from the pose the bitmap was baked at
+     (--field-*, inline on the canvas, set by desk-field.ts at each settle) to
+     the live --cam-* vars the runtime writes each animated frame — the same
+     pattern as .desk-plane. At rest and before the first bake it is identity.
+     No canvas repaints happen during a move; the field re-bakes once at
+     settle. */
+  transform: translate3d(
+      calc((var(--field-x0, var(--cam-x)) - var(--cam-x)) * var(--cam-zoom) * 1px),
+      calc((var(--field-y0, var(--cam-y)) - var(--cam-y)) * var(--cam-zoom) * 1px),
+      0
+    )
+    scale(calc(var(--cam-zoom) * var(--field-z0-inv, 1)));
 }
 /* Behind an open document the field is unmounted (no frames run), so the
    persisted bitmap would sit frozen at the pre-open pose while the camera

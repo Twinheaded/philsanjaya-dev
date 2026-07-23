@@ -10,8 +10,11 @@ import {
   FADE_ALPHA,
   FADE_INTERVAL_MS,
   isWrapJump,
+  minFreshAlpha,
+  SCRUB_BAND_TOP,
   SCRUB_BANDS,
   SCRUB_THRESHOLD,
+  scrubTable,
   secondsToScrub,
   stallFloor,
   strokeAlpha,
@@ -43,11 +46,34 @@ describe('fade/scrub invariants — trails must vanish to nothing (§12 note 1)'
     expect(FADE_INTERVAL_MS).toBeGreaterThanOrEqual(250);
   });
 
-  it('the scrub sweeps faster than a stroke can decay to the floor', () => {
-    // Bands per pass x band height must cover a tall buffer well inside the
-    // decay window, or residue could outlive its band's next visit.
+  it('the GPU scrub table zeroes exactly the stall band and nothing above it', () => {
+    const v = scrubTable().split(' ').map(Number);
+    expect(v).toHaveLength(64);
+    // The zero band [0, 3/63] covers the stall floor, so every stalled pixel
+    // snaps to nothing on the next pass.
+    expect(v[0]).toBe(0);
+    expect(v[3]).toBe(0);
+    expect((3 / 63) * 255).toBeGreaterThanOrEqual(SCRUB_THRESHOLD);
+    expect((3 / 63) * 255).toBeGreaterThanOrEqual(stallFloor(FADE_ALPHA));
+    // Monotone, identity at the top: living strokes are never brightened or
+    // reordered, and full-alpha marks pass through untouched.
+    for (let i = 1; i < v.length; i++) expect(v[i]).toBeGreaterThanOrEqual(v[i - 1]);
+    expect(v[63]).toBe(1);
+  });
+
+  it('the pull-down band never touches a fresh stroke (review)', () => {
+    // The faintest newborn mark at the default token must clear the band top,
+    // or fast pencils would see their marks crushed within a second of being
+    // laid instead of smudging out on the designed decay.
+    expect(minFreshAlpha(0.16)).toBeGreaterThan(SCRUB_BAND_TOP);
+  });
+
+  it('the JS fallback sweep is bounded (no-filter browsers)', () => {
+    // Without canvas filter support the rolling bands clear residue lazily —
+    // slower than the primary path, but every band is revisited well inside
+    // half a minute, so no residue is ever permanent.
     const sweepSeconds = (1620 / (SCRUB_BANDS * 36)) * (FADE_INTERVAL_MS / 1000);
-    expect(sweepSeconds).toBeLessThan(secondsToScrub(41) / 2);
+    expect(sweepSeconds).toBeLessThan(30);
   });
 });
 

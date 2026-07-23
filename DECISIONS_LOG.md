@@ -372,6 +372,59 @@ push progress**, driven from the same rAF tick as the camera, in BOTH open paths
   clock, 0.6 flip, catch-up ramp, and trace-asserted order+timing for both gate
   orderings and same-zone on-time/late/mid-ramp swaps.
 
+### 2026-07-24 — perf fix: field loop and re-projection cost (Phil's frame data)
+
+Phil measured 36%/31% duplicated frames in the travel/push windows (~50ms
+stutters, ≈40fps) at 1440p after M7. Root causes, all in the field:
+
+- **The rAF loop never parked**: the continue condition included `field`, so
+  every zone route ran 60fps agent stepping forever — §8's idle discipline
+  silently defeated (pre-dated M7, but M7 made every frame expensive).
+- **Two full-canvas blits per animated frame** (the M7 re-projection) — at
+  1440p×dpr1.5 that is 8.3M device px × 2, per frame, during the exact windows
+  Phil measured.
+- **getImageData scrubs demoted the canvas to software raster** (Chrome's
+  readback heuristic), multiplying the blit cost — the hidden jank amplifier.
+- The per-pixel JS scrub was itself a ~60ms long task every 1.5s.
+
+The rework:
+
+- **Ambient life on a ~6Hz timer** (`TICK_MS=166`; `MAX_DT` raised to 0.2 so a
+  tick is never speed-clamped): step pencils, lay strokes, fade/scrub when due.
+  The rAF loop drops `field` from its condition and **provably parks at rest**;
+  the timer is the sanctioned low-frequency cadence.
+- **During camera moves the pencils lift and the COMPOSITOR carries the
+  bitmap**: `.desk-field`'s CSS transform = the camera delta from the baked
+  pose (`--field-x0/y0/z0-inv`, inline at bake) to the live `--cam-*` vars —
+  the `.desk-plane` pattern. **Zero canvas work per animated frame.** One bake
+  (the affine blit) at settle. `desk.ts` exports `cameraAnimating()`.
+- **Field DPR → 1** (charcoal is soft by design): quarters every fill/blit.
+- **The scrub is GPU-side**: an SVG `feComponentTransfer` alpha table
+  (`#graphite-scrub`, 64 stops from `scrubTable()`) applied as ONE filtered
+  blit per 500ms fade pass — **zero getImageData ever** on the primary path
+  (the canvas stays GPU-backed); the JS band sweep remains only as the
+  no-filter fallback (gated on a real `'filter' in prototype` check — review:
+  assign-and-readback alone reports support via expando on exactly the
+  browsers that lack it). Filter semantics validated: α≤12→0 (stall zeroed),
+  the (12.1,16.2] band accelerates only dying pixels, α≥18 untouched — the
+  band sits STRICTLY below the faintest fresh stroke (pinned in tests; review:
+  a coarser table crushed newborn marks).
+- Review also fixed: **`resize()` must measure `clientWidth/Height`, never
+  `getBoundingClientRect`** (the new transform scales the rect — a mid-tween
+  remount wiped the bitmap and poisoned the projection; review BLOCKER), and
+  the fade anchor advances by the interval (tick quantisation was silently
+  stretching the decay by a third).
+- **Warm-up/GL confirmed**: the scene loop parks 2s after the warm-up's final
+  frame (unchanged path); its scrub… the GL has none; the field's is bounded
+  to the fade cadence.
+- **Measured** (synthetic, 2560×1440, this machine): per-animated-frame field
+  cost 1.0ms canvas work (plus the software-raster multiplier in real M7) →
+  **0ms**; ambient tick 20.4ms avg with ~60ms spikes → **0.51ms avg**; bake
+  0.25ms once per settle. The live rAF-parking + 60fps capture at 1440p is
+  Phil's confirmation (the harness pane runs hidden — rAF/idle callbacks never
+  fire, so frame traces cannot be recorded here).
+- **Verify:** 0 errors · 18 pages · vitest **116/116**.
+
 ### 2026-07-24 — M7 (PHI-68): graphite agents + Lift polish + the flourish
 
 The agent field re-materialised as **charcoal strokes** (§12), the LIFT verb

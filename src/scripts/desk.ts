@@ -80,6 +80,13 @@ export function cameraPose(): Pose {
   return store.current;
 }
 
+/** True while any camera choreography is in flight — a tween, a held two-beat
+ *  gate, or a running reveal. The graphite field pauses its pencils during
+ *  moves (the compositor carries its bitmap) and bakes at settle (perf fix). */
+export function cameraAnimating(): boolean {
+  return store.isAnimating || (!!twoBeat && !twoBeat.fired) || (!!reveal && !reveal.done);
+}
+
 function writePose(): void {
   const p = store.current;
   const b = document.body;
@@ -111,15 +118,17 @@ function frame(now: number): void {
   // could let the scene park during the swap hold and miss the zoom. Cheap: wake
   // no-ops when the scene loop is already running.
   if (store.isAnimating) wakeDeskScene();
-  field?.frame(now, store.current);
-  // Keep looping while the camera is moving, the field needs redrawing, a
-  // two-beat open is still holding for its gate, or a reveal is still pending.
-  // Re-read store.isAnimating AFTER tickTwoBeat — the frame that fires Beat 2
-  // starts a fresh tween AND clears the gate, so the pre-tick `animating` is
-  // stale and would stop the loop before the zoom-to-1.45 ever ticks.
+  // Keep looping ONLY while the camera is moving, a two-beat open is holding
+  // for its gate, or a reveal is pending. The graphite field is NOT a reason to
+  // loop (perf fix): it draws on its own low-frequency timer and rides the
+  // compositor during moves — with it in this condition the loop never parked
+  // and §8's idle discipline was silently defeated. Re-read store.isAnimating
+  // AFTER tickTwoBeat — the frame that fires Beat 2 starts a fresh tween AND
+  // clears the gate, so the pre-tick `animating` is stale and would stop the
+  // loop before the zoom-to-1.45 ever ticks.
   const holdingGate = !!twoBeat && !twoBeat.fired;
   const revealPending = !!reveal && !reveal.done;
-  if (running && (store.isAnimating || field || holdingGate || revealPending)) {
+  if (running && (store.isAnimating || holdingGate || revealPending)) {
     rafId = requestAnimationFrame(frame);
   } else {
     running = false;

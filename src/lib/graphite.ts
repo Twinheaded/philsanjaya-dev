@@ -20,13 +20,42 @@ export const FADE_INTERVAL_MS = 500;
 /** The per-application destination-out alpha: one 4.5% cut per interval — a
  *  fresh stroke falls to the scrub floor in ~13–20s. */
 export const FADE_ALPHA = 0.045;
-/** 8-bit alpha at or below this is scrubbed to zero by the rolling bands. */
+/** 8-bit alpha at or below this is scrubbed to zero. Must sit at the SVG
+ *  scrub filter's last zero stop (3/63 of 255 ≈ 12.1) — see scrubTable(). */
 export const SCRUB_THRESHOLD = 12;
-/** Scrub bands swept per fade pass. The scrub rides the fade cadence (review:
- *  a per-frame getImageData forces GPU readback every frame) — 8 bands of 36px
- *  every 500ms sweeps a 1620px-tall buffer in ~3s, far faster than the ~13s a
- *  stroke needs to decay to the stall floor. */
-export const SCRUB_BANDS = 8;
+/** FALLBACK ONLY (browsers without canvas `filter` support, e.g. older
+ *  Safari): rolling JS bands per fade pass. Kept small — the per-pixel
+ *  ImageData loop is the expensive path (a large sweep was a >50ms long task,
+ *  perf fix) — so fallback residue clears more lazily but still bounded. */
+export const SCRUB_BANDS = 2;
+
+/**
+ * The GPU scrub (perf fix): an SVG feComponentTransfer alpha table applied as
+ * ONE filtered blit per fade pass — no getImageData, no per-pixel JS, and the
+ * canvas never demotes to software raster (the per-frame readbacks were the
+ * hidden cost behind the M7 jank). The table maps alpha ≤ 3/63 (≈ the 8-bit
+ * stall floor, 12.1 of 255) to EXACTLY zero and is identity above; the one
+ * interpolation band between the zero stop and identity spans (12.1, 16.2] —
+ * kept STRICTLY below the faintest fresh stroke (≈18 at the default tokens,
+ * pinned in the tests), so newborn marks are never crushed (review): only
+ * pixels already fading through the band die faster, and fade + threshold
+ * provably converges every pixel to nothing.
+ */
+export function scrubTable(): string {
+  const v: string[] = ['0', '0', '0', '0'];
+  for (let k = 4; k <= 63; k++) v.push((k / 63).toFixed(4));
+  return v.join(' ');
+}
+
+/** The top of the scrub table's pull-down band in 8-bit alpha: values above
+ *  this pass through the filter untouched. */
+export const SCRUB_BAND_TOP = (4 / 63) * 255;
+
+/** The faintest alpha a fresh stroke can be laid at (8-bit), given a base
+ *  trail-alpha token — must clear SCRUB_BAND_TOP or new marks get crushed. */
+export function minFreshAlpha(base: number): number {
+  return strokeAlpha(Number.MAX_SAFE_INTEGER, 1, base, 0) * 255;
+}
 
 /** The stored-alpha value below which multiplicative fading stalls:
  *  a × FADE_ALPHA < 0.5 rounds to no change. */

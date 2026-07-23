@@ -17,6 +17,7 @@ import NotesZone from './zones/NotesZone.astro';
 import LogZone from './zones/LogZone.astro';
 import WorkshopZone from './zones/WorkshopZone.astro';
 import { ZONES } from '../lib/zones';
+import { scrubTable } from '../lib/graphite';
 
 interface Props {
   /** The posed zone id (the current zone, or a document's parent zone). */
@@ -54,6 +55,17 @@ const { current, open = false, notesPage, logPage } = Astro.props;
     class="desk-field"
     transition:persist="desk-field"
     aria-hidden="true"></canvas>
+  <!-- The field's GPU scrub (perf fix): an alpha-threshold filter desk-field.ts
+       applies as one filtered blit per fade pass — trails vanish to nothing
+       with zero getImageData readbacks. Resolved from the live document at
+       draw time, so it needn't persist with the canvas. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="graphite-scrub">
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues={scrubTable()}></feFuncA>
+      </feComponentTransfer>
+    </filter>
+  </svg>
 
   <!-- Layer 1 — DOM content plane. -->
   <div class="desk-plane">
