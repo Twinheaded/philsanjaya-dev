@@ -344,6 +344,99 @@
   border-radius: 6px;
   object-fit: contain;
 }
+.fig-plate__body svg {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+
+/* ---------------------------------------------------------------------------
+ * §11 — architecture diagrams (M8). Hand-drawn QUALITY, digitally built: ink
+ * strokes through ONE wobble filter per diagram (geometry only — text stays
+ * crisp), mono for labels, Caveat for margin notes (the only handwriting on
+ * the site), and exactly one copper path — the critical flow.
+ * --------------------------------------------------------------------------- */
+.arch-diagram {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.arch-diagram .d-box {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Paper-tone panels are the ONLY fills (§11). */
+.arch-diagram .d-panel {
+  fill: var(--paper);
+}
+.arch-diagram .d-arrow {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Stated-but-not-wired / pending components: dashed, softer ink. */
+.arch-diagram .d-ghost {
+  stroke: var(--ink-soft);
+  stroke-dasharray: 4 3;
+}
+.arch-diagram .d-ghost-label {
+  fill: var(--ink-soft);
+}
+/* THE one copper path per diagram — the critical flow. */
+.arch-diagram .d-flow {
+  fill: none;
+  stroke: var(--copper);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.arch-diagram .d-arrowhead {
+  fill: var(--ink);
+  stroke: none;
+}
+.arch-diagram .d-flowhead {
+  fill: var(--copper);
+  stroke: none;
+}
+.arch-diagram .d-label {
+  fill: var(--ink);
+}
+.arch-diagram .d-sub {
+  fill: var(--ink-soft);
+  font-size: 10px;
+}
+.arch-diagram .d-group-label {
+  fill: var(--ink-soft);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Margin notes: Caveat + hand-drawn leader arrows — handwriting lives here
+   and nowhere else (§11). */
+.arch-diagram .d-note {
+  fill: var(--ink-soft);
+  font-family: var(--font-hand);
+  font-size: 15px;
+}
+.arch-diagram .d-leader {
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 1.25;
+  stroke-linecap: round;
+}
+@media (max-width: 767px) {
+  .arch-diagram .d-box,
+  .arch-diagram .d-arrow {
+    stroke-width: 1.25;
+  }
+  .arch-diagram .d-flow {
+    stroke-width: 1.75;
+  }
+}
 .fig-plate__caption {
   margin-block-start: calc(var(--space) * 0.75);
   font-family: var(--font-mono);

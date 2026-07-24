@@ -108,7 +108,7 @@ single conventional commit. Branch: `redesign/inventors-workbench`.
 | M5  | PHI-66  | WebGL background scene with camera sync               | Done        |
 | M6  | PHI-67  | Experiment document templates and content migration   | Done        |
 | M7  | PHI-68  | Graphite agents and Lift polish                       | Done        |
-| M8  | PHI-69  | Exploded architecture diagrams                        | Not started |
+| M8  | PHI-69  | Exploded architecture diagrams                        | Done        |
 | M9  | PHI-70  | Mobile vertical roll                                  | Not started |
 | M10 | PHI-71  | Accessibility and performance hardening               | Not started |
 | M11 | PHI-72  | Staging deploy, cross-browser, sign-off               | Not started |
@@ -371,6 +371,49 @@ push progress**, driven from the same rAF tick as the camera, in BOTH open paths
 - **Verify:** 0 errors · 18 pages · vitest **104/104** (was 80): mapping, phase
   clock, 0.6 flip, catch-up ramp, and trace-asserted order+timing for both gate
   orderings and same-zone on-time/late/mid-ramp swaps.
+
+### 2026-07-24 — M8 (PHI-69): §11 architecture diagrams
+
+**Diagrams are claims** (Phil's rule 1): four content-derived diagrams shipped —
+EXP.001 CTF Arena, EXP.002 AEGISX (a coordinate-faithful redraw of Phil's own
+inline SVG, now removed from the markdown body), EXP.003 market sentiment,
+EXP.004 power forecasting. **EXP.005 deliberately has NO diagram**: its body
+still describes the retired shell, and drawing either the old architecture
+(stale) or the new one (unstated) would violate the rule — the reserved plate
+stays until Phil's rewrite.
+
+- **System:** `Diagram.astro` wrapper (role="img" + aria-labelledby title/desc,
+  the desc describing the actual architecture; ONE bounded wobble filter —
+  feTurbulence 0.015 ×2 octaves + feDisplacementMap scale 2 — around a single
+  `ink` slot group, so GEOMETRY wobbles and text stays crisp; the filter is
+  static, rasterised once, nothing re-filters on scroll). Per-diagram
+  components in `src/components/diagrams/`, registered in `[slug].astro`
+  (frontmatter `diagram` ref; unknown refs fail the build loudly) and rendered
+  inside the M6 FigurePlate as FIG.01 — zero template surgery.
+- **Style:** `.arch-diagram` classes — 1.5px ink strokes (1.25 below 768px),
+  paper-tone panels the only fills, exactly ONE `.d-flow` copper path per
+  diagram, mono labels, dashed `d-ghost` for stated-but-pending components,
+  Caveat margin notes + hand-drawn leaders (the only handwriting). **Caveat
+  ships here for the first time**: imported by the wrapper so its CSS bundles
+  only with document pages, latin subset, never preloaded (verified: font
+  `loaded` on diagram pages, absent from zone-page CSS, preloads = Geist only —
+  and @font-face alone never downloads without matching text).
+- **Adversarial review: 17 confirmed findings (13 distinct), all fixed** — the
+  truth audit earned its keep: "nine behaviours + carrier" overstated the
+  study's eight+carrier (HIGH); the feed→cache arrow speared both never-wired
+  ghost clients, drawing the exact dataflow the text denies (HIGH); a
+  features→regression edge was INVENTED — the case study never states what the
+  GRU windows read, so the edge is deleted (HIGH, phil-arch); the AEGISX
+  on-prem panel had grown to swallow the producer box that Phil's original
+  deliberately drew OUTSIDE the team stack (HIGH — ownership is a claim);
+  a margin note verb-blended Phil's phrase ("stays" → restored to "belongs");
+  plus geometry (label overflows measured by getBBox, arrow-through-box
+  clips, leader-through-box, viewBox overruns) — final state: zero text
+  overflows on all four, verified live.
+- **Verify:** 0 errors · 18 pages · vitest 116/116 · in-pane: 1 filter / 1
+  filtered group / 1 copper path / full a11y per diagram. Whether the drawings
+  read as hand sketches — and are TRUE — is Phil's call (note 7); the
+  TODO(phil-arch) list is on PHI-69.
 
 ### 2026-07-24 — perf fix: field loop and re-projection cost (Phil's frame data)
 

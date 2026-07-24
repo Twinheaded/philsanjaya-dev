@@ -3,6 +3,7 @@ title: CTF Arena
 slug: ctf-arena
 order: 1
 expNo: 1
+diagram: ctf-arena
 tags: [ai-for-games, simulation]
 stack: [Python, pyglet, GOAP, 'A*', FSM, steering]
 period: '2026'

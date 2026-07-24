@@ -1,0 +1,54 @@
+---
+/**
+ * §11 diagram wrapper (M8): one accessible SVG per experiment.
+ *
+ * - `role="img"` + <title>/<desc> — the desc describes the ACTUAL architecture
+ *   (§11 a11y; every box in it is a claim derived from the case-study text).
+ * - ONE wobble filter per diagram (feTurbulence + feDisplacementMap, §11
+ *   ranges), applied to the single `ink` slot group — geometry only, so labels
+ *   stay crisp. The filter region is bounded (modest overdraw) and static, so
+ *   browsers rasterise it once; nothing re-filters on scroll.
+ * - Caveat ships HERE, lazily: this import bundles the font CSS only into
+ *   pages that render a diagram — never preloaded, off every non-document
+ *   critical path (M8 note 4).
+ */
+import '@fontsource/caveat/latin-400.css';
+
+interface Props {
+  /** Unique per page — namespaces the filter + a11y ids. */
+  slug: string;
+  title: string;
+  desc: string;
+  viewBox: string;
+  /** feTurbulence seed, so each diagram wobbles differently. */
+  seed?: number;
+}
+const { slug, title, desc, viewBox, seed = 7 } = Astro.props;
+const tId = `dg-t-${slug}`;
+const dId = `dg-d-${slug}`;
+const fId = `dg-wobble-${slug}`;
+---
+
+<svg
+  class="arch-diagram"
+  viewBox={viewBox}
+  role="img"
+  aria-labelledby={`${tId} ${dId}`}
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <title id={tId}>{title}</title>
+  <desc id={dId}>{desc}</desc>
+  <defs>
+    <filter id={fId} x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="2" seed={seed}
+      ></feTurbulence>
+      <feDisplacementMap in="SourceGraphic" scale="2" xChannelSelector="R" yChannelSelector="G"
+      ></feDisplacementMap>
+    </filter>
+  </defs>
+  <!-- The one filtered group (§11): every stroke wobbles together, text never. -->
+  <g filter={`url(#${fId})`}>
+    <slot name="ink" />
+  </g>
+  <slot />
+</svg>

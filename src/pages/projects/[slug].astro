@@ -14,6 +14,20 @@ import Sheet from '../../layouts/Sheet.astro';
 import DocTitleBlock from '../../components/document/DocTitleBlock.astro';
 import FigurePlate from '../../components/document/FigurePlate.astro';
 import MetricsTable from '../../components/document/MetricsTable.astro';
+import CtfArenaDiagram from '../../components/diagrams/CtfArenaDiagram.astro';
+import AegisxDiagram from '../../components/diagrams/AegisxDiagram.astro';
+import MarketSentimentDiagram from '../../components/diagrams/MarketSentimentDiagram.astro';
+import PowerForecastingDiagram from '../../components/diagrams/PowerForecastingDiagram.astro';
+
+/** §11 diagram registry (M8): frontmatter `diagram` → component. A ref that
+ *  doesn't resolve fails the build loudly (FR-20 spirit) instead of quietly
+ *  rendering the reserved plate over a typo. */
+const DIAGRAMS = {
+  'ctf-arena': CtfArenaDiagram,
+  aegisx: AegisxDiagram,
+  'market-sentiment': MarketSentimentDiagram,
+  'power-forecasting': PowerForecastingDiagram,
+} as const;
 
 export async function getStaticPaths() {
   const projects = await getCollection('projects', ({ data }) => data.status === 'published');
@@ -35,6 +49,11 @@ export async function getStaticPaths() {
 const { project } = Astro.props;
 const { Content } = await render(project);
 const d = project.data;
+
+if (d.diagram && !(d.diagram in DIAGRAMS)) {
+  throw new Error(`Unknown diagram ref "${d.diagram}" in ${d.slug} — add it to DIAGRAMS`);
+}
+const DiagramCmp = d.diagram ? DIAGRAMS[d.diagram as keyof typeof DIAGRAMS] : null;
 
 /** FIG numbering: 01 is always the architecture plate; media follows. */
 const demoFig = 2;
@@ -70,10 +89,18 @@ const demoFig = 2;
       <Content />
     </div>
 
-    <!-- FIG.01 — the §11 exploded architecture diagram lands here in M8;
-         until then the reserved plate. A document may inline its own diagram
-         in the body (AEGISX does) — the plate still reserves the §11 redraw. -->
-    {!d.diagram && <FigurePlate no={1} caption="architecture" empty />}
+    <!-- FIG.01 — the §11 architecture diagram (M8). A document without a
+         diagram ref keeps the reserved plate (EXP.005 awaits Phil's body
+         rewrite — diagrams are claims, and its text describes the old shell). -->
+    {
+      DiagramCmp ? (
+        <FigurePlate no={1} caption="architecture">
+          <DiagramCmp />
+        </FigurePlate>
+      ) : (
+        <FigurePlate no={1} caption="architecture" empty />
+      )
+    }
 
     {
       d.hero && (

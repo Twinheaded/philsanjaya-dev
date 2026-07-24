@@ -3,6 +3,7 @@ title: Market sentiment
 slug: market-sentiment
 order: 3
 expNo: 3
+diagram: market-sentiment
 tags: [machine-learning, nlp]
 stack: [Python, TensorFlow/Keras, scikit-learn, XGBoost, FinBERT]
 period: '2025'

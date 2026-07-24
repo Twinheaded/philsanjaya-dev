@@ -3,6 +3,7 @@ title: Power forecasting
 slug: power-forecasting
 order: 4
 expNo: 4
+diagram: power-forecasting
 tags: [machine-learning, data-science]
 stack: [Python, scikit-learn, TensorFlow/Keras, pandas]
 period: '2026'

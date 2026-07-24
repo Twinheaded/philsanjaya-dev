@@ -57,6 +57,11 @@
      read as organised, not scribbled, at every pose. */
   --field-count: 30;
   --field-trail-alpha: 0.16;
+
+  /* §11 handwriting — Caveat, diagram margin notes ONLY (M8). The font CSS is
+     imported by the diagram wrapper, so it ships lazily with document pages
+     that render a diagram — never preloaded, never on a zone's critical path. */
+  --font-hand: 'Caveat', 'Segoe Script', 'Comic Sans MS', cursive;
   --t-stack:   300ms;
   --t-settle:  150ms;  /* two-beat cross-zone unfold settle hold (§7.3), 120–180ms */
 
