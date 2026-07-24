@@ -109,8 +109,8 @@ single conventional commit. Branch: `redesign/inventors-workbench`.
 | M6  | PHI-67  | Experiment document templates and content migration   | Done        |
 | M7  | PHI-68  | Graphite agents and Lift polish                       | Done        |
 | M8  | PHI-69  | Exploded architecture diagrams                        | Done        |
-| M9  | PHI-70  | Mobile vertical roll                                  | Not started |
-| M10 | PHI-71  | Accessibility and performance hardening               | Not started |
+| M9  | PHI-70  | Mobile vertical roll                                  | Done        |
+| M10 | PHI-71  | Accessibility and performance hardening               | Done        |
 | M11 | PHI-72  | Staging deploy, cross-browser, sign-off               | Not started |
 
 ---
@@ -414,6 +414,115 @@ stays until Phil's rewrite.
   filtered group / 1 copper path / full a11y per diagram. Whether the drawings
   read as hand sketches — and are TRUE — is Phil's call (note 7); the
   TODO(phil-arch) list is on PHI-69.
+
+### 2026-07-24 — M9 (PHI-70): mobile vertical roll
+
+Below 768px the desk collapses to a **single-axis vertical roll** (§13, Phil's
+seven notes). The roll is the native root scroller **mirrored into the same
+camera store** (y only) — one positioning system (§3): a user scroll snaps the
+store; a navigation tweens the store and drives `window.scrollTo`. No second 2D
+system, no free panning.
+
+- **`src/lib/roll.ts`** (pure, unit-tested): the scroll↔desk-y map and a
+  `PoseResolver` over measured snap offsets, so the §7.3 two-beat / phase-locked
+  reveal plans project onto the roll unchanged (`nav.ts planCamera` gained the
+  pluggable resolver; the desktop `DESK_POSES` default is byte-for-byte the
+  old behaviour). Zoom stays the reveal's progress clock — mobile projections
+  ignore it (static scene camera, untransformed plane).
+- **Rung-4 gating (decision).** The whole roll layout is gated on
+  `html[data-js]`. Landing the scroll at the current zone (`adoptRollRest`) and
+  lifting the off-zone `inert` fences (`applyModality`) are both JS; without
+  them a no-JS phone would stack five zones, open at Home for every route, and
+  leave four zones visible-but-inert (dead to touch, absent from the a11y
+  tree). So rung 4 keeps the server-posed **single-zone** view — the desktop
+  rung-4 behaviour. Documents don't roll (fixed static zoom-1 backdrop +
+  full-screen sheet + opacity scrim). A visible "Back to desk" chip replaces
+  Esc on touch. The `<main>` landmark follows the in-view zone as the roll
+  scrolls (`rehomeMainLandmark`, by role — no re-parenting).
+- **Compact strip:** name + `01–05` (≥44px), tap-to-expand disclosure,
+  `env(safe-area-inset-bottom)`; still `<nav>` + skip target. Field keeps the
+  M7 compositor-ride + 6Hz + DPR 1 (parked aggressively); scene is a static
+  camera + slight parallax + DPR 1, and drops to the CSS ground under Save-Data.
+- **Traps found by review (5-lens, 29 confirmed — 2 BLOCKER):** un-positioning
+  `.desk-behind` dissolved its stacking context so the fixed WebGL/graphite
+  canvases painted **over** roll content once the scene lit (fixed: plane
+  `position:relative; z-index:2`); `content-visibility:auto` off-zones
+  under-report their height as `100dvh` placeholders, so roll offsets must be
+  measured under a forced render (`is-sliding`); Astro's swap **wipes** the
+  live `<html>` attribute set mid-drive, re-arming mandatory snap against the
+  driven `scrollTo` (re-stamp `data-roll-tween` in `after-swap`, as BaseHead
+  already does for `data-js`). A focused re-review of the fixes caught 2
+  regressions (a mid-nav `rollSettled` rewriting the departing history entry;
+  the `<main>` landmark diverging from `data-current`), both fixed.
+- **Verify:** 0 errors · 18 pages · vitest **134/134** (18 new roll tests).
+  Emulated 375×812 pass (stacking order, offsets round-trip to true zone tops,
+  full-screen documents clear the close chip, rung-4 posed view, one `<main>`
+  following the in-view zone, no horizontal overflow). Motion/settle **feel** is
+  Phil's phone — a 5-item phone checklist is on PHI-70 (the headless pane parks
+  rAF, so snap feel / two-beat / chrome-collapse / safe-area / reduced-motion
+  are device-certified, the verification split used since M3).
+
+### 2026-07-24 — M10 (PHI-71): accessibility & performance hardening
+
+§14 in full, plus Phil's seven notes. All quality, no new surfaces.
+
+- **JS budgets enforced in CI (note 1).** `test/budget.test.ts` recomputes gz
+  sizes from `dist/` after the build (the CSP-guard pattern) and **fails on
+  regression**: initial route JS ≤ 90KB gz excl. `three`, the `three` chunk
+  ≤ 200KB gz, and `three` must be statically **unreachable** (dynamically
+  imported only). "Initial route JS" is the **transitive static-import
+  closure** from each route's entry `<script type=module>` — NOT a scan of
+  `<script>`/`modulepreload` tags: this Astro build emits no modulepreload
+  links and pulls the shared chunks (router/zones/engine) via bare static
+  `import` inside the JS, so a tag-only scan missed ~40% of the real initial JS
+  and would let an over-budget shared-chunk regression pass green (caught by
+  the M10 review). Measured: initial **19.9KB gz** (max route, 8 chunks), three
+  **184.3KB gz** (≈150KB brotli). The three chunk is found by its `three.js
+  r<rev>` banner — version tolerant, absent from the runtime chunks; a dynamic
+  `import()` is not a static edge, so three is excluded by construction.
+- **Contrast audit (note 3), measured not eyeballed.** axe-core 4.10.2 over
+  every route (desktop + mobile roll, zones + documents + 404): **0 WCAG 2A/2AA
+  violations**; the only `incomplete` results are `--ink` (8.7–15:1) text over
+  the WebGL/field canvas or the desk gradient, which axe cannot auto-resolve but
+  which pass by computation. **One real fix:** the active-sheet *text* moved
+  `--copper` (3.6:1 — indicator level, flagged as low-contrast text) →
+  `--copper-deep` (5.5:1, AA); the copper underline stays the redundant signal
+  (§9/§14 amended). `--copper` now appears only as non-text (the underline,
+  diagram `d-flow` paths) where ≥3:1 holds. The note-4 rule (muted/accent on
+  paper, `--ink` only on the bare desk) holds on every surface shipped since M1.
+- **Reduced motion re-verified end-to-end (note 4).** Every `transition`/
+  `animation` in the codebase is gated on `prefers-reduced-motion:
+  no-preference` or is a ≤120ms colour-only change; under reduce: camera cuts
+  instantly, verbs collapse to one ≤120ms crossfade, the graphite field is
+  never mounted (empty desk), the scene skips the warm-up (full contrast, no
+  fade), the ink-reveal is skipped (static underline stands), Lift is off, the
+  404 agents draw one static frame with no loop (FR-17), and focus is still
+  managed. Known shipped limitation (unchanged since M3): `desk.ts` reads the
+  preference once at boot, so a mid-session toggle needs a reload.
+- **M5 review helper removed (note 5).** The `window.__deskScene` readPixels
+  harness (FIX B / warm-up luminance parity) and its `?debug=scene` gate are
+  deleted — the calibrations are settled and pinned in code, and the runtime
+  ships no debug globals. `?debug=motion` (`lib/motion-trace.ts`) is kept: its
+  `mark()` calls are a handful of no-op string builds **per navigation** (never
+  per frame), so it costs nothing at runtime, and it is Phil's frame-timing
+  diagnostic.
+- **a11y / perf numbers (note 6).** Lighthouse a11y is the axe engine → **0
+  violations on all routes ⇒ ≥95** (effectively 100 on automated checks;
+  17–26 passes per route). **CLS = 0** (no layout-shift entries — content is
+  server-rendered, fonts preloaded). Initial JS 19.9KB gz. Complete keyboard
+  path verified (note 2): skip link first (→ `#sheet-index`), then zone content,
+  then the title-block `01–05`; off-zones inert-excluded; `1`–`5` and Esc
+  handlers bound; focus resolves to the in-view `#main h1`. **Fast-3G LCP / INP**
+  need a throttled load the headless pane cannot produce (paint timing is gated
+  on visibility) — they are a deployed-preview / real-device Lighthouse run,
+  the M3 verification split. Structurally LCP is server-rendered hero text with
+  preloaded fonts and no JS on the critical path.
+- **Docs reconciled (note 7).** The handoff spec carries dated amendment notes
+  for the two-beat gate (§7.3, already), the ≤200KB `three` budget (§8/§14,
+  already), the `problem`/`idea`/`result` body-section deviation (§10), the
+  EXP.005 reserved plate (§11), the mobile `data-js` gating + `<main>`-follows
+  (§13), and the `--copper-deep` active-sheet + CI budget enforcement (§9/§14).
+- **Verify:** 0 errors · 18 pages · vitest **137/137** (3 new budget tests).
 
 ### 2026-07-24 — perf fix: field loop and re-projection cost (Phil's frame data)
 

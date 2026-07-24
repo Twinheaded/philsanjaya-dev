@@ -148,10 +148,13 @@ const path =
 
   /* Active sheet: copper *and* an underline — colour is never the only
      signal (§14). Keyed on data-active so document routes can highlight their
-     parent sheet without falsely claiming aria-current="page". */
+     parent sheet without falsely claiming aria-current="page".
+     The TEXT is --copper-deep (5.5:1 on paper — passes AA 1.4.3), not --copper
+     (3.6:1, an indicator level that Lighthouse/axe flag as low-contrast text);
+     the underline stays the redundant active signal (§14). M10 contrast fix. */
   .tb-sheet[data-active],
   .tb-sheet[data-active] .tb-num {
-    color: var(--copper);
+    color: var(--copper-deep);
   }
   .tb-sheet[data-active] {
     text-decoration: underline;

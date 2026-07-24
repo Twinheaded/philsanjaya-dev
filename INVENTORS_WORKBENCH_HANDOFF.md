@@ -266,6 +266,11 @@ REV <git short-sha> · <build date> · SCALE 1:1 · BUILT IN PUBLIC
 
 - Semantics: `<nav aria-label="Sheet index">`, ordinary links (works at fallback rung 4); it is the skip-link target.
 - Active sheet: `--copper` + underline. Hover: `--copper-deep`.
+  **Amended (M10, 2026-07-24):** the active sheet's *text* is `--copper-deep`
+  (5.5:1 on paper — passes AA 1.4.3), not `--copper` (3.6:1, an indicator
+  level flagged as low-contrast text by axe/Lighthouse); the copper underline
+  stays the redundant active signal (§14). The literal `--copper` is reserved
+  for non-text indicators (the underline) and diagram paths, where ≥3:1 holds.
 - Keyboard: `1`–`5` jump to sheets (ignored while focus is in an input); full tab order; visible focus per §7.1.
 - The REV line is generated at build time (short SHA + date) — the "built in public" signature, automated.
 - Mobile: collapses to a compact bottom strip (§13). The title block is the **only** persistent chrome on the site.
@@ -283,6 +288,13 @@ Every project is a physical document. On the desk: a paper card (elevation 1) wi
 
 Content collection frontmatter additions: `expNo`, `status`, `stack[]`, `problem`, `idea`, `result`, `metrics[]` (label/value/note), `diagram` (component ref). Migrate the 5 existing entries; where existing copy doesn't map cleanly, scaffold the structure with the current text and flag `TODO(phil-voice)` for Phil to rewrite — the agent does not invent claims or metrics.
 
+**Amended (M6, 2026-07-23):** `problem` / `idea` / `result` are canonical `##`
+sections in the markdown **body**, not frontmatter fields. Astro renders body
+markdown natively (links, emphasis, inline SVG); multi-paragraph YAML would
+need a second markdown pipeline (a new dependency) or lose formatting. `expNo`,
+`status`, `stack[]`, `metrics[]`, `diagram` stay frontmatter; the template
+renders the §10 order regardless.
+
 Notes and Log entries are simpler documents (index card / notebook page) reusing the same open/close verbs.
 
 ---
@@ -290,6 +302,14 @@ Notes and Log entries are simpler documents (index card / notebook page) reusing
 ## 11. Illustration style guide (SVG)
 
 One exploded/isometric architecture diagram per experiment. Hand-drawn *quality*, digitally built:
+
+**Amended (M8, 2026-07-24):** four diagrams shipped (EXP.001–004). **EXP.005
+(This Website) deliberately has NO diagram** — a reserved hatched plate stands
+until Phil rewrites its body, which still describes the retired shell: diagrams
+are *claims*, and drawing either the old architecture (stale) or the new one
+(unstated) would violate that. The `[slug].astro` registry maps the frontmatter
+`diagram` ref to a component; a document without the ref keeps the reserved
+plate. See DECISIONS_LOG (M8) and the `TODO(phil-arch)` list on PHI-69.
 
 - Inline SVG components. Stroke `--ink` 1.5px (1.25 mobile), round caps/joins, no fills except paper-tone panels.
 - Wobble: one `feTurbulence` (baseFrequency 0.012–0.02) + `feDisplacementMap` (scale 1.5–2.5) filter applied per diagram group — subtle; lines look drawn, not wavy.
@@ -318,6 +338,15 @@ The steering-agent simulation persists — it is the site's "future being built,
 - Lift on touch: none on hover (no hover); active-state press = scale 0.99 + e1.
 - Type per §6 mobile column; document measure full-width minus 20px gutters.
 
+**Amended (M9, 2026-07-24):** the roll is the native root scroller mirrored
+into the same camera store (y only) — one positioning system (§3). The whole
+roll layout is **gated on `html[data-js]`**: landing the scroll at the current
+zone and lifting the off-zone `inert` fences are JS, so rung 4 (no JS) keeps
+the server-posed *single-zone* view — usable, operable, in the a11y tree —
+exactly as desktop rung 4 does. Documents don't roll (fixed static zoom-1
+backdrop). A visible close chip replaces Esc on touch; the `<main>` landmark
+follows the in-view zone as the roll scrolls. See DECISIONS_LOG (M9).
+
 ---
 
 ## 14. Acceptance criteria (a11y, perf, SEO)
@@ -327,6 +356,15 @@ The steering-agent simulation persists — it is the site's "future being built,
 - Reduced-motion path fully implemented (§7) and manually verified.
 - Contrast: `--ink` on `--paper` and on `--desk` both pass AA; `--copper` used at ≥ 3:1 for UI indicators, never as the only signal (active sheet also underlined).
 - Lighthouse accessibility ≥ 95 on all routes.
+
+**Amended (M10, 2026-07-24):** the JS budgets are **enforced in CI** by
+`test/budget.test.ts` (recomputes gz sizes from `dist/`, fails on regression,
+and asserts `three` is never on the critical path — the CSP-guard pattern).
+`--copper` text was reconciled to `--copper-deep` for AA (see §9). Accessibility
+verified with axe-core (0 WCAG 2A/2AA violations on all routes, desktop + mobile
+roll); CLS measured 0. The Fast-3G LCP/INP numbers are a real-device / deployed
+Lighthouse run (the headless preview parks rAF and can't throttle-load) — the
+same verification split used since M3.
 
 **Performance**
 - First paint = rung 2 with full content (no WebGL on the critical path); LCP is DOM text/hero, < 2.0s on Fast 3G simulated; CLS < 0.02; INP < 200ms including verb interruptions.

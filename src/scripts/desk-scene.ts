@@ -55,9 +55,9 @@ const dprCap = (): number => (mobileMq.matches ? 1 : 1.5);
  *
  * The lights are white and flat: three's physically-based diffuse divides the
  * light sum by π (measured — a lit level ~0.36× naive expectation), so the
- * intensities carry a π factor; LIGHT_GAIN is the residual trim measured with
- * the ?debug=scene harness (the standard material's broad F0=0.04 specular
- * adds a few flat percent).
+ * intensities carry a π factor; LIGHT_GAIN is the residual trim that was
+ * measured with the (now retired, M10 note 5) readPixels harness — the
+ * standard material's broad F0=0.04 specular adds a few flat percent.
  */
 const LIGHT_GAIN = 1.0;
 /**
@@ -120,8 +120,8 @@ export function initDeskScene(): void {
   ).requestIdleCallback;
   const run = () => void mount();
   // The timeout deadline matters: a hidden tab gets no idle periods at all, so
-  // without it the scene would never init in the background (and the harness
-  // could never measure it there). 2s is still comfortably post-idle.
+  // without it the scene would never init in the background. 2s is still
+  // comfortably post-idle.
   if (ric) ric(run, { timeout: 2000 });
   else window.setTimeout(run, 200);
 }
@@ -164,17 +164,6 @@ async function mount(): Promise<void> {
   }
 }
 
-const debugScene = (): boolean => {
-  try {
-    return (
-      new URLSearchParams(location.search).get('debug') === 'scene' ||
-      localStorage.getItem('debug:scene') === '1'
-    );
-  } catch {
-    return false;
-  }
-};
-
 function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskScene {
   const desk = tokenColor('--desk', 0xd8d2c6);
   const deskDeep = tokenColor('--desk-deep', 0xc7c0b2);
@@ -208,7 +197,6 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
     });
     canvas.classList.remove('is-lit');
     canvas.dataset.rung = '2'; // the CSS ground is the active rung again
-    delete (window as unknown as Record<string, unknown>).__deskScene;
   };
 
   try {
@@ -580,74 +568,11 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
     trackOnVisible = onVisible;
     document.addEventListener('visibilitychange', onVisible);
 
-    // Measurement harness (?debug=scene or localStorage debug:scene=1): one
-    // manual render + readPixels — no rAF, works with the pane hidden — so
-    // luminance parity is verifiable against the CSS gradient (FIX B).
-    if (debugScene()) {
-      (window as unknown as Record<string, unknown>).__deskScene = {
-        renderer,
-        world,
-        camera,
-        syncCamera,
-        /** Render once and sample RGBA at normalized viewport points (y down). */
-        sample(points: Array<[number, number]>): number[][] {
-          resize(); // hidden panes never ran the ResizeObserver correction
-          syncCamera(cameraPose());
-          renderer.render(world, camera);
-          const gl = renderer.getContext();
-          const w = gl.drawingBufferWidth;
-          const h = gl.drawingBufferHeight;
-          const px = new Uint8Array(4);
-          return points.map(([nx, ny]) => {
-            gl.readPixels(
-              Math.round(nx * (w - 1)),
-              Math.round((1 - ny) * (h - 1)),
-              1,
-              1,
-              gl.RGBA,
-              gl.UNSIGNED_BYTE,
-              px
-            );
-            return [px[0], px[1], px[2], px[3]];
-          });
-        },
-        /** Force a warm-up contrast (0..1) for mid-fade parity measurement —
-         *  cancels a running warm-up; set back to 1 when done. */
-        setContrast(c: number): void {
-          warmupStart = -1;
-          contrast = Math.max(0, Math.min(1, c));
-          applyContrast();
-          // Keep the LIVE canvas in sync on visible tabs (review): the loop
-          // only renders on pose change, so invalidate and wake it. On mobile
-          // the grade is a one-shot — force it to repaint at the new contrast
-          // too, or the ground stays graded at the old value under new slabs.
-          gradePainted = false;
-          lastKey = '';
-          wake();
-        },
-        /** Render once and return the whole-frame mean [R,G,B]. */
-        mean(): number[] {
-          resize(); // hidden panes never ran the ResizeObserver correction
-          syncCamera(cameraPose());
-          renderer.render(world, camera);
-          const gl = renderer.getContext();
-          const w = gl.drawingBufferWidth;
-          const h = gl.drawingBufferHeight;
-          const buf = new Uint8Array(w * h * 4);
-          gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-          let r = 0;
-          let g = 0;
-          let b = 0;
-          const n = w * h;
-          for (let i = 0; i < buf.length; i += 4) {
-            r += buf[i];
-            g += buf[i + 1];
-            b += buf[i + 2];
-          }
-          return [r / n, g / n, b / n];
-        },
-      };
-    }
+    // (M10 note 5) The `__deskScene` measurement harness — render + readPixels
+    // for the FIX B / warm-up luminance-parity checks — was gated out at M10 as
+    // the spec requires. Those calibrations are settled and pinned in the code;
+    // the runtime ships no debug globals. `?debug=motion` (a no-op string build
+    // per navigation) is the only remaining diagnostic (lib/motion-trace.ts).
 
     return { destroy: disposeAll, wake };
   } catch (err) {
