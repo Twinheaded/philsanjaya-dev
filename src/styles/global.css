@@ -772,7 +772,8 @@ body[data-view='document'][data-unfold='traveling'] .stack-scrim {
   inset-inline-start: calc(var(--zone-x) * 1px);
   transform: translate(-50%, -50%);
   /* Tracks the viewport so a zone can never park content out of reach on a
-     small screen (note 6). Real mobile composition is M9. */
+     small screen (note 6). Below 768px the §13 roll re-lays all of this
+     (the mobile block at the end of this file). */
   inline-size: min(64rem, calc((100vw - var(--space) * 5) / var(--cam-zoom)));
 }
 
@@ -1034,4 +1035,205 @@ a.chip:active {
   box-shadow: var(--e3);
   /* The page's own contained scroll (.panel-scroll) does the scrolling. */
   overflow: hidden;
+}
+
+/* The document close affordance (§13 note: Esc has no key on touch). A real
+   link to the parent zone — the same fold every other close path takes, and
+   it works at rung 4. Desktop keeps Esc / Back / the title block; the chip is
+   mobile chrome only. */
+.doc-close {
+  display: none;
+}
+
+/* ==================================================================== *
+ * §13 — Mobile (< 768px): the vertical roll (M9).
+ *
+ * Zone routes collapse to a single-axis native scroll: the ROOT scroller
+ * IS the camera's y — desk.ts mirrors a user scroll into the store and
+ * drives the scroller from the store during navigations (one positioning
+ * system, §3). Zones stack in sheet order, each at least a viewport tall,
+ * snapping at their tops; a store-driven tween disarms the snap
+ * (html[data-roll-tween]) and always ends ON a snap position, so re-arming
+ * never jumps.
+ *
+ * THE ROLL IS GATED ON html[data-js]. Landing the scroll at the current
+ * zone and lifting the off-zone `inert` fences are both JS (adoptRollRest /
+ * applyModality in desk.ts). Without them the roll would stack five zones,
+ * open at Home for every route, and leave four zones visible-but-inert —
+ * dead to touch and absent from the a11y tree. So rung 4 (no JS) keeps the
+ * server-posed single-zone view — usable, operable, screen-reader-correct —
+ * exactly as desktop rung 4 does (review: rung-4 land-at-top / inert-zones).
+ *
+ * Document routes do NOT roll: they keep the fixed posed plane behind the
+ * full-screen sheet (a hard load is posed with zero JS — rung 4), rendered
+ * as a STATIC zoom-1 backdrop (§13 static camera; zoom is the reveal's
+ * progress clock on mobile, never a projection input). Stack is the opacity
+ * scrim — the no-blur rules further up already cover < 768px. Document
+ * chrome is rung-independent, so it is NOT gated on data-js.
+ * ==================================================================== */
+@media (max-width: 767px) {
+  /* Never a horizontal scroll trap, at any rung. */
+  html {
+    overflow-x: clip;
+  }
+  html[data-js] {
+    scroll-snap-type: y mandatory;
+    /* Focus/anchor scroll-into-view clears the fixed bottom strip (§14 focus
+       not obscured); the fixed close chip's band is cleared on the panes. */
+    scroll-padding-block-end: var(--tb-strip);
+  }
+  html[data-js][data-roll-tween] {
+    scroll-snap-type: none;
+  }
+
+  /* FR-01's "the desk never scrolls" is desktop law — on the roll the scroll
+     IS the Slide (§13). Document routes keep the base overflow:hidden. */
+  html[data-js] body[data-view='zone'] {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+    /* The two-tone ground rides the VIEWPORT, not the (now tall) document —
+       a fixed underlay keeps the light pool anchored exactly where the
+       rung-2 gradient and the scene's grade expect it. */
+    background-image: none;
+  }
+  html[data-js] body[data-view='zone']::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--desk);
+    background-image: radial-gradient(
+      145% 125% at 50% 38%,
+      var(--desk-pool) 0%,
+      var(--desk) 46%,
+      var(--desk-deep) 100%
+    );
+  }
+
+  /* The roll layout: the behind-wrapper joins the flow (its canvases stay
+     viewport-fixed); the plane is positioned at z-index 2 so it keeps the
+     desktop stacking order scene(0) < field(1) < plane(2) — un-positioning
+     .desk-behind dissolves its context, promoting the fixed canvases into
+     the root context where they would otherwise paint OVER the in-flow zone
+     text once the scene lights up (review BLOCKER). `position: relative`
+     with no offsets keeps the static-flow layout the gBCR snap map reads. */
+  html[data-js] body[data-view='zone'] .desk-behind {
+    position: static;
+  }
+  html[data-js] body[data-view='zone'] .desk-plane {
+    position: relative;
+    z-index: 2;
+    inline-size: auto;
+    block-size: auto;
+    transform: none;
+  }
+  /* Static flow, untransformed — the gBCR offsets desk.ts measures ARE the
+     snap map. Each zone is at least one viewport tall; a taller zone scrolls
+     freely inside its snap area (CSS snap permits rests within an oversized
+     area), so nothing nests a second scroll. */
+  html[data-js] body[data-view='zone'] .zone {
+    position: static;
+    transform: none;
+    inline-size: auto;
+    min-block-size: 100dvh;
+    scroll-snap-align: start;
+  }
+  html[data-js] body[data-view='zone'] .zone:not([data-current]) {
+    contain-intrinsic-size: auto 100dvh;
+  }
+  /* The roll scrolls; sheets don't (no nested touch scrolling). §13 gutters
+     (20px, grown for notches); the strip clearance keeps the last line
+     reachable above the fixed bottom strip. */
+  html[data-js] body[data-view='zone'] .zone__sheet {
+    max-block-size: none;
+    overflow: visible;
+    padding: calc(var(--space) * 3) max(20px, env(safe-area-inset-right))
+      calc(var(--tb-strip) + var(--space) * 3) max(20px, env(safe-area-inset-left));
+  }
+
+  /* The skip chip pins to the viewport — an absolute chip would sit at the
+     top of the tall roll document, off-screen from anywhere below Home. */
+  html[data-js] .skip-link {
+    position: fixed;
+  }
+
+  /* Document routes: the desk behind is a STATIC backdrop. The server vars
+     hold the parent pose; the transform ignores zoom, so the plane renders
+     head-on at rest scale and never moves behind the scrim. */
+  body[data-view='document'] .desk-plane {
+    transform: translate3d(
+      calc(50vw - var(--cam-x) * 1px),
+      calc(50dvh - var(--cam-y) * 1px),
+      0
+    );
+  }
+  body[data-view='document'] .zone {
+    inline-size: min(64rem, calc(100vw - var(--space) * 5));
+  }
+  body[data-view='document'] .zone__sheet {
+    max-block-size: calc(100dvh - var(--space) * 4);
+    padding-block-end: calc(var(--tb-strip) + var(--space) * 3);
+  }
+
+  /* Documents are full-screen paper (§13): edge-to-edge sheet, no HUD
+     reserve — the strip overlays, and the contained scroll clears it (and
+     the roll behind never chain-scrolls) from inside. */
+  .document {
+    padding: 0;
+  }
+  .document__sheet {
+    inline-size: 100%;
+    block-size: 100%;
+    min-block-size: 0;
+    border: 0;
+    border-radius: 0;
+  }
+  /* Reserve the fixed close chip's band so no template's header text lays
+     out under it (the chip is opaque, top-right, z-index 45 — review: it
+     covered the meta row / title on notched phones). Applies to whatever
+     the slot renders (the header sits OUTSIDE the scroll pane in the note /
+     log templates, so padding the pane alone would not clear it). */
+  .document__sheet > * {
+    padding-block-start: calc(
+      max(var(--space), env(safe-area-inset-top)) + 44px + var(--space)
+    );
+  }
+  .document :is(.panel-scroll, .note-pane) {
+    overscroll-behavior: contain;
+    padding-block-end: calc(var(--tb-strip) + var(--space) * 2);
+    /* Tabbing/anchoring inside the pane clears both fixed affordances. */
+    scroll-padding-block-end: calc(var(--tb-strip) + var(--space) * 2);
+    scroll-padding-block-start: calc(env(safe-area-inset-top) + 44px + var(--space));
+  }
+
+  /* The close chip: fixed over the sheet, ≥44px target, §13 press state
+     (scale 0.99 + e1). Pre-reveal it is hidden with the document
+     (body[data-unfold] covers the whole <main>). */
+  .doc-close {
+    position: fixed;
+    inset-block-start: max(var(--space), env(safe-area-inset-top));
+    inset-inline-end: max(var(--space), env(safe-area-inset-right));
+    z-index: 45;
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--space) * 0.75);
+    min-block-size: 44px;
+    padding: 0 calc(var(--space) * 1.75);
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--e2);
+    font-family: var(--font-mono);
+    font-size: var(--fs-micro);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .doc-close:active {
+    transform: scale(0.99);
+    box-shadow: var(--e1);
+  }
 }

@@ -49,6 +49,12 @@ const parent = zoneForPath(Astro.url.pathname);
     <!-- The open document (elevation 3). tabindex: the stage scrolls on short
          viewports and must be keyboard-reachable (WCAG 2.1.1). -->
     <main id="main" class="document" tabindex="-1" style="view-transition-name: unfold">
+      <!-- §13 close affordance (M9): Esc has no key on touch. A real link to
+           the parent zone — the same fold as every other close, rung-4 safe.
+           Mobile-only chrome (CSS); §6 microcopy ("Back to desk"). -->
+      <a class="doc-close" href={parent.href}>
+        <span aria-hidden="true">✕</span> Back to desk
+      </a>
       <div class="document__sheet">
         <slot />
       </div>

@@ -28,6 +28,16 @@ const IDLE_MS = 2000; // pause the render loop after this long with no camera mo
 const DESK_W = 5200;
 const DESK_H = 3400;
 
+// §13 mobile (M9): a simplified STATIC camera — head-on at rest scale, zoom
+// ignored (on mobile it is the reveal's progress clock, not a projection
+// input), with a slight vertical parallax from the roll. The store's roll y
+// spans the desk band (±1700), so 0.06 drifts the room ≈ ±100 units across
+// the whole roll — atmosphere, not travel.
+const mobileMq = window.matchMedia('(max-width: 767px)');
+const MOBILE_PARALLAX = 0.06;
+/** DPR cap: 1.5 desktop (§8), 1 on the roll (§13). */
+const dprCap = (): number => (mobileMq.matches ? 1 : 1.5);
+
 /**
  * Luminance-parity calibration (FIX B). The lights-on fade may change light
  * QUALITY, never QUANTITY: the rendered ground must match the CSS ground (the
@@ -122,6 +132,18 @@ async function mount(): Promise<void> {
   const canvas = document.getElementById('desk-scene') as HTMLCanvasElement | null;
   if (!canvas || scene) return;
 
+  // §13 rung-2 threshold: Save-Data on a phone keeps the CSS ground — the
+  // ~188KB three chunk is never fetched. Evaluated once at first idle: a
+  // session that STARTS narrow with Save-Data stays on rung 2 for its
+  // lifetime (the `started` latch never re-runs mount), which is the intended
+  // read of the preference; a later rotate to a wide viewport does not fetch
+  // three. Desktop that starts wide is unaffected (§8 gates on failure only).
+  const conn = (navigator as { connection?: { saveData?: boolean } }).connection;
+  if (mobileMq.matches && conn?.saveData === true) {
+    console.info('desk scene: rung 2 — CSS ground (Save-Data, §13)');
+    return;
+  }
+
   let THREE: typeof import('three');
   try {
     THREE = await import('three');
@@ -166,6 +188,7 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
   let trackWorld: Scene | null = null;
   let trackObserver: ResizeObserver | null = null;
   let trackOnVisible: (() => void) | null = null;
+  let trackOnMq: (() => void) | null = null;
   let rafId = 0;
   let litRaf = 0;
   let running = false;
@@ -176,6 +199,7 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
     running = false;
     trackObserver?.disconnect();
     if (trackOnVisible) document.removeEventListener('visibilitychange', trackOnVisible);
+    if (trackOnMq) mobileMq.removeEventListener('change', trackOnMq);
     trackRenderer?.dispose();
     trackWorld?.traverse((o) => {
       const mesh = o as { geometry?: { dispose(): void }; material?: { dispose(): void } };
@@ -190,7 +214,7 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
   try {
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     trackRenderer = renderer;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprCap()));
     // Pin the output pipeline (FIX B): sRGB out, no tone mapping — these are
     // today's three defaults, but the luminance calibration depends on them, so
     // a future three default drift must not silently re-grade the desk.
@@ -376,6 +400,10 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
     let vh = 0;
     let idleSince = 0;
     let lastKey = '';
+    // §13: on mobile the grade paints once per size (and through the warm-up)
+    // — the slight parallax drift is far too small to re-project 6k vertices
+    // for every frame of a scroll.
+    let gradePainted = false;
     const halfFovTan = Math.tan((FOV * Math.PI) / 360);
 
     function resize(): void {
@@ -385,32 +413,20 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
       vh = rect.height;
       // Refresh the DPR cap: monitor drags and browser zoom change
       // devicePixelRatio, and setSize scales the buffer from the STORED ratio
-      // (review — a stale ratio renders soft on a sharper display).
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+      // (review — a stale ratio renders soft on a sharper display). The cap
+      // itself is modal: 1.5 desktop, 1 on the roll (§13).
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprCap()));
       renderer.setSize(vw, vh, false);
       camera.aspect = vw / vh;
+      gradePainted = false; // the §13 one-shot grade repaints at the new size
     }
 
     /**
-     * Position the camera from the store pose. Distance maps from zoom so the
-     * ground's scale matches the DOM plane; x/y pan is parallaxed for depth.
-     * The vertex grade re-projects with the camera (FIX B): the pool stays
-     * viewport-anchored — exactly the CSS ground's behaviour — at every pose
-     * and zoom, and the desk beyond the frame grades on to --desk-deep.
+     * Repaint the grade in normalized-viewport space: a ground vertex at
+     * world (wx, wy) sits at screen nx = 0.5 + (wx-cx)/visW (head-on camera),
+     * ny = 0.5 - (wy-cy)/visH (three y-up vs screen y-down).
      */
-    function syncCamera(p: Pose): void {
-      const dist = vh / (2 * p.zoom * halfFovTan);
-      const cx = p.x * PARALLAX;
-      const cy = -p.y * PARALLAX;
-      camera.position.set(cx, cy, dist);
-      camera.lookAt(cx, cy, 0);
-      camera.updateProjectionMatrix();
-
-      // Repaint the grade in normalized-viewport space: a ground vertex at
-      // world (wx, wy) sits at screen nx = 0.5 + (wx-cx)/visW (head-on camera),
-      // ny = 0.5 - (wy-cy)/visH (three y-up vs screen y-down).
-      const visH = vh / p.zoom;
-      const visW = vw / p.zoom;
+    function paintGrade(cx: number, cy: number, visW: number, visH: number): void {
       const pos = groundGeo.getAttribute('position');
       const col = groundGeo.getAttribute('color') as { array: Float32Array; needsUpdate: boolean };
       const arr = col.array;
@@ -425,6 +441,42 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
         arr[i * 3 + 2] = flat[2] + (gradeLut[li + 2] - flat[2]) * contrast;
       }
       col.needsUpdate = true;
+    }
+
+    /**
+     * Position the camera from the store pose. Distance maps from zoom so the
+     * ground's scale matches the DOM plane; x/y pan is parallaxed for depth.
+     * The vertex grade re-projects with the camera (FIX B): the pool stays
+     * viewport-anchored — exactly the CSS ground's behaviour — at every pose
+     * and zoom, and the desk beyond the frame grades on to --desk-deep.
+     *
+     * §13 mobile: a simplified STATIC camera instead — head-on at rest scale
+     * (zoom is the reveal's clock there, not a projection input), a slight
+     * vertical parallax from the roll's y, and a one-shot grade (repainted
+     * only for the warm-up and on resize — the drift is too small to
+     * re-project per scroll frame).
+     */
+    function syncCamera(p: Pose, warming = false): void {
+      if (mobileMq.matches) {
+        const dist = vh / (2 * halfFovTan);
+        const cy = -p.y * MOBILE_PARALLAX;
+        camera.position.set(0, cy, dist);
+        camera.lookAt(0, cy, 0);
+        camera.updateProjectionMatrix();
+        if (!gradePainted || warming) {
+          paintGrade(0, 0, vw, vh);
+          gradePainted = true;
+        }
+        return;
+      }
+      gradePainted = false; // desktop repaints every sync; mobile re-arms
+      const dist = vh / (2 * p.zoom * halfFovTan);
+      const cx = p.x * PARALLAX;
+      const cy = -p.y * PARALLAX;
+      camera.position.set(cx, cy, dist);
+      camera.lookAt(cx, cy, 0);
+      camera.updateProjectionMatrix();
+      paintGrade(cx, cy, vw / p.zoom, vh / p.zoom);
     }
 
     function frame(now: number): void {
@@ -448,11 +500,18 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
         warming = true;
       }
       const p = cameraPose();
-      const key = `${p.x.toFixed(1)},${p.y.toFixed(1)},${p.zoom.toFixed(3)}`;
+      // On the roll only y is a projection input (x locked, zoom is the
+      // reveal's clock — syncCamera ignores both), so x/zoom must not be
+      // render-dirty inputs either: otherwise a document open/close zoom
+      // ramp forces ~27 bit-identical full-scene renders during exactly the
+      // frames the reveal contends for (review). Desktop keys on all three.
+      const key = mobileMq.matches
+        ? p.y.toFixed(1)
+        : `${p.x.toFixed(1)},${p.y.toFixed(1)},${p.zoom.toFixed(3)}`;
       if (key !== lastKey || warming) {
         lastKey = key;
         idleSince = now;
-        syncCamera(p);
+        syncCamera(p, warming);
         renderer.render(world, camera);
       } else if (now - idleSince > IDLE_MS) {
         running = false; // the camera has rested; stop drawing (§8 budget)
@@ -476,6 +535,17 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
     trackObserver = observer;
     observer.observe(canvas);
     resize();
+
+    // Crossing the 768px boundary swaps camera modes AND the DPR cap (§13):
+    // re-cap, invalidate the grade and the pose key, and draw a frame.
+    const onMq = (): void => {
+      resize();
+      gradePainted = false;
+      lastKey = '';
+      wake();
+    };
+    trackOnMq = onMq;
+    mobileMq.addEventListener('change', onMq);
 
     // The "lights on" moment (§8 + FIX B): render first, then start the 600ms
     // fade from a rAF callback — rAF runs just before the paint that composites
@@ -548,7 +618,10 @@ function build(THREE: typeof import('three'), canvas: HTMLCanvasElement): DeskSc
           contrast = Math.max(0, Math.min(1, c));
           applyContrast();
           // Keep the LIVE canvas in sync on visible tabs (review): the loop
-          // only renders on pose change, so invalidate and wake it.
+          // only renders on pose change, so invalidate and wake it. On mobile
+          // the grade is a one-shot — force it to repaint at the new contrast
+          // too, or the ground stays graded at the old value under new slabs.
+          gradePainted = false;
           lastKey = '';
           wake();
         },

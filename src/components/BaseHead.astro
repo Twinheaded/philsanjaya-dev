@@ -26,7 +26,9 @@ const ogImageURL = new URL(ogImage, Astro.site);
 ---
 
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- viewport-fit=cover: the §13 strip and close chip pad by env(safe-area-*),
+     which stays 0 without it on notched phones (M9). -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="preload" href={geist400Url} as="font" type="font/woff2" crossorigin />
 <link rel="preload" href={geist500Url} as="font" type="font/woff2" crossorigin />

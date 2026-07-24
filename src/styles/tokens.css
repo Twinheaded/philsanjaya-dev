@@ -96,3 +96,21 @@
   --signal-text: var(--copper-deep); /* text-safe accent (prose links) */
   --debug:       #c97e12;            /* dev overlay only (canvas getComputedStyle); hidden in v1 */
 }
+
+/* §13 mobile (M9). The strip clearance is the compact title block's reserved
+   band (its one content row plus the home-indicator safe area) — the roll's
+   zones and the document scrolls pad their bottoms by it so the last line is
+   never parked under the fixed strip. Fewer pencils on a phone: battery. */
+@media (max-width: 767px) {
+  :root {
+    --tb-strip:    calc(3.25rem + env(safe-area-inset-bottom, 0px));
+    --field-count: 18;
+  }
+  /* Rung 4: no disclosure toggle, so the strip shows the full labelled sheet
+     list as a wrapping row — taller than the JS-collapsed single row. The
+     strip is capped to this height (TitleBlock) and the reserve token matches
+     it, so document panes never hide their last lines behind it (review). */
+  html:not([data-js]) {
+    --tb-strip:  calc(9rem + env(safe-area-inset-bottom, 0px));
+  }
+}

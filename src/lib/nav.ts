@@ -66,6 +66,26 @@ function zonePose(zoneId: string): Pose {
   return { x: z.x, y: z.y, zoom: z.zoom };
 }
 
+/**
+ * Pluggable pose space (M9): the same navigation plans project onto different
+ * geometries. `zone` is a zone's rest pose; `doc` the document pose anchored
+ * on that zone. Desktop uses the §4 desk poses (the default); the mobile roll
+ * passes measured scroll offsets (lib/roll.ts) — the PLAN (two-beat structure,
+ * settle holds, gates) is identical either way.
+ */
+export interface PoseResolver {
+  zone(zoneId: string): Pose;
+  doc(zoneId: string): Pose;
+}
+
+const DESK_POSES: PoseResolver = {
+  zone: zonePose,
+  doc: (zoneId) => {
+    const z = zonePose(zoneId);
+    return { x: z.x, y: z.y, zoom: DOC_ZOOM };
+  },
+};
+
 /** The push fraction where the reveal begins (§7.3: the document resolves in
  *  the final ~40% of the push). */
 export const REVEAL_START = 0.6;
@@ -131,18 +151,23 @@ export function beat2Gate(
  * document's parent is the mirror: fold out to the parent, settle, slide on.
  * Same-zone opens/closes and plain zone moves are a single tween.
  */
-export function planCamera(fromPath: string, toPath: string, settleMs = SETTLE_MS): Step[] {
+export function planCamera(
+  fromPath: string,
+  toPath: string,
+  settleMs = SETTLE_MS,
+  poses: PoseResolver = DESK_POSES
+): Step[] {
   const fromZone = zoneForPath(fromPath).id;
   const toZone = zoneForPath(toPath).id;
-  const dest = resolvePose(toPath);
+  const dest = isDocumentRoute(toPath) ? poses.doc(toZone) : poses.zone(toZone);
 
   if (isDocumentRoute(toPath) && toZone !== fromZone) {
     // Two-beat OPEN: travel to the parent zone, settle, then unfold.
-    return [{ pose: zonePose(toZone), settle: settleMs }, { pose: dest, settle: 0 }];
+    return [{ pose: poses.zone(toZone), settle: settleMs }, { pose: dest, settle: 0 }];
   }
   if (isDocumentRoute(fromPath) && !isDocumentRoute(toPath) && fromZone !== toZone) {
     // Two-beat CLOSE: fold out to the parent zone, settle, then slide on.
-    return [{ pose: zonePose(fromZone), settle: settleMs }, { pose: dest, settle: 0 }];
+    return [{ pose: poses.zone(fromZone), settle: settleMs }, { pose: dest, settle: 0 }];
   }
   return [{ pose: dest, settle: 0 }];
 }
