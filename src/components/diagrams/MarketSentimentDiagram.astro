@@ -1,0 +1,101 @@
+---
+/**
+ * EXP.003 — Market sentiment (§11). Every box from the case study: the Alpha
+ * Vantage NEWS_SENTIMENT feed, the three-way scoring (VADER, TextBlob,
+ * FinBERT) joined by the feed's own score, the daily ensemble with its
+ * disagreement spread, the cache-first CSV layer, the 35-feature engineering,
+ * and the two deliberately separated pipelines. Finnhub/NewsAPI are dashed
+ * with NO arrows — "written but never wired" (capability, not usage). The
+ * copper path is the sentiment signal — the ablation's variable — ending at
+ * classification, where the baseline/enhanced comparison lives.
+ */
+import Diagram from './Diagram.astro';
+---
+
+<Diagram
+  slug="market-sentiment"
+  title="Market sentiment — two-pipeline architecture"
+  desc="News comes from Alpha Vantage's NEWS_SENTIMENT feed; clients for Finnhub and NewsAPI were written but never wired in. Each article is scored by VADER, TextBlob and FinBERT, joined by the feed's own score, and averaged per day into an ensemble sentiment with a disagreement spread. Every fetch is cached to CSV so re-runs skip the network. Feature engineering produces 35 features: OHLCV, eleven sentiment aggregates, seven technical indicators, nine lags and three interaction terms. Two deliberately separated pipelines follow: classification wraps logistic regression, random forest and XGBoost behind one class with chronological splits and a train-only scaler — the sentiment ablation is measured here; regression builds GRU stacks reading 60-day windows to forecast five days, with a SARIMA model fit on the network's training residuals added back onto its forecast."
+  viewBox="0 0 760 400"
+  seed={37}
+>
+  <Fragment slot="ink">
+    <!-- feed + unwired clients -->
+    <rect class="d-box" x={20} y={40} width={180} height={48} rx={6}></rect>
+    <rect class="d-box d-ghost" x={20} y={116} width={180} height={36} rx={6}></rect>
+    <rect class="d-box d-ghost" x={20} y={164} width={180} height={36} rx={6}></rect>
+    <!-- cache: the feed edge routes down the clear gutter RIGHT of the ghost
+         column — the never-wired clients get NO arrows through or into them -->
+    <rect class="d-box" x={20} y={240} width={180} height={48} rx={6}></rect>
+    <path class="d-arrow" d="M200 76 h22 v178 h-18" marker-end="url(#ms-ah)"></path>
+
+    <!-- three-way scoring -->
+    <rect class="d-box" x={260} y={28} width={130} height={32} rx={6}></rect>
+    <rect class="d-box" x={260} y={70} width={130} height={32} rx={6}></rect>
+    <rect class="d-box" x={260} y={112} width={130} height={32} rx={6}></rect>
+
+    <!-- ensemble -->
+    <rect class="d-box" x={450} y={54} width={170} height={56} rx={6}></rect>
+    <path class="d-arrow" d="M390 44 L448 70" marker-end="url(#ms-ah)"></path>
+    <path class="d-arrow" d="M390 128 L448 96" marker-end="url(#ms-ah)"></path>
+
+    <!-- features -->
+    <rect class="d-box" x={260} y={210} width={240} height={72} rx={6}></rect>
+
+    <!-- the two pipelines. NO features->regression edge: the case study never
+         states what the GRU windows read — drawing it would invent a dataflow
+         (TODO(phil-arch): confirm the regression input). -->
+    <rect class="d-box" x={150} y={330} width={280} height={58} rx={6}></rect>
+    <rect class="d-box" x={470} y={330} width={270} height={58} rx={6}></rect>
+
+    <!-- THE copper path: feed -> scoring -> ensemble -> features -> classification -->
+    <path
+      class="d-flow"
+      d="M200 64 h58 M390 86 h58 M535 110 v58 h-155 v40 M340 284 L300 328"
+      marker-end="url(#ms-fh)"></path>
+
+    <!-- margin-note leader -->
+    <path class="d-leader" d="M600 300 C 545 306, 490 314, 436 330"></path>
+  </Fragment>
+
+  <defs>
+    <marker id="ms-ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="d-arrowhead" d="M0 0L8 4L0 8z"></path>
+    </marker>
+    <marker id="ms-fh" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="d-flowhead" d="M0 0L8 4L0 8z"></path>
+    </marker>
+  </defs>
+
+  <text class="d-group-label" x={20} y={18}>collect-news → analyze-sentiment → train-models</text>
+
+  <text class="d-label" x={110} y={60} text-anchor="middle">Alpha Vantage</text>
+  <text class="d-sub" x={110} y={74} text-anchor="middle">NEWS_SENTIMENT feed</text>
+  <text class="d-label d-ghost-label" x={110} y={136} text-anchor="middle">Finnhub client</text>
+  <text class="d-label d-ghost-label" x={110} y={184} text-anchor="middle">NewsAPI client</text>
+  <text class="d-sub" x={110} y={214} text-anchor="middle">written — never wired</text>
+  <text class="d-label" x={110} y={258} text-anchor="middle">CSV cache — cache-first</text>
+  <text class="d-sub" x={110} y={274} text-anchor="middle">re-runs skip the network</text>
+
+  <text class="d-label" x={325} y={48} text-anchor="middle">VADER</text>
+  <text class="d-label" x={325} y={90} text-anchor="middle">TextBlob</text>
+  <text class="d-label" x={325} y={132} text-anchor="middle">FinBERT</text>
+  <text class="d-sub" x={325} y={166} text-anchor="middle">+ the feed's own score</text>
+
+  <text class="d-label" x={535} y={76} text-anchor="middle">daily ensemble</text>
+  <text class="d-sub" x={535} y={90} text-anchor="middle">sentiment + disagreement spread</text>
+
+  <text class="d-label" x={380} y={230} text-anchor="middle">feature engineering — 35</text>
+  <text class="d-sub" x={380} y={246} text-anchor="middle">OHLCV · 11 sentiment · 7 technical</text>
+  <text class="d-sub" x={380} y={260} text-anchor="middle">9 lags · 3 interaction terms</text>
+
+  <text class="d-label" x={290} y={350} text-anchor="middle">classification</text>
+  <text class="d-sub" x={290} y={364} text-anchor="middle">logreg · random forest · XGBoost — one class</text>
+  <text class="d-sub" x={290} y={377} text-anchor="middle">chronological split · train-only scaler</text>
+
+  <text class="d-label" x={605} y={350} text-anchor="middle">regression</text>
+  <text class="d-sub" x={605} y={364} text-anchor="middle">GRU 2×128 · 60-day window → 5 days</text>
+  <text class="d-sub" x={605} y={377} text-anchor="middle">+ SARIMA on training residuals</text>
+
+  <text class="d-note" x={740} y={296} text-anchor="end">a clean ablation — does sentiment add signal?</text>
+</Diagram>

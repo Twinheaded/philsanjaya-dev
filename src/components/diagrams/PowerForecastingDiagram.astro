@@ -1,0 +1,84 @@
+---
+/**
+ * EXP.004 — Power forecasting (§11). Every box from the case study: the
+ * Tetouan dataset, the deliberate leakage drop (the other two zones'
+ * consumption columns), the seeded 80/20 split with a train-fit-only scaler,
+ * and the three model branches with their real test numbers. The copper path
+ * is the winning Random Forest branch into the comparison — "the boring model
+ * that wins" is the study's own conclusion.
+ */
+import Diagram from './Diagram.astro';
+---
+
+<Diagram
+  slug="power-forecasting"
+  title="Power forecasting — three-model comparison"
+  desc="Tetouan City zone 1 power consumption: 52,416 readings at ten-minute intervals across all of 2017 with zero missing values. The other two zones' consumption columns are dropped as leakage — they correlate with zone 1 at 0.83 and 0.75 — leaving nine honest features. An identical seeded 80/20 split with a scaler fit on training data only feeds three models: a 200-tree Random Forest (test R-squared 0.9779, five-fold CV 0.9745), a scikit-learn MLP with layers 64 and 32 (test R-squared 0.8763), and a Keras network 64-32-16 with dropout, 3,265 parameters, swept over batch sizes 16, 32 and 64 with batch 16 best at 0.7477. The Random Forest branch is the winner in the recorded comparison."
+  viewBox="0 0 760 330"
+  seed={53}
+>
+  <Fragment slot="ink">
+    <!-- data -> leakage drop -> split -->
+    <rect class="d-box" x={20} y={36} width={210} height={64} rx={6}></rect>
+    <rect class="d-box" x={286} y={36} width={200} height={64} rx={6}></rect>
+    <rect class="d-box" x={540} y={36} width={200} height={64} rx={6}></rect>
+    <path class="d-arrow" d="M230 68 h52" marker-end="url(#pf-ah)"></path>
+    <path class="d-arrow" d="M486 68 h50" marker-end="url(#pf-ah)"></path>
+
+    <!-- three model branches -->
+    <rect class="d-box" x={20} y={170} width={230} height={64} rx={6}></rect>
+    <rect class="d-box" x={286} y={170} width={190} height={64} rx={6}></rect>
+    <rect class="d-box" x={510} y={170} width={230} height={64} rx={6}></rect>
+    <path class="d-arrow" d="M610 100 L400 168" marker-end="url(#pf-ah)"></path>
+    <path class="d-arrow" d="M648 100 v68" marker-end="url(#pf-ah)"></path>
+
+    <!-- comparison -->
+    <rect class="d-box" x={286} y={272} width={190} height={40} rx={6}></rect>
+    <path class="d-arrow" d="M381 234 v36" marker-end="url(#pf-ah)"></path>
+    <path class="d-arrow" d="M625 234 L478 288" marker-end="url(#pf-ah)"></path>
+
+    <!-- THE copper path: split -> Random Forest -> comparison (the winner) -->
+    <path
+      class="d-flow"
+      d="M572 100 L140 168 M135 234 L284 286"
+      marker-end="url(#pf-fh)"></path>
+
+    <!-- margin-note leader -->
+    <path class="d-leader" d="M96 296 C 100 284, 104 270, 116 240"></path>
+  </Fragment>
+
+  <defs>
+    <marker id="pf-ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="d-arrowhead" d="M0 0L8 4L0 8z"></path>
+    </marker>
+    <marker id="pf-fh" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="d-flowhead" d="M0 0L8 4L0 8z"></path>
+    </marker>
+  </defs>
+
+  <text class="d-label" x={125} y={58} text-anchor="middle">Tetouan City — zone 1</text>
+  <text class="d-sub" x={125} y={74} text-anchor="middle">52,416 × 10-min · all of 2017</text>
+  <text class="d-sub" x={125} y={88} text-anchor="middle">zero missing values</text>
+
+  <text class="d-label" x={386} y={58} text-anchor="middle">drop zones 2 &amp; 3</text>
+  <text class="d-sub" x={386} y={74} text-anchor="middle">leakage — r 0.83 / 0.75</text>
+  <text class="d-sub" x={386} y={88} text-anchor="middle">nine honest features</text>
+
+  <text class="d-label" x={640} y={58} text-anchor="middle">seeded 80/20 split</text>
+  <text class="d-sub" x={640} y={74} text-anchor="middle">scaler fits train only</text>
+
+  <text class="d-label" x={135} y={192} text-anchor="middle">Random Forest — 200 trees</text>
+  <text class="d-sub" x={135} y={208} text-anchor="middle">test R² 0.9779</text>
+  <text class="d-sub" x={135} y={222} text-anchor="middle">5-fold CV 0.9745 ± 0.0013</text>
+
+  <text class="d-label" x={381} y={192} text-anchor="middle">MLP (64, 32)</text>
+  <text class="d-sub" x={381} y={208} text-anchor="middle">test R² 0.8763</text>
+
+  <text class="d-label" x={625} y={192} text-anchor="middle">Keras 64→32→16 + dropout</text>
+  <text class="d-sub" x={625} y={208} text-anchor="middle">3,265 params · batch 16/32/64</text>
+  <text class="d-sub" x={625} y={222} text-anchor="middle">best R² 0.7477 (batch 16)</text>
+
+  <text class="d-label" x={381} y={296} text-anchor="middle">comparison_metrics.csv</text>
+
+  <text class="d-note" x={30} y={310}>the boring model that wins</text>
+</Diagram>

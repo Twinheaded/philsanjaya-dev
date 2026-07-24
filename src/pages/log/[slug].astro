@@ -1,7 +1,8 @@
 ---
 import { getCollection, render } from 'astro:content';
-import Shell from '../../layouts/Shell.astro';
+import Sheet from '../../layouts/Sheet.astro';
 import NotePane from '../../components/NotePane.astro';
+import InkUnderline from '../../components/InkUnderline.astro';
 import { SITE } from '../../lib/site';
 
 export async function getStaticPaths() {
@@ -24,22 +25,24 @@ const formatDate = (d: Date) =>
   d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 ---
 
-<Shell
+<Sheet
   title={`${entry.data.title} — build log — Philipus Sanjaya`}
   description={`Build log entry ${String(entry.data.entry).padStart(2, '0')}: ${entry.data.title}`}
 >
   <article class="flex h-full min-h-0 flex-col p-5 md:p-12">
-    <header class="shrink-0">
-      <a href="/log" class="font-mono text-xs text-mist hover:text-ink">&larr; build log</a>
-      <p class="mt-4 font-mono text-xs tracking-[0.08em] text-mist">
-        entry {String(entry.data.entry).padStart(2, '0')} ·{' '}
+    <!-- A notebook page (§10): LOG number, date, milestone in mono micro over
+         a ruled line; commit chips are the receipts (FR-23). -->
+    <header class="doc-cardhead shrink-0">
+      <a href="/log" class="font-mono text-xs text-ink-soft hover:text-ink">&larr; build log</a>
+      <p class="doc-cardhead__meta">
+        <span>LOG.{String(entry.data.entry).padStart(2, '0')}</span>
         <time datetime={entry.data.date.toISOString().slice(0, 10)}
           >{formatDate(entry.data.date)}</time
-        >{' '}
-        · {entry.data.milestone}
+        >
+        <span>{entry.data.milestone}</span>
       </p>
       <h1 class="mt-2 max-w-2xl font-display text-[28px] leading-tight font-medium">
-        {entry.data.title}
+        {entry.data.title}<InkUnderline />
       </h1>
       {
         entry.data.commits.length > 0 && (
@@ -47,7 +50,7 @@ const formatDate = (d: Date) =>
             {entry.data.commits.map((sha) => (
               <a
                 href={`${SITE.repoUrl}/commit/${sha}`}
-                class="chip rounded border border-line px-1.5 py-0.5 font-mono text-[11px] text-mist"
+                class="chip rounded border border-paper-edge px-1.5 py-0.5 font-mono text-[11px] text-ink-soft"
               >
                 {sha}
               </a>
@@ -62,11 +65,11 @@ const formatDate = (d: Date) =>
       </div>
     </NotePane>
   </article>
-</Shell>
+</Sheet>
 
 <style>
   .chip:hover {
-    border-color: var(--signal);
+    border-color: var(--copper);
     color: var(--ink);
   }
 </style>

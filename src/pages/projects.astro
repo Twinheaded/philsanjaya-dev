@@ -1,6 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
-import Shell from '../layouts/Shell.astro';
+import Desk from '../layouts/Desk.astro';
 
 const projects = (await getCollection('projects', ({ data }) => data.status === 'published')).sort(
   (a, b) => a.data.order - b.data.order
@@ -14,55 +14,4 @@ const description =
     : 'Projects by Philipus Sanjaya.';
 ---
 
-<Shell title="Projects — Philipus Sanjaya" description={description}>
-  <div class="flex h-full flex-col p-5 md:p-12">
-    <p class="font-mono text-xs tracking-[0.08em] text-mist">02 — projects</p>
-    <h1 class="mt-2 font-display text-[28px] font-medium">Projects</h1>
-    {
-      projects.length > 0 ? (
-        <ul
-          class="panel-scroll mt-6 grid min-h-0 flex-1 content-start gap-4 sm:grid-cols-2 sm:content-stretch"
-          style="grid-auto-rows: minmax(min-content, 1fr); max-block-size: 100%;"
-        >
-          {projects.map((p) => (
-            <li class="flex min-h-0">
-              <a
-                href={`/projects/${p.data.slug}`}
-                class="project-card flex min-h-0 flex-1 flex-col justify-between gap-2 overflow-hidden rounded-[10px] border border-line bg-surface p-5 motion-safe:transition-colors motion-safe:duration-150 motion-safe:ease-out"
-              >
-                <div class="min-h-0 overflow-hidden">
-                  <p class="font-mono text-xs tracking-[0.08em] text-signal-text">{p.data.tags[0]}</p>
-                  <h2 class="mt-1 font-display text-xl font-medium text-ink">{p.data.title}</h2>
-                  <p class="summary mt-1 text-sm text-mist">{p.data.summary}</p>
-                </div>
-                <p class="font-mono text-xs text-mist">{p.data.period}</p>
-              </a>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p class="mt-6 max-w-xl text-mist">No projects published yet.</p>
-      )
-    }
-  </div>
-</Shell>
-
-<style>
-  .project-card:hover {
-    border-color: var(--signal);
-  }
-  /* The grid clips overflow flush to the cards; draw the ring inward so
-     it stays fully visible on edge cells (FR-32). */
-  .project-card:focus-visible {
-    outline-offset: -2px;
-  }
-  /* Rows share the stage while it is tall enough (1fr); below that they
-     hold their content height and the grid scrolls instead of letting
-     compressed cards paint their text across the year line. */
-  .summary {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-</style>
+<Desk title="Projects — Philipus Sanjaya" description={description} zone="experiments" />

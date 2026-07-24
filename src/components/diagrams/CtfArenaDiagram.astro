@@ -1,0 +1,90 @@
+---
+/**
+ * EXP.001 — CTF Arena (§11). Every box is a claim from the case study: the
+ * fixed per-tick pipeline (sense → coordinate → plan → path → steer →
+ * resolve), the coordinator with its four postures and role templates, the
+ * shared blackboard, the drop-in Independent sibling with its empty role
+ * table, GOAP ("what"), A* + influence map ("where"), the steering blend, and
+ * the six-state FSM ("how"). The copper path is the coordination flow — the
+ * study's only experimental variable. The FSM is deliberately unattached
+ * (the text gives it no single pipeline edge — TODO(phil-arch)).
+ */
+import Diagram from './Diagram.astro';
+
+const stages = ['sense', 'coordinate', 'plan', 'path', 'steer', 'resolve'];
+---
+
+<Diagram
+  slug="ctf-arena"
+  title="CTF Arena — per-tick agent pipeline"
+  desc="Each tick runs a fixed pipeline: sense, coordinate, plan, path, steer, resolve. A coordinator evaluates team state, picks a posture from attack, balanced, defend or retrieve, expands it to a role template, and assigns roles through a shared blackboard — the coordination flow feeding the coordinate stage is the experiment's only variable. An independent controller is a drop-in sibling that writes an empty role table. A STRIPS-style GOAP planner decides what to pursue, A-star with an influence map plans where, a blended steering layer produces the motion, and a six-state FSM executes how an agent acts."
+  viewBox="0 0 760 372"
+  seed={11}
+>
+  <Fragment slot="ink">
+    {stages.map((_, i) => <rect class="d-box" x={20 + i * 124} y={28} width={104} height={34} rx={6} />)}
+    {stages.slice(0, -1).map((_, i) => <path class="d-arrow" d={`M${124 + i * 124} 45 h16`} marker-end="url(#ctf-ah)" />)}
+
+    <!-- coordinator + blackboard (row 2) -->
+    <rect class="d-box" x={20} y={132} width={216} height={58} rx={6}></rect>
+    <rect class="d-box" x={330} y={140} width={140} height={44} rx={6}></rect>
+    <!-- independent controller: the drop-in sibling (dashed) -->
+    <rect class="d-box d-ghost" x={20} y={214} width={216} height={52} rx={6}></rect>
+    <path class="d-arrow d-ghost" d="M236 240 h164 v-54" marker-end="url(#ctf-ah)"></path>
+
+    <!-- subsystem row -->
+    <rect class="d-box" x={20} y={300} width={200} height={52} rx={6}></rect>
+    <rect class="d-box" x={252} y={300} width={160} height={52} rx={6}></rect>
+    <rect class="d-box" x={436} y={300} width={150} height={52} rx={6}></rect>
+    <rect class="d-box" x={606} y={300} width={134} height={52} rx={6}></rect>
+    <path class="d-arrow" d="M332 298 L322 66" marker-end="url(#ctf-ah)"></path>
+    <path class="d-arrow" d="M520 298 L455 66" marker-end="url(#ctf-ah)"></path>
+    <path class="d-arrow" d="M673 298 L578 66" marker-end="url(#ctf-ah)"></path>
+
+    <!-- THE copper path: coordinator -> blackboard -> coordinate (one path) -->
+    <path
+      class="d-flow"
+      d="M236 160 h94 M400 140 v-36 h-204 v-34"
+      marker-end="url(#ctf-fh)"></path>
+
+    <!-- margin-note leader (hand-drawn) -->
+    <path class="d-leader" d="M425 218 C 380 226, 320 234, 250 240"></path>
+  </Fragment>
+
+  <defs>
+    <marker id="ctf-ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="d-arrowhead" d="M0 0L8 4L0 8z"></path>
+    </marker>
+    <marker id="ctf-fh" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="d-flowhead" d="M0 0L8 4L0 8z"></path>
+    </marker>
+  </defs>
+
+  <text class="d-group-label" x={20} y={18}>one tick</text>
+  {stages.map((s, i) => <text class="d-label" x={72 + i * 124} y={49} text-anchor="middle">{s}</text>)}
+
+  <text class="d-label" x={128} y={152} text-anchor="middle">coordinator</text>
+  <text class="d-sub" x={128} y={166} text-anchor="middle">posture: attack · balanced</text>
+  <text class="d-sub" x={128} y={180} text-anchor="middle">defend · retrieve → role template</text>
+
+  <text class="d-label" x={400} y={158} text-anchor="middle">shared blackboard</text>
+  <text class="d-sub" x={400} y={172} text-anchor="middle">role assignments</text>
+
+  <text class="d-label" x={128} y={232} text-anchor="middle">independent controller</text>
+  <text class="d-sub" x={128} y={246} text-anchor="middle">drop-in sibling</text>
+  <text class="d-sub" x={128} y={259} text-anchor="middle">writes an empty role table</text>
+
+  <text class="d-label" x={120} y={320} text-anchor="middle">six-state FSM</text>
+  <text class="d-sub" x={120} y={334} text-anchor="middle">executes how an agent acts</text>
+
+  <text class="d-label" x={332} y={320} text-anchor="middle">GOAP planner</text>
+  <text class="d-sub" x={332} y={334} text-anchor="middle">STRIPS-style — decides what</text>
+
+  <text class="d-label" x={511} y={320} text-anchor="middle">A* + influence map</text>
+  <text class="d-sub" x={511} y={334} text-anchor="middle">cost rises in danger</text>
+
+  <text class="d-label" x={673} y={320} text-anchor="middle">steering blend</text>
+  <text class="d-sub" x={673} y={334} text-anchor="middle">eight behaviours + carrier</text>
+
+  <text class="d-note" x={430} y={214}>the only experimental variable</text>
+</Diagram>

@@ -1,7 +1,33 @@
 ---
+/**
+ * An experiment document (§10) — a physical engineering document on the desk:
+ * title block (§9-styled), abstract, the Problem / Idea / Result write-up from
+ * the markdown body, figure plates (M8 fills the architecture plate per §11),
+ * the honest-metrics ruled table, and links. One scrolling sheet — the M4/M6
+ * chaptered slide deck is retired; the camera (desk.ts) owns all motion.
+ *
+ * Voice rule (§10): every word of prose comes from the content file; gaps are
+ * flagged TODO(phil-voice) in the markdown, never filled in here.
+ */
 import { getCollection, render } from 'astro:content';
-import Shell from '../../layouts/Shell.astro';
-import MetricCard from '../../components/MetricCard.astro';
+import Sheet from '../../layouts/Sheet.astro';
+import DocTitleBlock from '../../components/document/DocTitleBlock.astro';
+import FigurePlate from '../../components/document/FigurePlate.astro';
+import MetricsTable from '../../components/document/MetricsTable.astro';
+import CtfArenaDiagram from '../../components/diagrams/CtfArenaDiagram.astro';
+import AegisxDiagram from '../../components/diagrams/AegisxDiagram.astro';
+import MarketSentimentDiagram from '../../components/diagrams/MarketSentimentDiagram.astro';
+import PowerForecastingDiagram from '../../components/diagrams/PowerForecastingDiagram.astro';
+
+/** §11 diagram registry (M8): frontmatter `diagram` → component. A ref that
+ *  doesn't resolve fails the build loudly (FR-20 spirit) instead of quietly
+ *  rendering the reserved plate over a typo. */
+const DIAGRAMS = {
+  'ctf-arena': CtfArenaDiagram,
+  aegisx: AegisxDiagram,
+  'market-sentiment': MarketSentimentDiagram,
+  'power-forecasting': PowerForecastingDiagram,
+} as const;
 
 export async function getStaticPaths() {
   const projects = await getCollection('projects', ({ data }) => data.status === 'published');
@@ -21,474 +47,112 @@ export async function getStaticPaths() {
 }
 
 const { project } = Astro.props;
-const { Content, headings } = await render(project);
-const chapters = headings.filter((h) => h.depth === 2);
+const { Content } = await render(project);
 const d = project.data;
+
+if (d.diagram && !(d.diagram in DIAGRAMS)) {
+  throw new Error(`Unknown diagram ref "${d.diagram}" in ${d.slug} — add it to DIAGRAMS`);
+}
+const DiagramCmp = d.diagram ? DIAGRAMS[d.diagram as keyof typeof DIAGRAMS] : null;
+
+/** FIG numbering: 01 is always the architecture plate; media follows. */
+const demoFig = 2;
 ---
 
-<Shell title={`${d.title} — Philipus Sanjaya`} description={d.summary} ogImage={`/og/${d.slug}.png`}>
-  <article class="flex h-full min-h-0 flex-col p-5 md:p-12" data-study>
-    <!-- pr-24 below md keeps the right-aligned chapter tabs clear of the
-         fixed settings pill (Shell, top-4 right-4 z-40), which otherwise
-         covers the last tabs and intercepts their taps on phones. -->
-    <header class="flex flex-wrap items-baseline justify-between gap-2 pr-24 md:pr-0">
-      <!-- Persistent h1: the visual title lives in the overview chapter,
-           which is display:none on other chapters under JS. -->
-      <h1 class="sr-only">{d.title}</h1>
-      <a href="/projects" class="font-mono text-xs text-mist hover:text-ink">&larr; projects</a>
-      <!-- FR-36: chapter tabs are real hash anchors — deep links work with
-           and without JS; with JS they become slide controls. aria-current
-           is set by the script only (no single chapter is "current" in the
-           stacked no-JS reading mode). -->
-      <nav class="flex flex-wrap gap-3" aria-label="Chapters">
-        <a href="#overview" data-tab="overview" class="tab font-mono text-xs text-mist">
-          <span aria-hidden="true">00</span>
-          <span class="sr-only sm:not-sr-only">Overview</span>
-        </a>
-        {
-          chapters.map((c, i) => (
-            <a href={`#${c.slug}`} data-tab={c.slug} class="tab font-mono text-xs text-mist">
-              <span aria-hidden="true">0{i + 1}</span>
-              <span class="sr-only sm:not-sr-only">{c.text}</span>
-            </a>
-          ))
-        }
-      </nav>
-    </header>
-
-    <!-- Chapter changes are announced here for assistive tech; the focused
-         chapter region carries no visible ring (Phil's M2 call). -->
-    <p class="sr-only" aria-live="polite" data-announce></p>
-
-    <div class="relative mt-4 min-h-0 flex-1 overflow-y-auto" data-frame>
-      <!-- align island (§10): calm order behind the architecture chapter
-           only; activated by the chapter script, faint and aria-hidden. -->
-      <canvas
-        id="study-canvas"
-        class="pointer-events-none absolute inset-0 h-full w-full"
-        aria-hidden="true"></canvas>
-      <!-- Chapter zero (FR-35): the generated dashboard. -->
-      <section
-        id="overview"
-        data-chapter="overview"
-        class="chapter"
-        tabindex="0"
-        aria-label="Overview"
+<Sheet title={`${d.title} — Philipus Sanjaya`} description={d.summary} ogImage={`/og/${d.slug}.png`}>
+  <!-- The sheet clips (overflow:hidden) and the page supplies the one
+       sanctioned contained scroll (§7.5) — the whole document, title block
+       included, scrolls as one paper. tabindex: a scrollable region must be
+       keyboard-operable (WCAG 2.1.1, repo convention). -->
+  <article class="doc flex h-full min-h-0 flex-col">
+    <div class="panel-scroll min-h-0 flex-1 p-5 md:p-12" tabindex="0">
+    <p>
+      <a href="/projects" class="font-mono text-xs text-ink-soft hover:text-ink"
+        >&larr; experiments</a
       >
-        <p class="font-mono text-xs tracking-[0.08em] text-signal-text">{d.tags.join(' · ')}</p>
-        <p
-          aria-hidden="true"
-          class="mt-2 font-display text-[clamp(1.75rem,4vw,2.5rem)] leading-tight font-medium"
-        >
-          {d.title}
-        </p>
-        {d.question && <p class="mt-3 max-w-2xl text-mist">{d.question}</p>}
-        {
-          d.metrics.length > 0 && (
-            <div class="mt-6 grid gap-4 md:grid-cols-3">
-              {d.metrics.map((m) => (
-                <MetricCard label={m.label} value={m.value} source={m.source} />
-              ))}
-            </div>
-          )
-        }
-        {
-          d.hero &&
-            (/\.(webm|mp4)$/i.test(d.hero) ? (
-              /* FR-38: lazy hero — preload="none" means nothing downloads
-                 until the script starts playback (or the user presses play).
-                 Muted-autoplay + loop is applied by the script only when
-                 prefers-reduced-motion allows it; otherwise this stays a
-                 poster with controls. Without JS: poster + controls. */
-              <video
-                src={d.hero}
-                poster={d.heroPoster}
-                class="mt-6 max-h-[40vh] rounded-[10px] border border-line"
-                data-hero-video
-                controls
-                muted
-                loop
-                playsinline
-                preload="none"
-                aria-label={`${d.title} — demonstration video`}
-              ></video>
-            ) : (
-              <img
-                src={d.hero}
-                alt={`${d.title} — demonstration`}
-                class="mt-6 max-h-[40vh] rounded-[10px] border border-line"
-                loading="lazy"
-                decoding="async"
-              />
-            ))
-        }
-        <div class="mt-6 flex flex-wrap gap-x-6 gap-y-1">
-          {
-            d.links.map((l) => (
-              <a
-                href={l.url}
-                class="font-mono text-xs text-signal-text underline underline-offset-4"
-              >
-                {l.label}
-              </a>
-            ))
-          }
-        </div>
-        <p class="mt-4 font-mono text-xs text-mist">{d.stack.join(' · ')} · {d.period}</p>
-      </section>
+    </p>
 
-      <!-- The body, rendered once; a small script groups it into chapter
-           sections. Without JS everything reads top-to-bottom in this
-           contained-scroll frame (FR-74, FR-37). -->
-      <div data-content class="prose-md">
-        <Content />
-      </div>
+    <DocTitleBlock
+      expNo={d.expNo}
+      title={d.title}
+      period={d.period}
+      status={d.status}
+      stack={d.stack}
+    />
+
+    <!-- The abstract: the card's one-liner and the research question (both
+         frontmatter voice copy), opening the document like a report head. -->
+    <p class="doc__abstract">{d.summary}</p>
+    {d.question && <p class="doc__question">{d.question}</p>}
+
+    <div class="prose-md doc__body">
+      <Content />
     </div>
 
-    <p class="js-only mt-4 h-5 shrink-0">
-      <button
-        type="button"
-        data-next
-        class="hidden cursor-pointer font-mono text-xs text-mist hover:text-ink"
-      ></button>
-    </p>
+    <!-- FIG.01 — the §11 architecture diagram (M8). A document without a
+         diagram ref keeps the reserved plate (EXP.005 awaits Phil's body
+         rewrite — diagrams are claims, and its text describes the old shell). -->
+    {
+      DiagramCmp ? (
+        <FigurePlate no={1} caption="architecture">
+          <DiagramCmp />
+        </FigurePlate>
+      ) : (
+        <FigurePlate no={1} caption="architecture" empty />
+      )
+    }
+
+    {
+      d.hero && (
+        <FigurePlate no={demoFig} caption="demonstration">
+          {/\.(webm|mp4)$/i.test(d.hero) ? (
+            /* FR-38: lazy hero — preload="none" means nothing downloads until
+               the user presses play; the poster stands in. The old
+               chapter-gated autoplay retired with the chapter deck — a
+               document on the desk stays still until asked. */
+            <video
+              src={d.hero}
+              poster={d.heroPoster}
+              controls
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label={`${d.title} — demonstration video`}
+            />
+          ) : (
+            <img
+              src={d.hero}
+              alt={`${d.title} — demonstration`}
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+        </FigurePlate>
+      )
+    }
+
+    <section class="doc__section" aria-labelledby="doc-metrics">
+      <h2 id="doc-metrics" class="doc__h2">Honest metrics</h2>
+      <MetricsTable metrics={d.metrics} />
+    </section>
+
+    {
+      d.links.length > 0 && (
+        <section class="doc__section" aria-labelledby="doc-links">
+          <h2 id="doc-links" class="doc__h2">Links</h2>
+          <ul class="doc__links">
+            {d.links.map((l) => (
+              <li>
+                <a href={l.url} class="font-mono text-xs text-copper-deep underline underline-offset-4">
+                  {l.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+    </div>
   </article>
-</Shell>
-
-<style is:global>
-  /* Hide ungrouped raw content only when JS is running, until the
-     grouping script has run — avoids a stacked-content flash. */
-  html[data-js] [data-content]:not([data-grouped]) {
-    visibility: hidden;
-  }
-
-  /* Chapters are focusable regions (for keyboard scrolling). The full-pane
-     ring read as a glitch on arrow navigation, so chapter changes no longer
-     steal focus (show() does not focus the region) — the aria-live region
-     announces instead. When a keyboard user *does* Tab onto the region, a
-     subtle inset left-edge bar marks it: a real WCAG 2.4.7 indicator that
-     is not the floating box Phil disliked. (M4 review.) */
-  [data-study] .chapter:focus {
-    outline: none;
-  }
-  [data-study] .chapter:focus-visible {
-    outline: none;
-    box-shadow: inset 3px 0 0 0 var(--signal);
-  }
-
-  /* With JS: chapters become slides; the frame stops scrolling and each
-     chapter scrolls internally instead (FR-37 contained fallback). */
-  html[data-js] [data-study] [data-frame] {
-    overflow: hidden;
-  }
-  html[data-js] [data-study] .chapter {
-    position: absolute;
-    inset: 0;
-    overflow-y: auto;
-  }
-  html[data-js] [data-study] .chapter[hidden] {
-    display: none;
-  }
-
-  /* Chapter slide: 450ms, shell curve (§9.5); reduced motion: 150ms fade. */
-  @media (prefers-reduced-motion: no-preference) {
-    [data-study] .ch-in-right {
-      animation: ch-in-right 450ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
-    }
-    [data-study] .ch-in-left {
-      animation: ch-in-left 450ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
-    }
-    [data-study] .ch-out-left {
-      animation: ch-out-left 450ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
-    }
-    [data-study] .ch-out-right {
-      animation: ch-out-right 450ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    [data-study] .ch-in-right,
-    [data-study] .ch-in-left {
-      animation: vt-fade-in 150ms ease-out both;
-    }
-    [data-study] .ch-out-left,
-    [data-study] .ch-out-right {
-      animation: vt-fade-out 150ms ease-out both;
-    }
-  }
-  @keyframes ch-in-right {
-    from {
-      transform: translateX(100%);
-    }
-  }
-  @keyframes ch-in-left {
-    from {
-      transform: translateX(-100%);
-    }
-  }
-  @keyframes ch-out-left {
-    to {
-      transform: translateX(-100%);
-    }
-  }
-  @keyframes ch-out-right {
-    to {
-      transform: translateX(100%);
-    }
-  }
-</style>
-
-<style>
-  .tab[aria-current='true'] {
-    color: var(--ink);
-  }
-  .tab[aria-current='true'] > span:first-child {
-    color: var(--signal-text);
-  }
-  .tab:hover {
-    color: var(--ink);
-  }
-</style>
-
-<script>
-  // Case-study chapter machinery (FR-34/36/37): groups the rendered body
-  // into chapter sections, then drives tabs, the next action, arrow keys,
-  // and #chapter deep links. All listeners are delegated so they survive
-  // view-transition swaps; everything no-ops off case-study pages.
-  import { mountAgents, type IslandController } from '../../islands/agents/engine';
-
-  const CURRENT = { sections: [] as HTMLElement[], active: 0, timer: 0 };
-  // align island (§10): faint, 10–12 agents, active only behind the
-  // architecture chapter. Recreated per page; paused otherwise.
-  let island: IslandController | null = null;
-
-  function study(): HTMLElement | null {
-    return document.querySelector('[data-study]');
-  }
-
-  /** Activate align only while the architecture chapter is showing. */
-  function syncIsland(): void {
-    const active = CURRENT.sections[CURRENT.active]?.dataset.chapter === 'architecture';
-    island?.setActive(active);
-  }
-
-  /** FR-38 hero video: muted-autoplay on the overview chapter, paused on
-   *  the others. Under prefers-reduced-motion the video is never started —
-   *  the poster (and controls) stand in, and preload="none" means the
-   *  video bytes are never fetched either. */
-  function syncHero(): void {
-    const video = study()?.querySelector<HTMLVideoElement>('[data-hero-video]');
-    if (!video || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (CURRENT.sections[CURRENT.active]?.dataset.chapter === 'overview') {
-      video.controls = false;
-      video.play().catch(() => {
-        // Autoplay refused (e.g. low-power mode): hand control back.
-        video.controls = true;
-      });
-    } else {
-      video.pause();
-    }
-  }
-
-  /** Announce the current chapter to assistive tech (FR-71/72). */
-  function announce(root: HTMLElement): void {
-    const region = root.querySelector<HTMLElement>('[data-announce]');
-    const section = CURRENT.sections[CURRENT.active];
-    if (!region || !section) return;
-    const label = section.getAttribute('aria-label') ?? 'Chapter';
-    region.textContent = `${label}, chapter ${CURRENT.active + 1} of ${CURRENT.sections.length}`;
-  }
-
-  function group(root: HTMLElement): HTMLElement[] {
-    const content = root.querySelector<HTMLElement>('[data-content]');
-    const overview = root.querySelector<HTMLElement>('[data-chapter="overview"]');
-    if (!content || !overview) return [];
-    if (!content.dataset.grouped) {
-      const sections: HTMLElement[] = [];
-      let current: HTMLElement | null = null;
-      const leading: ChildNode[] = [];
-      for (const node of [...content.childNodes]) {
-        if (node.nodeName === 'H2') {
-          const h2 = node as HTMLElement;
-          current = document.createElement('section');
-          current.dataset.chapter = h2.id;
-          current.className = 'chapter';
-          current.tabIndex = 0;
-          current.setAttribute('aria-label', h2.textContent ?? 'Chapter');
-          sections.push(current);
-          if (leading.length) {
-            current.append(...leading.splice(0));
-          }
-        }
-        if (current) {
-          current.appendChild(node);
-        } else {
-          leading.push(node);
-        }
-      }
-      // FR-34: chapters are optional. A body with no h2 headings becomes
-      // one chapter rather than being discarded.
-      if (!current && leading.length) {
-        const fallback = document.createElement('section');
-        fallback.dataset.chapter = 'study';
-        fallback.className = 'chapter';
-        fallback.tabIndex = 0;
-        fallback.setAttribute('aria-label', 'Study');
-        fallback.append(...leading.splice(0));
-        sections.push(fallback);
-      }
-      content.replaceChildren(...sections);
-      content.dataset.grouped = '1';
-    }
-    return [overview, ...content.querySelectorAll<HTMLElement>('.chapter')];
-  }
-
-  function syncChrome(root: HTMLElement): void {
-    const { sections, active } = CURRENT;
-    for (const tab of root.querySelectorAll<HTMLElement>('[data-tab]')) {
-      const isActive = tab.dataset.tab === sections[active]?.dataset.chapter;
-      if (isActive) tab.setAttribute('aria-current', 'true');
-      else tab.removeAttribute('aria-current');
-    }
-    const next = root.querySelector<HTMLElement>('[data-next]');
-    if (next) {
-      const upcoming = sections[active + 1];
-      if (upcoming) {
-        const label = upcoming.getAttribute('aria-label') ?? 'next chapter';
-        next.textContent = `next: ${label.toLowerCase()} →`;
-        next.classList.remove('hidden');
-      } else {
-        // Never hide the focused element — focus would silently drop to
-        // <body> (FR-71).
-        if (document.activeElement === next) {
-          sections[active]?.focus({ preventScroll: true });
-        }
-        next.classList.add('hidden');
-      }
-    }
-  }
-
-  function show(idx: number): void {
-    const root = study();
-    if (!root) return;
-    const { sections } = CURRENT;
-    if (idx < 0 || idx >= sections.length || idx === CURRENT.active) return;
-    // Interrupt any in-flight slide and retarget: the latest input wins
-    // instantly instead of being dropped mid-animation.
-    window.clearTimeout(CURRENT.timer);
-    for (const s of sections) {
-      s.classList.remove('ch-in-right', 'ch-in-left', 'ch-out-left', 'ch-out-right');
-      s.hidden = true;
-    }
-    const oldS = sections[CURRENT.active];
-    const newS = sections[idx];
-    const forward = idx > CURRENT.active;
-    CURRENT.active = idx;
-    oldS.hidden = false;
-    newS.hidden = false;
-    newS.scrollTop = 0;
-    newS.classList.add(forward ? 'ch-in-right' : 'ch-in-left');
-    oldS.classList.add(forward ? 'ch-out-left' : 'ch-out-right');
-    CURRENT.timer = window.setTimeout(() => {
-      oldS.hidden = true;
-      oldS.classList.remove('ch-out-left', 'ch-out-right');
-      newS.classList.remove('ch-in-right', 'ch-in-left');
-    }, 470);
-    const id = newS.dataset.chapter ?? 'overview';
-    // Preserve ClientRouter's history state ({index, scrollX, scrollY}) —
-    // a null state makes its popstate handler swallow the next Back press.
-    history.replaceState(history.state, '', `#${id}`);
-    // Do NOT steal focus on chapter change — that flashed the focus box on
-    // every arrow press (Phil's M2 complaint) and double-announced the name.
-    // The aria-live region carries the change; focus stays with the user's
-    // control (tab or next button).
-    syncChrome(root);
-    syncIsland();
-    syncHero();
-    announce(root);
-  }
-
-  function setup(): void {
-    window.clearTimeout(CURRENT.timer); // a stale timer must not unlock the next page
-    island?.destroy();
-    island = null;
-    const root = study();
-    if (!root) {
-      CURRENT.sections = [];
-      return;
-    }
-    CURRENT.sections = group(root);
-    const fromHash = location.hash.slice(1);
-    const target = Math.max(
-      0,
-      CURRENT.sections.findIndex((s) => s.dataset.chapter === fromHash)
-    );
-    CURRENT.active = target;
-    CURRENT.sections.forEach((s, i) => {
-      s.hidden = i !== target;
-    });
-    // Mount the align island for this page; it stays paused until the
-    // architecture chapter is shown (no fps cost otherwise).
-    const canvas = root.querySelector<HTMLCanvasElement>('#study-canvas');
-    if (canvas) {
-      island = mountAgents(canvas, () => {}, {
-        behaviour: 'align',
-        opacity: 0.25,
-        count: [10, 12],
-        startActive: false,
-        interactive: false,
-      });
-    }
-    syncChrome(root);
-    syncIsland();
-    syncHero();
-  }
-
-  // Run once now (module scripts are deferred, so the DOM is ready —
-  // and on a cold load astro:page-load may already have fired before
-  // this module finished loading) and again after every swap.
-  setup();
-  document.addEventListener('astro:page-load', setup);
-
-  // Capture phase: this must win against ClientRouter's own click
-  // listener, which would otherwise push a history entry per tab click.
-  // Modified clicks (ctrl/cmd/shift/middle) stay with the browser.
-  document.addEventListener(
-    'click',
-    (e) => {
-      const root = study();
-      if (!root) return;
-      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      const tab = target.closest<HTMLElement>('[data-tab]');
-      if (tab && root.contains(tab)) {
-        e.preventDefault();
-        show(CURRENT.sections.findIndex((s) => s.dataset.chapter === tab.dataset.tab));
-        return;
-      }
-      if (target.closest('[data-next]')) {
-        show(CURRENT.active + 1);
-      }
-    },
-    true
-  );
-
-  document.addEventListener('keydown', (e) => {
-    if (!study()) return;
-    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-    const t = e.target as HTMLElement | null;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-    show(CURRENT.active + (e.key === 'ArrowRight' ? 1 : -1));
-  });
-
-  // Hash navigation (back/forward between chapter deep links). An empty
-  // hash means the bare URL — that is the overview.
-  window.addEventListener('hashchange', () => {
-    const root = study();
-    if (!root) return;
-    const id = location.hash.slice(1);
-    const idx = id ? CURRENT.sections.findIndex((s) => s.dataset.chapter === id) : 0;
-    if (idx >= 0) show(idx);
-  });
-</script>
+</Sheet>

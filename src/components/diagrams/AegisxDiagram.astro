@@ -1,0 +1,106 @@
+---
+/**
+ * EXP.002 — AEGISX (§11). A faithful redraw of Phil's own in-content SVG —
+ * same boxes, arrows, and labels, restyled to the §11 language. The copper
+ * path is the delivered ingest spine (producer → Kinesis → Lambda → S3),
+ * drawn as one path; dashed components are exactly the ones the original
+ * marked pending/not-deployed. Margin notes quote the case study's own
+ * phrases. TODO(phil-arch): confirm the ingest spine as THE critical flow.
+ */
+import Diagram from './Diagram.astro';
+---
+
+<Diagram
+  slug="aegisx"
+  title="AEGISX — delivered cloud architecture"
+  desc="On-premise, the team stack: Modbus traffic through mTLS proxies and deep packet inspection with AES-256-GCM and a firewall, and LSTM scoring kept on-premises by design. Outside the team stack sits the author's own direct boto3 producer — no Greengrass — feeding AWS ap-southeast-2, the delivered slice: an on-demand KMS-encrypted Kinesis stream into a roughly 430-line Lambda validator checking 14 fields and never raising, writing a Hive-partitioned server-side-encrypted S3 data lake queried in place by Athena; SNS publishes one aggregated alert per batch and failures dead-letter to SQS with 14-day retention. A SageMaker retraining scaffold is pending the model handoff, the CloudFront access path is documented but not deployed, and the demo dashboard reads S3 locally, read-only."
+  viewBox="0 0 760 340"
+  seed={23}
+>
+  <Fragment slot="ink">
+    <!-- on-prem group — ends ABOVE the producer, as Phil's original drew it:
+         the producer is "mine", outside the team stack -->
+    <rect class="d-box" x={8} y={28} width={196} height={182} rx={10}></rect>
+    <rect class="d-box" x={24} y={44} width={164} height={36} rx={6}></rect>
+    <rect class="d-box" x={24} y={104} width={164} height={36} rx={6}></rect>
+    <rect class="d-box" x={24} y={164} width={164} height={36} rx={6}></rect>
+    <rect class="d-box" x={24} y={224} width={164} height={36} rx={6}></rect>
+    <path class="d-arrow" d="M106 80 v20" marker-end="url(#aeg-ah)"></path>
+    <path class="d-arrow" d="M106 140 v20" marker-end="url(#aeg-ah)"></path>
+    <path class="d-arrow" d="M106 200 v20" marker-end="url(#aeg-ah)"></path>
+
+    <!-- aws group -->
+    <rect class="d-box" x={240} y={28} width={512} height={282} rx={10}></rect>
+    <rect class="d-box" x={256} y={104} width={120} height={44} rx={6}></rect>
+    <rect class="d-box" x={408} y={104} width={130} height={44} rx={6}></rect>
+    <rect class="d-box" x={408} y={44} width={130} height={40} rx={6}></rect>
+    <rect class="d-box" x={588} y={44} width={148} height={40} rx={6}></rect>
+    <rect class="d-box" x={588} y={106} width={148} height={40} rx={6}></rect>
+    <rect class="d-box" x={588} y={168} width={148} height={40} rx={6}></rect>
+
+    <!-- pending / not-deployed (dashed, as in the original) -->
+    <rect class="d-box d-ghost" x={256} y={226} width={150} height={36} rx={6}></rect>
+    <rect class="d-box d-ghost" x={422} y={226} width={150} height={36} rx={6}></rect>
+    <rect class="d-box" x={588} y={226} width={148} height={36} rx={6}></rect>
+
+    <!-- ink arrows (non-critical flows) -->
+    <path class="d-arrow" d="M538 126 h48" marker-end="url(#aeg-ah)"></path>
+    <path class="d-arrow d-ghost" d="M538 140 l48 44" marker-end="url(#aeg-ah)"></path>
+    <path class="d-arrow" d="M586 64 h-46" marker-end="url(#aeg-ah)"></path>
+    <path class="d-arrow d-ghost" d="M662 84 v140" marker-end="url(#aeg-ah)"></path>
+
+    <!-- THE copper path: producer -> Kinesis -> Lambda -> S3 lake (one path) -->
+    <path
+      class="d-flow"
+      d="M188 242 h128 v-90 M376 126 h28 M538 114 l46 -44"
+      marker-end="url(#aeg-fh)"></path>
+
+    <!-- margin-note leader: up the left gutter, clear of the producer box -->
+    <path class="d-leader" d="M60 292 C 24 282, 16 250, 20 202"></path>
+  </Fragment>
+
+  <defs>
+    <marker id="aeg-ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="d-arrowhead" d="M0 0L8 4L0 8z"></path>
+    </marker>
+    <marker id="aeg-fh" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="d-flowhead" d="M0 0L8 4L0 8z"></path>
+    </marker>
+  </defs>
+
+  <text class="d-group-label" x={20} y={18}>on-prem (team stack)</text>
+  <text class="d-group-label" x={252} y={18}>aws ap-southeast-2 (my slice — delivered)</text>
+
+  <text class="d-label" x={106} y={66} text-anchor="middle">Modbus traffic</text>
+  <text class="d-label" x={106} y={121} text-anchor="middle">mTLS proxies · DPI</text>
+  <text class="d-sub" x={106} y={134} text-anchor="middle">AES-256-GCM · firewall</text>
+  <text class="d-label" x={106} y={181} text-anchor="middle">LSTM scoring</text>
+  <text class="d-sub" x={106} y={194} text-anchor="middle">on-prem by design</text>
+  <text class="d-label" x={106} y={241} text-anchor="middle">boto3 producer — mine</text>
+  <text class="d-sub" x={106} y={254} text-anchor="middle">direct — no Greengrass</text>
+
+  <text class="d-label" x={316} y={123} text-anchor="middle">Kinesis</text>
+  <text class="d-sub" x={316} y={138} text-anchor="middle">on-demand · KMS</text>
+  <text class="d-label" x={473} y={118} text-anchor="middle">Lambda</text>
+  <text class="d-sub" x={473} y={131} text-anchor="middle">~430-line validator</text>
+  <text class="d-sub" x={473} y={143} text-anchor="middle">14 fields · never raises</text>
+  <text class="d-label" x={473} y={61} text-anchor="middle">Athena</text>
+  <text class="d-sub" x={473} y={74} text-anchor="middle">queries the lake</text>
+  <text class="d-label" x={662} y={61} text-anchor="middle">S3 data lake</text>
+  <text class="d-sub" x={662} y={76} text-anchor="middle">Hive-partitioned · SSE</text>
+  <text class="d-label" x={662} y={123} text-anchor="middle">SNS alerts</text>
+  <text class="d-sub" x={662} y={138} text-anchor="middle">1 aggregated / batch</text>
+  <text class="d-label" x={662} y={185} text-anchor="middle">SQS DLQ</text>
+  <text class="d-sub" x={662} y={200} text-anchor="middle">14-day retention</text>
+  <text class="d-sub" x={526} y={162}>on failure</text>
+
+  <text class="d-label d-ghost-label" x={331} y={243} text-anchor="middle">SageMaker</text>
+  <text class="d-sub" x={331} y={256} text-anchor="middle">scaffold — pending model</text>
+  <text class="d-label d-ghost-label" x={497} y={243} text-anchor="middle">CloudFront + OAC</text>
+  <text class="d-sub" x={497} y={256} text-anchor="middle">documented, not deployed</text>
+  <text class="d-label" x={662} y={243} text-anchor="middle">demo dashboard</text>
+  <text class="d-sub" x={662} y={256} text-anchor="middle">local · read-only · S3</text>
+
+  <text class="d-note" x={30} y={306}>detection belongs next to the process</text>
+  <text class="d-note" x={560} y={300}>the memory and the megaphone</text>
+</Diagram>

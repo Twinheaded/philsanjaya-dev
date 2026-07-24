@@ -1,0 +1,354 @@
+---
+/**
+ * Title block (§9) — the site's only persistent chrome and its entire
+ * navigation. A real drafting title block: paper card at elevation 1, fixed
+ * bottom-left in Layer 2, mono micro type, ruled internal lines.
+ *
+ * Ordinary links, so it works at fallback rung 4 (no JS). It is also the
+ * skip-link target. Keys 1-5 jump between sheets as progressive enhancement.
+ * The REV line is stamped at build time — the "built in public" signature.
+ *
+ * Below 768px it collapses to the §13 compact strip (M9): a full-width
+ * bottom bar — name + the 01–05 index, ≥44px targets, safe-area padded —
+ * expanding on tap (the name is the disclosure button) to the full block.
+ * Without JS the strip shows the labelled sheet list instead (the toggle is
+ * js-only), so rung 4 keeps a usable nav. The expand/collapse is an instant
+ * disclosure, not an animation — the title block never animates (§7).
+ */
+import { ZONES, zoneForPath } from '../lib/zones';
+import { REV } from '../lib/rev';
+
+const current = zoneForPath(Astro.url.pathname);
+
+// `aria-current="page"` may only mark the page actually being viewed. On a
+// document route (/projects/<slug>) the parent sheet is highlighted, but the
+// user is not on /projects — so that link gets the active *styling* via
+// data-active, without the false "page" claim.
+const path =
+  Astro.url.pathname.length > 1 && Astro.url.pathname.endsWith('/')
+    ? Astro.url.pathname.slice(0, -1)
+    : Astro.url.pathname;
+---
+
+<nav
+  id="sheet-index"
+  class="title-block"
+  aria-label="Sheet index"
+  tabindex="-1"
+  transition:persist="title-block"
+>
+  <p class="tb-name">
+    <button type="button" class="tb-toggle js-only" aria-expanded="false">
+      <span class="tb-toggle-label"
+        >Philipus Sanjaya <span aria-hidden="true">·</span> Inventor's Workbench</span
+      >
+      <!-- The purpose, for AT: the visible name reads like a site title, so
+           state alone ("collapsed, button") does not say it opens the index.
+           Visible text stays first in the name (WCAG 2.5.3). -->
+      <span class="sr-only">, sheet index</span>
+      <span class="tb-caret" aria-hidden="true"></span>
+    </button>
+    <span class="tb-name-static"
+      >Philipus Sanjaya <span aria-hidden="true">·</span> Inventor's Workbench</span
+    >
+  </p>
+  <p class="tb-caption">Sheet index</p>
+  <ul class="tb-sheets">
+    {
+      ZONES.map((z, i) => (
+        <li>
+          <a
+            href={z.href}
+            class="tb-sheet"
+            data-sheet={String(i + 1)}
+            data-active={z.id === current.id ? '' : undefined}
+            aria-current={path === z.href ? 'page' : undefined}
+            aria-label={`Sheet ${z.sheet} ${z.label}`}
+          >
+            <span class="tb-num">{z.sheet}</span>
+            <span class="tb-label">{z.label}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+  <p class="tb-rev">
+    REV {REV.sha} · {REV.date} · Scale 1:1 · Built in public
+  </p>
+</nav>
+
+<style>
+  .title-block {
+    position: fixed;
+    bottom: calc(var(--space) * 2);
+    left: calc(var(--space) * 2);
+    z-index: 40;
+    max-inline-size: min(30rem, calc(100vw - var(--space) * 4));
+    padding: calc(var(--space) * 1.5) calc(var(--space) * 2);
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-paper);
+    /* Depth level 4 (HUD) pairs with e1. */
+    box-shadow: var(--e1);
+    font-family: var(--font-mono);
+    font-size: var(--fs-micro);
+    line-height: 1.4;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .tb-name {
+    color: var(--ink);
+  }
+
+  /* The mobile disclosure button exists in the strip only (§13); everywhere
+     else the static name shows. Duplicated text, exactly one visible. */
+  .tb-toggle {
+    display: none;
+  }
+
+  /* Ruled internal lines — structural, drafting-sheet detail (§5). */
+  .tb-caption,
+  .tb-rev {
+    margin-block-start: calc(var(--space) * 0.75);
+    padding-block-start: calc(var(--space) * 0.75);
+    border-block-start: 1px solid var(--paper-edge);
+  }
+
+  .tb-sheets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--space) * 0.5) calc(var(--space) * 2);
+    margin-block-start: calc(var(--space) * 0.75);
+  }
+
+  .tb-sheet {
+    display: inline-flex;
+    gap: calc(var(--space) * 0.75);
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+
+  .tb-num {
+    color: var(--ink);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* §7: the title block never animates, except the active-sheet colour. */
+    .tb-sheet {
+      transition: color 120ms var(--ease-settle);
+    }
+  }
+
+  .tb-sheet:hover,
+  .tb-sheet:hover .tb-num {
+    color: var(--copper-deep);
+  }
+
+  /* Active sheet: copper *and* an underline — colour is never the only
+     signal (§14). Keyed on data-active so document routes can highlight their
+     parent sheet without falsely claiming aria-current="page".
+     The TEXT is --copper-deep (5.5:1 on paper — passes AA 1.4.3), not --copper
+     (3.6:1, an indicator level that Lighthouse/axe flag as low-contrast text);
+     the underline stays the redundant active signal (§14). M10 contrast fix. */
+  .tb-sheet[data-active],
+  .tb-sheet[data-active] .tb-num {
+    color: var(--copper-deep);
+  }
+  .tb-sheet[data-active] {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * §13 — the compact strip (M9): full-width bottom bar, safe-area
+   * padded, ≥44px targets. Collapsed (JS present): name + 01–05 numbers.
+   * Expanded (data-expanded): the full block — labels, caption, REV —
+   * growing upward from the bottom anchor. No JS: the labelled sheet
+   * list shows (rung 4 keeps a usable nav; the toggle is js-only).
+   * ------------------------------------------------------------------ */
+  @media (max-width: 767px) {
+    .title-block {
+      inset-inline-start: 0;
+      inset-inline-end: 0;
+      inset-block-end: 0;
+      left: 0;
+      bottom: 0;
+      max-inline-size: none;
+      border: 0;
+      border-block-start: 1px solid var(--paper-edge);
+      border-radius: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      column-gap: var(--space);
+      padding-block-start: calc(var(--space) * 0.5);
+      padding-block-end: calc(var(--space) * 0.5 + env(safe-area-inset-bottom, 0px));
+      padding-inline-start: max(calc(var(--space) * 2), env(safe-area-inset-left, 0px));
+      padding-inline-end: max(calc(var(--space) * 2), env(safe-area-inset-right, 0px));
+    }
+
+    .tb-name {
+      min-inline-size: 0;
+    }
+    .tb-name-static,
+    .tb-toggle-label {
+      display: block;
+      min-inline-size: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    :global(html[data-js]) .tb-name-static {
+      display: none;
+    }
+    :global(html[data-js]) .tb-toggle {
+      display: flex;
+      align-items: center;
+      gap: calc(var(--space) * 0.75);
+      min-inline-size: 0;
+      inline-size: 100%;
+      min-block-size: 44px;
+      padding: 0;
+      background: none;
+      border: 0;
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+      text-align: start;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    /* The caret points up — the strip expands upward — and flips when open.
+       An instant flip: the title block never animates (§7). */
+    .tb-caret {
+      flex: none;
+      inline-size: 0;
+      block-size: 0;
+      border-inline: 4px solid transparent;
+      border-block-end: 5px solid currentColor;
+    }
+    .title-block[data-expanded] .tb-caret {
+      border-block-end: 0;
+      border-block-start: 5px solid currentColor;
+    }
+
+    /* Collapsed: the 01–05 numbers, each a ≥44px target. */
+    .tb-sheets {
+      margin-block-start: 0;
+      gap: 0;
+      flex-wrap: nowrap;
+      justify-content: flex-end;
+    }
+    .tb-sheet {
+      min-inline-size: 44px;
+      min-block-size: 44px;
+      align-items: center;
+      justify-content: center;
+      gap: calc(var(--space) * 0.75);
+    }
+    :global(html[data-js]) .title-block:not([data-expanded]) .tb-label {
+      display: none;
+    }
+    .title-block:not([data-expanded]) .tb-caption,
+    .title-block:not([data-expanded]) .tb-rev {
+      display: none;
+    }
+
+    /* Expanded: the full block stacks — name row, caption, the labelled
+       sheet list (44px rows), REV — anchored to the bottom, growing upward. */
+    .title-block[data-expanded] {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .title-block[data-expanded] .tb-sheets {
+      flex-direction: column;
+      align-items: stretch;
+      flex-wrap: nowrap;
+    }
+    .title-block[data-expanded] .tb-sheet {
+      justify-content: flex-start;
+    }
+
+    /* No JS: no toggle — show the labelled list as a wrapping row so the
+       nav stays fully usable (caption/REV stay desktop-only detail). Capped
+       to the --tb-strip reserve (bumped to 9rem under html:not([data-js]))
+       and scrollable, so the strip can never occlude more of the document
+       panes than they reserve at the bottom (review). */
+    :global(html:not([data-js])) .title-block {
+      grid-template-columns: minmax(0, 1fr);
+      max-block-size: calc(9rem + env(safe-area-inset-bottom, 0px));
+      overflow-y: auto;
+    }
+    :global(html:not([data-js])) .tb-sheets {
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+  }
+</style>
+
+<script>
+  import { navigate } from 'astro:transitions/client';
+  import { zoneForPath } from '../lib/zones';
+
+  // The title block persists across navigations (transition:persist) so keyboard
+  // focus survives a sheet-to-sheet jump. Because the persisted DOM keeps its
+  // old active marks, re-sync them to the current route on every page load —
+  // and whenever the mobile roll settles on a new zone (M9, roll:zonechange:
+  // the roll re-points the URL via replaceState without a page load).
+  function syncActiveSheet(): void {
+    const path = location.pathname.replace(/(.)\/$/, '$1');
+    const zone = zoneForPath(location.pathname);
+    for (const a of document.querySelectorAll<HTMLAnchorElement>('.tb-sheet')) {
+      const href = a.getAttribute('href') ?? '';
+      const isZone = zoneForPath(href).id === zone.id;
+      if (isZone) a.setAttribute('data-active', '');
+      else a.removeAttribute('data-active');
+      // aria-current="page" only when the user is literally on that route.
+      if (href === path) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    }
+  }
+  document.addEventListener('astro:page-load', syncActiveSheet);
+  document.addEventListener('roll:zonechange', syncActiveSheet);
+
+  // §13 strip disclosure (M9): the name button expands the compact strip to
+  // the full title block. Instant — the title block never animates (§7).
+  // Collapses when a sheet is chosen and on every navigation (the persisted
+  // nav would otherwise carry an open panel across routes).
+  const nav = document.getElementById('sheet-index');
+  const toggle = nav?.querySelector<HTMLButtonElement>('.tb-toggle');
+  function setExpanded(open: boolean): void {
+    if (!nav || !toggle) return;
+    if (open) nav.setAttribute('data-expanded', '');
+    else nav.removeAttribute('data-expanded');
+    toggle.setAttribute('aria-expanded', String(open));
+  }
+  toggle?.addEventListener('click', () => setExpanded(!nav?.hasAttribute('data-expanded')));
+  nav?.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement | null)?.closest('.tb-sheet')) setExpanded(false);
+  });
+  document.addEventListener('astro:page-load', () => setExpanded(false));
+
+  // Keys 1-5 jump to sheets (§9). Progressive enhancement over real links;
+  // ignored while focus is in a field, and while a modifier is held so browser
+  // tab-switching shortcuts still work.
+  document.addEventListener('keydown', (e) => {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (!/^[1-5]$/.test(e.key)) return;
+    const t = e.target as HTMLElement | null;
+    if (
+      t &&
+      (t.tagName === 'INPUT' ||
+        t.tagName === 'TEXTAREA' ||
+        t.tagName === 'SELECT' ||
+        t.isContentEditable)
+    ) {
+      return;
+    }
+    const link = document.querySelector<HTMLAnchorElement>(`.tb-sheet[data-sheet="${e.key}"]`);
+    if (!link) return;
+    e.preventDefault();
+    navigate(link.href);
+  });
+</script>

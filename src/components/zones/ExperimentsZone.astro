@@ -1,0 +1,59 @@
+---
+/**
+ * Sheet 02 — Experiments (§4): a bento of the five experiment documents.
+ * Each card is paper at elevation 1 with its EXP number, title, one-line
+ * summary, period and status dot (§10). Muted metadata is safe here because
+ * it sits on paper (M2 note 4).
+ */
+import { getCollection } from 'astro:content';
+
+const experiments = (
+  await getCollection('projects', ({ data }) => data.status === 'published')
+).sort((a, b) => a.data.order - b.data.order);
+
+/** The card shows the document's stable EXP number (§10), not its sort slot. */
+const expNo = (n: number) => `EXP.${String(n).padStart(3, '0')}`;
+import InkUnderline from '../InkUnderline.astro';
+---
+
+<div>
+  <p class="zone-kicker">02 — Experiments</p>
+  <h1 class="zone-title">Experiments<InkUnderline /></h1>
+
+  {
+    experiments.length > 0 ? (
+      <ul class="bento">
+        {experiments.map((p) => (
+          <li>
+            <a class="paper-card" href={`/projects/${p.data.slug}`}>
+              <p class="paper-card__meta">
+                <span class="status-dot" aria-hidden="true" />
+                {expNo(p.data.expNo)}
+              </p>
+              <p class="paper-card__title">{p.data.title}</p>
+              <p class="paper-card__note">{p.data.summary}</p>
+              <p class="paper-card__foot">{p.data.period}</p>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="zone-empty">No experiments published yet.</p>
+    )
+  }
+</div>
+
+<style>
+  .bento {
+    display: grid;
+    gap: calc(var(--space) * 2);
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    margin-block-start: calc(var(--space) * 3);
+  }
+
+  /* .status-dot itself is global (shared with the §10 title block); the card
+     only spaces it. */
+  .status-dot {
+    margin-inline-end: calc(var(--space) * 0.75);
+  }
+</style>

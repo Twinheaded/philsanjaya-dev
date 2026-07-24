@@ -1,0 +1,67 @@
+---
+/**
+ * The desk — layout for the five zone routes (§3, §4).
+ *
+ * Four layers, back to front:
+ *   Layer 0    the two-tone CSS ground (body, from global.css; WebGL lands in M5)
+ *   Layer 0.5  the agent field — one viewport-fixed canvas (DeskScene)
+ *   Layer 1    the DOM content plane — every zone, positioned in desk units
+ *   Layer 2    the HUD — skip link, title block, route announcer
+ *
+ * The pose is emitted server-side as `--cam-x` / `--cam-y` / `--cam-zoom` on
+ * `<body data-zone>`; the plane and field derive from those variables (note 1).
+ * A hard load is already posed with zero JS (rung 4). The camera store
+ * (src/scripts/desk.ts) animates these same variables — one positioning system.
+ *
+ * The desk is continuous: every route renders every zone (via DeskScene), which
+ * is what lets the Slide move the *plane* with neighbours leaving past the frame
+ * edges, and what lets a document (Sheet.astro) Stack the real desk behind it.
+ */
+import type { Page } from 'astro';
+import type { CollectionEntry } from 'astro:content';
+import BaseHead from '../components/BaseHead.astro';
+import DeskScene from '../components/DeskScene.astro';
+import TitleBlock from '../components/TitleBlock.astro';
+import { zoneById } from '../lib/zones';
+
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+  /** Zone id for this route — sets the pose. */
+  zone: string;
+  notesPage?: Page<CollectionEntry<'notes'>>;
+  logPage?: Page<CollectionEntry<'buildlog'>>;
+}
+
+const { title, description, ogImage, zone, notesPage, logPage } = Astro.props;
+const current = zoneById(zone);
+---
+
+<html lang="en">
+  <head>
+    <BaseHead title={title} description={description} ogImage={ogImage} />
+  </head>
+  <body
+    data-zone={current.id}
+    data-view="zone"
+    style={`--cam-x:${current.x}; --cam-y:${current.y}; --cam-zoom:${current.zoom};`}
+  >
+    <a class="skip-link" href="#sheet-index">Skip to sheet index</a>
+
+    <DeskScene current={current.id} notesPage={notesPage} logPage={logPage} />
+
+    <!-- Route extras (structured data, etc.). -->
+    <slot />
+
+    <!-- Layer 2 — HUD. -->
+    <TitleBlock />
+    <p class="sr-only" aria-live="polite">Sheet {current.sheet}, {current.label}</p>
+
+    <script>
+      // The camera store + Slide/Fold/Stack verbs. A module singleton that
+      // persists across ClientRouter swaps (M3/M4).
+      import '../scripts/desk';
+    </script>
+  </body>
+</html>

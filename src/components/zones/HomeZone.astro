@@ -1,0 +1,87 @@
+---
+/**
+ * Sheet 01 — Home, the desk centre (§4).
+ *
+ * Name, one-line intro, the resume object, and featured experiment cards. The
+ * steering-agent field is no longer anchored here: from M3 it is a desk-wide
+ * layer (Desk.astro / desk-field.ts) that slides with the camera (§12, note 7).
+ *
+ * Contrast rule (M2 note 4): text directly on the desk uses --ink only; muted
+ * and accent text lives on paper surfaces.
+ */
+import { getCollection } from 'astro:content';
+
+const featured = (await getCollection('projects', ({ data }) => data.status === 'published'))
+  .sort((a, b) => a.data.order - b.data.order)
+  .slice(0, 3);
+
+/** The card shows the document's stable EXP number (§10), not its sort slot. */
+const expNo = (n: number) => `EXP.${String(n).padStart(3, '0')}`;
+import InkUnderline from '../InkUnderline.astro';
+---
+
+<div class="home">
+  <p class="zone-kicker">01 — Home</p>
+  <h1 class="home__name">Philipus Sanjaya<InkUnderline /></h1>
+  <p class="home__intro">
+    Final-semester Computer Science student (Data Science &amp; AI) at Swinburne,
+    Melbourne, completing July 2026. I build agent simulations, ML pipelines, and
+    ICS security tooling — and I'm looking for graduate software engineering and
+    data/ML roles.
+  </p>
+
+  <ul class="home__objects">
+    <li>
+      <a class="paper-card paper-card--resume" href="/resume.pdf">
+        <p class="paper-card__meta">Document</p>
+        <p class="paper-card__title">Resume</p>
+        <p class="paper-card__note">PDF · download</p>
+      </a>
+    </li>
+    {
+      featured.map((p) => (
+        <li>
+          <a class="paper-card" href={`/projects/${p.data.slug}`}>
+            <p class="paper-card__meta">{expNo(p.data.expNo)}</p>
+            <p class="paper-card__title">{p.data.title}</p>
+            <p class="paper-card__note">{p.data.summary}</p>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  <p class="home__more">
+    <a class="desk-link" href="/projects">Open all experiments</a>
+  </p>
+</div>
+
+<style>
+  .home__name {
+    margin-block-start: calc(var(--space) * 1.5);
+    font-size: var(--fs-display);
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  /* On the bare desk, body copy stays --ink (10.4:1) — muted tones are reserved
+     for paper surfaces (note 4 / note 8b). */
+  .home__intro {
+    max-inline-size: 46ch;
+    margin-block-start: calc(var(--space) * 2);
+    color: var(--ink);
+  }
+
+  .home__objects {
+    display: grid;
+    gap: calc(var(--space) * 2);
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    margin-block-start: calc(var(--space) * 4);
+  }
+
+  .home__more {
+    margin-block-start: calc(var(--space) * 3);
+  }
+</style>

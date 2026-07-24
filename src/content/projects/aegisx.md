@@ -2,6 +2,8 @@
 title: AEGISX cloud pipeline
 slug: aegisx
 order: 2
+expNo: 2
+diagram: aegisx
 tags: [ics-security, cloud]
 stack: [Python, AWS Kinesis, Lambda, S3, Athena, SNS, SQS, CloudFormation]
 period: '2025–2026'
@@ -29,6 +31,16 @@ metrics:
     source: Reflection Report, individual challenges — commit history
 ---
 
+<!-- TODO(phil-voice) — §10 restructure notes (M6, agent-scaffolded; copy untouched):
+     · Problem runs long; §10 wants 2–4 sentences — condense or bless as-is.
+     · "Approach" + "Architecture" now scaffold the Idea section. Your inline
+       SVG was redrawn to the §11 style in M8 and renders as FIG.01 (same
+       boxes/arrows/labels); "the diagram" in the Architecture prose now
+       refers to that plate.
+     · "Planned vs delivered" sits as a subsection of Result — it is honest
+       results material; move or retitle if you disagree.
+     · Reflection is not a §10 section — fold into Result, keep, or cut. -->
+
 ## Problem
 
 AEGISX is a two-semester capstone: a smart-grid industrial-control-system security
@@ -43,7 +55,7 @@ monitoring pipeline that floods, drops, or stalls is itself a security failure.
 Live inference deliberately stays on-premises: in an ICS,
 detection belongs next to the process. The cloud is the memory and the megaphone.
 
-## Approach
+## Idea
 
 Being the only cloud person meant no peer to review AWS judgement calls, so the
 discipline had to be structural. Teammates' modules were treated as APIs to consume,
@@ -57,70 +69,7 @@ infrastructure is captured as a CloudFormation template of intended state, and t
 handover includes a migration runbook written for fresh-account deployment to the
 client.
 
-## Architecture
-
-<svg viewBox="0 0 760 330" role="img" aria-label="AEGISX delivered architecture: on-premise Modbus monitoring streams scored events through a boto3 producer into Kinesis; a Lambda validator writes to a Hive-partitioned S3 data lake queried by Athena, publishes aggregated SNS alerts, and dead-letters failures to SQS. SageMaker retraining is a scaffold pending the model handoff; the CloudFront access path is documented but not deployed; the demo dashboard reads S3 locally, read-only" style="width: 100%; max-width: 720px; font-family: var(--font-mono); font-size: 11px;">
-  <defs>
-    <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0 0L8 4L0 8z" fill="var(--mist)"></path>
-    </marker>
-  </defs>
-  <rect x="8" y="28" width="196" height="182" rx="10" fill="none" stroke="var(--line)"></rect>
-  <text x="20" y="18" fill="var(--mist)">on-prem (team stack)</text>
-  <rect x="24" y="44" width="164" height="36" rx="6" fill="var(--surface)" stroke="var(--line)"></rect>
-  <text x="106" y="66" text-anchor="middle" fill="var(--ink)">Modbus traffic</text>
-  <rect x="24" y="104" width="164" height="36" rx="6" fill="var(--surface)" stroke="var(--line)"></rect>
-  <text x="106" y="121" text-anchor="middle" fill="var(--ink)">mTLS proxies · DPI</text>
-  <text x="106" y="134" text-anchor="middle" fill="var(--mist)">AES-256-GCM · firewall</text>
-  <rect x="24" y="164" width="164" height="36" rx="6" fill="var(--surface)" stroke="var(--line)"></rect>
-  <text x="106" y="181" text-anchor="middle" fill="var(--ink)">LSTM scoring</text>
-  <text x="106" y="194" text-anchor="middle" fill="var(--mist)">on-prem by design</text>
-  <rect x="24" y="224" width="164" height="36" rx="6" fill="var(--surface)" stroke="var(--signal)"></rect>
-  <text x="106" y="241" text-anchor="middle" fill="var(--ink)">boto3 producer — mine</text>
-  <text x="106" y="254" text-anchor="middle" fill="var(--mist)">direct — no Greengrass</text>
-  <line x1="106" y1="80" x2="106" y2="102" stroke="var(--mist)" marker-end="url(#arr)"></line>
-  <line x1="106" y1="140" x2="106" y2="162" stroke="var(--mist)" marker-end="url(#arr)"></line>
-  <line x1="106" y1="200" x2="106" y2="222" stroke="var(--mist)" marker-end="url(#arr)"></line>
-  <rect x="240" y="28" width="512" height="262" rx="10" fill="none" stroke="var(--line)"></rect>
-  <text x="252" y="18" fill="var(--mist)">aws ap-southeast-2 (my slice — delivered)</text>
-  <rect x="256" y="104" width="120" height="44" rx="6" fill="var(--surface)" stroke="var(--signal)"></rect>
-  <text x="316" y="123" text-anchor="middle" fill="var(--ink)">Kinesis</text>
-  <text x="316" y="138" text-anchor="middle" fill="var(--mist)">on-demand · KMS</text>
-  <rect x="408" y="104" width="130" height="44" rx="6" fill="var(--surface)" stroke="var(--signal)"></rect>
-  <text x="473" y="118" text-anchor="middle" fill="var(--ink)">Lambda</text>
-  <text x="473" y="131" text-anchor="middle" fill="var(--mist)">~430-line validator</text>
-  <text x="473" y="143" text-anchor="middle" fill="var(--mist)">14 fields · never raises</text>
-  <rect x="408" y="44" width="130" height="40" rx="6" fill="var(--surface)" stroke="var(--signal)"></rect>
-  <text x="473" y="61" text-anchor="middle" fill="var(--ink)">Athena</text>
-  <text x="473" y="74" text-anchor="middle" fill="var(--mist)">queries the lake</text>
-  <rect x="588" y="44" width="148" height="40" rx="6" fill="var(--surface)" stroke="var(--signal)"></rect>
-  <text x="662" y="61" text-anchor="middle" fill="var(--ink)">S3 data lake</text>
-  <text x="662" y="76" text-anchor="middle" fill="var(--mist)">Hive-partitioned · SSE</text>
-  <rect x="588" y="106" width="148" height="40" rx="6" fill="var(--surface)" stroke="var(--signal)"></rect>
-  <text x="662" y="123" text-anchor="middle" fill="var(--ink)">SNS alerts</text>
-  <text x="662" y="138" text-anchor="middle" fill="var(--mist)">1 aggregated / batch</text>
-  <rect x="588" y="168" width="148" height="40" rx="6" fill="var(--surface)" stroke="var(--line)"></rect>
-  <text x="662" y="185" text-anchor="middle" fill="var(--ink)">SQS DLQ</text>
-  <text x="662" y="200" text-anchor="middle" fill="var(--mist)">14-day retention</text>
-  <line x1="190" y1="242" x2="316" y2="242" stroke="var(--mist)"></line>
-  <line x1="316" y1="242" x2="316" y2="150" stroke="var(--mist)" marker-end="url(#arr)"></line>
-  <line x1="376" y1="126" x2="406" y2="126" stroke="var(--mist)" marker-end="url(#arr)"></line>
-  <line x1="538" y1="114" x2="586" y2="70" stroke="var(--mist)" marker-end="url(#arr)"></line>
-  <line x1="538" y1="126" x2="586" y2="126" stroke="var(--mist)" marker-end="url(#arr)"></line>
-  <line x1="538" y1="140" x2="586" y2="184" stroke="var(--mist)" stroke-dasharray="3 3" marker-end="url(#arr)"></line>
-  <text x="548" y="172" fill="var(--mist)" font-size="10">on failure</text>
-  <line x1="586" y1="64" x2="540" y2="64" stroke="var(--mist)" marker-end="url(#arr)"></line>
-  <rect x="256" y="226" width="150" height="36" rx="6" fill="none" stroke="var(--mist)" stroke-dasharray="4 3"></rect>
-  <text x="331" y="243" text-anchor="middle" fill="var(--mist)">SageMaker</text>
-  <text x="331" y="256" text-anchor="middle" fill="var(--mist)" font-size="10">scaffold — pending model</text>
-  <rect x="422" y="226" width="150" height="36" rx="6" fill="none" stroke="var(--mist)" stroke-dasharray="4 3"></rect>
-  <text x="497" y="243" text-anchor="middle" fill="var(--mist)">CloudFront + OAC</text>
-  <text x="497" y="256" text-anchor="middle" fill="var(--mist)" font-size="10">documented, not deployed</text>
-  <rect x="588" y="226" width="148" height="36" rx="6" fill="var(--surface)" stroke="var(--line)"></rect>
-  <text x="662" y="243" text-anchor="middle" fill="var(--ink)">demo dashboard</text>
-  <text x="662" y="256" text-anchor="middle" fill="var(--mist)" font-size="10">local · read-only · S3</text>
-  <line x1="662" y1="84" x2="662" y2="224" stroke="var(--mist)" stroke-dasharray="3 3" marker-end="url(#arr)"></line>
-</svg>
+### Architecture
 
 The delivered pipeline runs in ap-southeast-2. A direct boto3 producer maps the OT
 bridge's events into an on-demand, KMS-encrypted Kinesis stream. A Python 3.12 Lambda —
@@ -134,7 +83,7 @@ configurable confidence threshold — and records that fail repeatedly land in a
 dead-letter queue. IAM is least-privilege throughout. What the diagram does not show is
 as deliberate as what it does: live LSTM inference never moved to the cloud.
 
-## Results
+## Result
 
 The pipeline's defining results came from two live incidents, each now an ADR. The
 first was the alert flood: the handler published one SNS email per event, and combined
@@ -155,7 +104,7 @@ two aggregated alerts — the tamper and the above-threshold anomaly, with the
 below-threshold anomaly correctly staying silent. By the handover demo the lake held
 162,095 normal, 20,634 anomaly, and 1,982 tamper events, with quarantine at zero.
 
-## Planned vs delivered
+### Planned vs delivered
 
 The Semester 1 roadmap and the delivered system differ, and the differences are the
 engineering. Greengrass edge ingestion became the direct boto3 producer: weeks of

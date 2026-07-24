@@ -1,0 +1,124 @@
+---
+/**
+ * Sheet 04 — Log (§4): the lab-notebook object, chronological entries.
+ * Entries live on a single paper sheet with ruled dividers; commit chips are
+ * the receipts (FR-23).
+ */
+import type { Page } from 'astro';
+import { getCollection, type CollectionEntry } from 'astro:content';
+import { SITE } from '../../lib/site';
+
+interface Props {
+  /** Supplied by the paginated /log/[...page] route; defaults to the newest. */
+  page?: Page<CollectionEntry<'buildlog'>>;
+}
+
+const { page } = Astro.props;
+
+const all = (await getCollection('buildlog')).sort((a, b) => b.data.entry - a.data.entry);
+const entries = page ? page.data : all.slice(0, 4);
+
+const formatDate = (d: Date) =>
+  d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+import InkUnderline from '../InkUnderline.astro';
+---
+
+<div>
+  <p class="zone-kicker">04 — Log</p>
+  <h1 class="zone-title">Build log<InkUnderline /></h1>
+
+  {
+    entries.length > 0 ? (
+      <ol class="notebook">
+        {entries.map((e) => (
+          <li class="notebook__entry">
+            <p class="paper-card__meta">
+              Entry {String(e.data.entry).padStart(2, '0')} ·{' '}
+              <time datetime={e.data.date.toISOString().slice(0, 10)}>
+                {formatDate(e.data.date)}
+              </time>{' '}
+              · {e.data.milestone}
+            </p>
+            <h2 class="notebook__title">
+              <a class="paper-link" href={`/log/${e.id}`}>
+                {e.data.title}
+              </a>
+            </h2>
+            {e.data.commits.length > 0 && (
+              <p class="notebook__chips">
+                {e.data.commits.map((sha) => (
+                  <a class="chip" href={`${SITE.repoUrl}/commit/${sha}`}>
+                    {sha}
+                  </a>
+                ))}
+              </p>
+            )}
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <p class="zone-empty">No entries yet.</p>
+    )
+  }
+
+  {
+    page && (page.url.prev || page.url.next) && (
+      <p class="zone-pager">
+        {page.url.prev && <a class="desk-link" href={page.url.prev}>&larr; Newer</a>}
+        {page.url.next && <a class="desk-link" href={page.url.next}>Older &rarr;</a>}
+      </p>
+    )
+  }
+</div>
+
+<style>
+  .notebook {
+    margin-block-start: calc(var(--space) * 3);
+    padding: calc(var(--space) * 3);
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--e1);
+  }
+
+  /* Ruled dividers — the notebook's lines. */
+  .notebook__entry + .notebook__entry {
+    margin-block-start: calc(var(--space) * 2.5);
+    padding-block-start: calc(var(--space) * 2.5);
+    border-block-start: 1px solid var(--paper-edge);
+  }
+
+  .notebook__title {
+    margin-block-start: calc(var(--space) * 0.5);
+    font-size: var(--fs-h2);
+    line-height: 1.25;
+    font-weight: 500;
+  }
+
+  .notebook__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--space) * 1);
+    margin-block-start: calc(var(--space) * 1.5);
+  }
+
+  .chip {
+    padding: 2px calc(var(--space) * 0.75);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-paper);
+    font-family: var(--font-mono);
+    font-size: var(--fs-micro);
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+  .chip:hover {
+    border-color: var(--copper);
+    color: var(--ink);
+  }
+
+  .zone-pager {
+    display: flex;
+    gap: calc(var(--space) * 3);
+    margin-block-start: calc(var(--space) * 3);
+  }
+</style>

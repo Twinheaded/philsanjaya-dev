@@ -38,14 +38,17 @@ export interface IslandOptions {
   count?: [number, number];
   /** 404 state: agents flee continuously from the screen centre. */
   fleeFromCenter?: boolean;
-  /** Start hidden + paused; the case study activates align on its architecture chapter. */
+  /** Start hidden + paused until setActive(true). NOTE: the chaptered case
+   *  study that used this (align behind its architecture chapter) retired in
+   *  M6 — `align` currently has no consumer; kept, with its tested maths, for
+   *  a §11/M8 decision. */
   startActive?: boolean;
   /** Element id of a debug toggle button (kept in sync via aria-pressed, FR-15). */
   debugButtonId?: string;
   /**
-   * Wire cursor/tap/debug listeners. The case-study align island passes
-   * false: it has no debug affordance and sits behind prose, so the global
-   * listeners would only do dormant work (M4 review).
+   * Wire cursor/tap/debug listeners. Pass false for a decorative island with
+   * no debug affordance — the global listeners would only do dormant work
+   * (M4 review).
    */
   interactive?: boolean;
 }
@@ -66,8 +69,10 @@ export const PARAMS: WanderParams = {
   maxForce: 30,
 };
 
-const OPACITY = 0.55; // §10: default active state
-const REDUCED_OPACITY = 0.35; // §10: reduced-motion static frame
+// §12: the field reads as graphite on the desk — --ink at low alpha. Ink is far
+// darker than the accent this replaced, so the alpha drops to match.
+const OPACITY = 0.22; // default active state
+const REDUCED_OPACITY = 0.14; // reduced-motion static frame
 export const MARGIN = 16;
 const MAX_DT = 0.05; // clamp integration after tab-hidden gaps
 
@@ -99,8 +104,12 @@ function makeAgents(
   });
 }
 
-function signalColor(canvas: HTMLCanvasElement): string {
-  return getComputedStyle(canvas).getPropertyValue('--signal').trim() || '#149e7c';
+/**
+ * §12: agent trails are graphite — --ink at low alpha — not the copper accent.
+ * The desk must read as organised pencil work, never as a coloured effect.
+ */
+function graphiteColor(canvas: HTMLCanvasElement): string {
+  return getComputedStyle(canvas).getPropertyValue('--ink').trim() || '#232323';
 }
 
 function debugColor(canvas: HTMLCanvasElement): string {
@@ -213,7 +222,7 @@ export function mountAgents(
   const renderOpacity = reduced ? Math.min(targetOpacity, REDUCED_OPACITY) : targetOpacity;
   const interactive = options.interactive !== false;
   let agents: Agent[] = [];
-  let color = signalColor(canvas);
+  let color = graphiteColor(canvas);
   let rafId = 0;
   let running = false;
 
@@ -260,7 +269,7 @@ export function mountAgents(
     render();
     onReadout({ count: agents.length, behaviour, fps: null, debug: false });
     const themeObserver = new MutationObserver(() => {
-      color = signalColor(canvas);
+      color = graphiteColor(canvas);
       render();
     });
     themeObserver.observe(document.documentElement, {
@@ -375,7 +384,7 @@ export function mountAgents(
       lastFps = Math.round((frames * 1000) / elapsed);
       frames = 0;
       windowStart = now;
-      color = signalColor(canvas);
+      color = graphiteColor(canvas);
       if (debug) dColor = debugColor(canvas);
       emitReadout();
     }

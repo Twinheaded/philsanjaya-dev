@@ -1,0 +1,71 @@
+---
+/**
+ * An open document on the desk (§7.3, §7.4) — layout for the detail routes
+ * (/projects/<slug>, /notes/<slug>, /log/<slug>, 404).
+ *
+ * The real desk renders behind (DeskScene, posed at the parent zone at the
+ * document zoom) and Stacks — blurred on desktop, scrim on mobile/fallback
+ * (global.css, keyed on `body[data-view="document"]`). The document itself is a
+ * paper sheet at elevation 3 with its own contained scroll, carrying the shared
+ * `view-transition-name: unfold` so a card morphs into it (§7.3). The camera
+ * push to this pose is the M3 store (desk.ts), not a second animation (note 2).
+ *
+ * A hard load lands here already open and stacked, posed, with zero fly-in and
+ * fully readable with JS off (note 5, rung 4).
+ */
+import BaseHead from '../components/BaseHead.astro';
+import DeskScene from '../components/DeskScene.astro';
+import TitleBlock from '../components/TitleBlock.astro';
+import { zoneForPath } from '../lib/zones';
+import { DOC_ZOOM } from '../lib/nav';
+
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+}
+
+const { title, description, ogImage } = Astro.props;
+const parent = zoneForPath(Astro.url.pathname);
+---
+
+<html lang="en">
+  <head>
+    <BaseHead title={title} description={description} ogImage={ogImage} />
+  </head>
+  <body
+    data-zone={parent.id}
+    data-view="document"
+    style={`--cam-x:${parent.x}; --cam-y:${parent.y}; --cam-zoom:${DOC_ZOOM};`}
+  >
+    <a class="skip-link" href="#sheet-index">Skip to sheet index</a>
+
+    <!-- The desk behind, Stacked (blur/scrim via CSS). Inert backdrop. -->
+    <DeskScene current={parent.id} open />
+
+    <!-- Stack scrim — used on mobile / reduced-motion / fallback instead of blur. -->
+    <div class="stack-scrim" aria-hidden="true"></div>
+
+    <!-- The open document (elevation 3). tabindex: the stage scrolls on short
+         viewports and must be keyboard-reachable (WCAG 2.1.1). -->
+    <main id="main" class="document" tabindex="-1" style="view-transition-name: unfold">
+      <!-- §13 close affordance (M9): Esc has no key on touch. A real link to
+           the parent zone — the same fold as every other close, rung-4 safe.
+           Mobile-only chrome (CSS); §6 microcopy ("Back to desk"). -->
+      <a class="doc-close" href={parent.href}>
+        <span aria-hidden="true">✕</span> Back to desk
+      </a>
+      <div class="document__sheet">
+        <slot />
+      </div>
+    </main>
+
+    <TitleBlock />
+    <p class="sr-only" aria-live="polite">Document open, sheet {parent.sheet} {parent.label}</p>
+
+    <script>
+      // The camera store + Slide/Fold/Stack verbs (M3/M4). Persists across swaps.
+      import '../scripts/desk';
+    </script>
+  </body>
+</html>

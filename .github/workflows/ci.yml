@@ -3,7 +3,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'redesign/**']
   pull_request:
 
 permissions:
@@ -53,3 +53,44 @@ jobs:
         run: npm run build
       - if: env.CLOUDFLARE_API_TOKEN != ''
         run: npx wrangler pages deploy dist --project-name=philsanjaya-dev --branch=main --commit-hash=${{ github.sha }}
+
+  # Branch previews for the redesign. Any verified non-main ref gets a
+  # Cloudflare Pages *preview* deployment (production branch is main, so a
+  # different --branch is a preview), giving each milestone a reviewable URL.
+  #
+  # Never runs for fork PRs: the head-repo guard makes that explicit, and
+  # secrets are unavailable to forks anyway. Production stays the `deploy`
+  # job above (main only) — untouched.
+  preview:
+    needs: build-and-test
+    if: >-
+      github.ref != 'refs/heads/main' &&
+      (github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    # One preview per branch: a push and its pull_request `synchronize` event
+    # would otherwise deploy the same commit twice.
+    concurrency:
+      group: preview-${{ github.head_ref || github.ref_name }}
+      cancel-in-progress: true
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 904d250aff49b9fb7673433563d80207
+      # Real branch name for both event types; quoted at use (it contains `/`).
+      PREVIEW_BRANCH: ${{ github.head_ref || github.ref_name }}
+    steps:
+      - if: env.CLOUDFLARE_API_TOKEN == ''
+        run: echo "CLOUDFLARE_API_TOKEN secret not set - skipping preview deploy"
+      - if: env.CLOUDFLARE_API_TOKEN != ''
+        uses: actions/checkout@v5
+      - if: env.CLOUDFLARE_API_TOKEN != ''
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - if: env.CLOUDFLARE_API_TOKEN != ''
+        run: npm ci
+      - if: env.CLOUDFLARE_API_TOKEN != ''
+        run: npm run build
+      - if: env.CLOUDFLARE_API_TOKEN != ''
+        run: npx wrangler pages deploy dist --project-name=philsanjaya-dev --branch="$PREVIEW_BRANCH" --commit-hash=${{ github.sha }}

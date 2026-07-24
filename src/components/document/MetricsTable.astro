@@ -1,0 +1,56 @@
+---
+/**
+ * §10.5 — honest metrics as a ruled mono table, never prose. Every row is
+ * frontmatter verbatim — including the unflattering ones — and `source` (the
+ * ADR-0004 receipt, FR-22) always renders. `value: pending` renders as an
+ * em-dash row (FR-22), with the word kept so the pending state stays honest.
+ * The wrapper scrolls sideways on narrow screens instead of breaking the
+ * sheet (never the page).
+ */
+interface Metric {
+  label: string;
+  value: string | number;
+  source: string;
+  note?: string | undefined;
+}
+interface Props {
+  metrics: Metric[];
+}
+const { metrics } = Astro.props;
+---
+
+<!-- tabindex: a scrollable region must be keyboard-operable (WCAG 2.1.1, repo
+     convention — the wrapper scrolls x on narrow screens). -->
+<div class="metrics-wrap" tabindex="0" role="region" aria-label="Honest metrics">
+  <table class="metrics-table">
+    <thead>
+      <tr>
+        <th scope="col">metric</th>
+        <th scope="col">value</th>
+        <th scope="col">source</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        metrics.map((m) => (
+          <tr>
+            <th scope="row">{m.label}</th>
+            <td>
+              {String(m.value) === 'pending' ? (
+                <span class="metrics-table__pending">
+                  <span aria-hidden="true">—</span> pending
+                </span>
+              ) : (
+                m.value
+              )}
+            </td>
+            <td class="metrics-table__source">
+              {m.source}
+              {m.note && <span class="metrics-table__note">{m.note}</span>}
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>

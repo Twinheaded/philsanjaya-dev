@@ -1,41 +1,116 @@
-/* Design tokens — PRD §9.1. Amber (--debug) is reserved for the debug overlay only. */
+/*
+ * Design tokens — Inventor's Workbench (handoff §5).
+ *
+ * Single source of truth: every colour, shadow, duration and easing in the
+ * codebase references a token here — no magic values in components.
+ *
+ * The WORKBENCH PALETTE (top) is the real system. The LEGACY ALIASES (bottom)
+ * map the original token names onto the workbench palette, so components that
+ * have not been rebuilt yet (their own milestone owns them) keep compiling and
+ * render in the new system. One palette, never two (M1 notes #1/#2). An alias
+ * is retired when its last consumer is migrated.
+ *
+ * Dark mode ("workshop at night") is deferred; its palette is specified in the
+ * handoff §16, not seeded here.
+ */
 
 :root {
-  --bg: #f6f7f5;
-  --surface: #ffffff;
-  --ink: #161b19;
-  --mist: #67706c;
-  --line: rgba(22, 27, 25, 0.14);
-  --signal: #149e7c;
-  /* Signal when used as text: #149e7c is 3.15:1 on --bg, below the 4.5:1
-     AA floor (FR-70), so normal-size text uses this darker variant
-     (4.92:1 on --bg, 5.29:1 on --surface). */
-  --signal-text: #0e7a60;
-  --debug: #c97e12;
+  /* Ground — the two-tone signature */
+  --desk:        #d8d2c6;   /* warm stone workbench */
+  --desk-deep:   #c7c0b2;   /* desk shading, vignette, scrim base */
+  --paper:       #fafaf8;   /* documents, cards */
+  --paper-edge:  #efede7;   /* card borders, dividers, ruled lines */
+
+  /* Two-tone ground: the warm light pool at desk centre (rung 2, §3/§8).
+     ~desk + 22% white — a gentle glow, still clearly stone-toned. */
+  --desk-pool:   #e1dcd3;
+
+  /* Ink */
+  --ink:         #232323;   /* AA on paper (15.0), desk (10.4), desk-deep (8.7) */
+  --ink-soft:    #6b6b6b;   /* secondary text, captions — AA on paper (5.1) */
+
+  /* Accent — copper only. Not terracotta, not orange. */
+  --copper:      #b87333;   /* indicators/active — paper-scoped (3.6:1 on paper) */
+  --copper-deep: #8f5a26;   /* text-safe accent (links) — AA on paper (5.5) */
+
+  /* Status — forest green, strictly for live/status markers. AA on desk (4.6). */
+  --status:      #41604f;
+
+  /* Glass — Stack verb only (M4) */
+  --glass:       rgba(250, 250, 248, 0.62);
+  --glass-blur:  8px;
+
+  /* Warm shadows — the shadow tint is a warmth signature, never pure black */
+  --shadow-rgb:  42 34 22;
+  --e1: 0 1px 2px rgb(var(--shadow-rgb) / 0.10), 0 2px 8px  rgb(var(--shadow-rgb) / 0.08);
+  --e2: 0 2px 4px rgb(var(--shadow-rgb) / 0.12), 0 8px 24px rgb(var(--shadow-rgb) / 0.14);
+  --e3: 0 4px 8px rgb(var(--shadow-rgb) / 0.14), 0 24px 64px rgb(var(--shadow-rgb) / 0.22);
+
+  /* Motion */
+  --ease-physical: cubic-bezier(0.65, 0, 0.35, 1);  /* Slide, Fold — symmetric */
+  --ease-settle:   cubic-bezier(0.2, 0, 0, 1);      /* Lift in, small settles */
+  --t-lift-in: 180ms;
+  --t-lift-out: 240ms;
+
+  /* §12 field density — Phil's tuning pair (M7). Count is the agent cap;
+     trail alpha is the graphite darkness of a fresh stroke. The desk must
+     read as organised, not scribbled, at every pose. */
+  --field-count: 30;
+  --field-trail-alpha: 0.16;
+
+  /* §11 handwriting — Caveat, diagram margin notes ONLY (M8). The font CSS is
+     imported by the diagram wrapper, so it ships lazily with document pages
+     that render a diagram — never preloaded, never on a zone's critical path. */
+  --font-hand: 'Caveat', 'Segoe Script', 'Comic Sans MS', cursive;
+  --t-stack:   300ms;
+  --t-settle:  150ms;  /* two-beat cross-zone unfold settle hold (§7.3), 120–180ms */
+
+  /* Rhythm */
+  --space:         8px;    /* base unit; spacing in multiples */
+  --radius-paper:  2px;    /* paper is nearly square-cornered */
+  --radius-glass:  12px;
+
+  /* Type scale sizes (§6), fluid desktop→mobile. Raw tokens so base CSS and the
+     Tailwind @theme (global.css) share one source. Line-heights/weights are set
+     alongside the utilities in @theme. */
+  --fs-display:  clamp(2.25rem, 1.40rem + 3.8vw, 3.5rem);   /* 36 → 56 */
+  --fs-h1:       clamp(1.75rem, 1.30rem + 2.0vw, 2.25rem);  /* 28 → 36 */
+  --fs-h2:       clamp(1.25rem, 1.05rem + 0.9vw, 1.5rem);   /* 20 → 24 */
+  --fs-body:     clamp(1rem,    0.97rem + 0.15vw, 1.0625rem); /* 16 → 17 */
+  --fs-caption:  0.8125rem;  /* 13px */
+  --fs-micro:    0.6875rem;  /* 11px */
+
+  /* ---------------------------------------------------------------------- *
+   * Legacy aliases — original token names mapped onto the workbench palette.
+   * Kept so un-migrated consumers compile and adopt the new system. Remaining
+   * consumers after M6 rebuilt the document templates: NotePane/.panel-scroll
+   * scrollbars, the agent island, the AEGISX in-content SVG (redrawn per §11
+   * in M8), and the 404. Retire each alias when its last consumer is rebuilt —
+   * grep first. Do NOT add new usages of these names.
+   * ---------------------------------------------------------------------- */
+  /* --bg retired in M2: the rebuilt shell paints the ground from --desk. */
+  --surface:     var(--paper);       /* cards / panels → paper */
+  --mist:        var(--ink-soft);    /* secondary text */
+  --line:        var(--paper-edge);  /* borders, dividers, ruled lines */
+  --signal:      var(--copper);      /* indicators, active borders, focus */
+  --signal-text: var(--copper-deep); /* text-safe accent (prose links) */
+  --debug:       #c97e12;            /* dev overlay only (canvas getComputedStyle); hidden in v1 */
 }
 
-/* Explicit dark choice from the rail toggle (FR-08). */
-:root[data-theme='dark'] {
-  --bg: #101312;
-  --surface: #171b1a;
-  --ink: #e7eae8;
-  --mist: #9aa39e;
-  --line: rgba(231, 234, 232, 0.14);
-  --signal: #23b893;
-  --signal-text: #23b893; /* 7.43:1 on dark --bg, passes as-is */
-  --debug: #e09a2f;
-}
-
-/* System preference, unless light was explicitly chosen. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #101312;
-    --surface: #171b1a;
-    --ink: #e7eae8;
-    --mist: #9aa39e;
-    --line: rgba(231, 234, 232, 0.14);
-    --signal: #23b893;
-    --signal-text: #23b893;
-    --debug: #e09a2f;
+/* §13 mobile (M9). The strip clearance is the compact title block's reserved
+   band (its one content row plus the home-indicator safe area) — the roll's
+   zones and the document scrolls pad their bottoms by it so the last line is
+   never parked under the fixed strip. Fewer pencils on a phone: battery. */
+@media (max-width: 767px) {
+  :root {
+    --tb-strip:    calc(3.25rem + env(safe-area-inset-bottom, 0px));
+    --field-count: 18;
+  }
+  /* Rung 4: no disclosure toggle, so the strip shows the full labelled sheet
+     list as a wrapping row — taller than the JS-collapsed single row. The
+     strip is capped to this height (TitleBlock) and the reserve token matches
+     it, so document panes never hide their last lines behind it (review). */
+  html:not([data-js]) {
+    --tb-strip:  calc(9rem + env(safe-area-inset-bottom, 0px));
   }
 }

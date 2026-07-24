@@ -17,6 +17,9 @@ const metric = z.object({
   label: z.string().min(1),
   value: z.union([z.string().min(1), z.number()]),
   source: z.string().min(1, 'every metric needs a source (PRD FR-22)'),
+  /** Optional annotation rendered with the source (§10 label/value/note —
+   *  `note` ADDS to the ADR-0004 receipt, it never replaces it). */
+  note: z.string().optional(),
 });
 
 /** Underscore convention: _file.md AND _dir/anything are work-in-progress. */
@@ -30,6 +33,13 @@ const projects = defineCollection({
       .string()
       .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'slug must be kebab-case'),
     order: z.number().int().positive(),
+    /** The stable EXP document number (§10) — initialised equal to `order`,
+     *  but deliberately its own field: desk sort order may change, a
+     *  document's number must not. */
+    expNo: z.number().int().positive(),
+    /** §11 architecture-diagram component ref (M8). Unset renders the
+     *  reserved figure plate. */
+    diagram: z.string().optional(),
     tags: z.array(z.string()).min(1),
     stack: z.array(z.string()).min(1),
     period: z.string().min(1),

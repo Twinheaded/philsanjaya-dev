@@ -2,6 +2,7 @@
 title: This website
 slug: this-website
 order: 5
+expNo: 5
 tags: [meta, web]
 stack: [Astro 6, TypeScript, Tailwind v4, Cloudflare Pages]
 period: '2026'
@@ -22,6 +23,17 @@ links:
   - { label: Source on GitHub, url: 'https://github.com/Twinheaded/philsanjaya-dev' }
 ---
 
+<!-- TODO(phil-voice) — §10 restructure notes (M6, agent-scaffolded; copy untouched):
+     · The whole write-up describes the PREVIOUS shell (200px rail, panel
+       slides, no-scroll stage) — the Inventor's Workbench redesign makes this
+       document stale end to end. Needs your rewrite before the production
+       swap (M11 gate); the metrics also predate the redesign.
+     · Near-term even before that rewrite: "The metrics above are the build's
+       own receipts" (Result) — the table now renders BELOW (§10 order);
+       points the wrong way — reword.
+     · "Approach" + "Architecture" now scaffold the Idea section.
+     · Reflection is not a §10 section — fold into Result, keep, or cut. -->
+
 ## Problem
 
 Portfolio sites collapse into templates: a scrolling page, a wall of cards, numbers
@@ -29,7 +41,7 @@ nobody can check. The brief for this one was different — a fixed viewport wher
 slide instead of scrolling, a live simulation of steering agents as the signature
 element, and a standing rule that no metric appears anywhere without a source.
 
-## Approach
+## Idea
 
 Content is data: every project, note, and build-log entry is a markdown file with a
 schema-checked frontmatter, so adding one is a commit, never a code change. The shell
@@ -37,7 +49,7 @@ is Astro with view transitions; the agents are a vanilla-TypeScript canvas islan
 ported from my COS30002 steering coursework. The honest-numbers rule is enforced
 mechanically — a metric without a `source` field fails the build.
 
-## Architecture
+### Architecture
 
 A 200px rail and a `100dvh` stage; five panel routes joined by directional slide
 transitions. One island owns the canvas: pure steering maths over an injected seeded
@@ -45,7 +57,7 @@ RNG, an engine for the loop and DPR-aware sizing, and a readout that displays on
 live-measured values. CI runs type-check, build, and the steering tests on every push,
 then deploys to Cloudflare Pages.
 
-## Results
+## Result
 
 The metrics above are the build's own receipts: the island's gzipped size, the test
 count, and a Lighthouse card that stayed an em-dash until the M4 audit actually ran —

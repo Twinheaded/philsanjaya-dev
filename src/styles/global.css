@@ -1,25 +1,72 @@
 @import 'tailwindcss';
 @import './tokens.css';
 
-/* Self-hosted woff2 subsets (PRD §9.2, §11.1) */
-@import '@fontsource/archivo/500.css';
-@import '@fontsource/instrument-sans/400.css';
-@import '@fontsource/instrument-sans/500.css';
-@import '@fontsource/ibm-plex-mono/400.css';
+/* Self-hosted latin subsets (§6). Geist = display + body, Geist Mono =
+   labels/numbers/data. Preloads (400/500/700) live in BaseHead.astro. Caveat is
+   NOT imported here — it loads lazily with diagram components only (§6/§11) and
+   is never referenced in UI CSS. */
+@import '@fontsource/geist/latin-400.css';
+@import '@fontsource/geist/latin-500.css';
+@import '@fontsource/geist/latin-700.css';
+@import '@fontsource/geist-mono/latin-400.css';
 
 @theme inline {
-  --color-bg: var(--bg);
-  --color-surface: var(--surface);
+  /* Workbench palette → Tailwind utilities. `inline` keeps the var() indirection
+     live so a future theme (§16 dark mode) can re-point the raw tokens. */
+  --color-desk: var(--desk);
+  --color-desk-deep: var(--desk-deep);
+  --color-desk-pool: var(--desk-pool);
+  --color-paper: var(--paper);
+  --color-paper-edge: var(--paper-edge);
   --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-copper: var(--copper);
+  --color-copper-deep: var(--copper-deep);
+  --color-status: var(--status);
+
+  /* Legacy color aliases (bg-bg, bg-surface, text-mist, border-line,
+     text-signal, text-signal-text) — resolve to the workbench palette via the
+     aliases in tokens.css. Retired per-component as milestones rebuild them.
+     No --color-debug utility: amber (--debug) is reached only by the canvas
+     overlay via getComputedStyle, so it can never leak into markup (§9.1). */
+  /* --color-bg retired in M2 with the old shell (nothing uses bg-bg). */
+  --color-surface: var(--surface);
   --color-mist: var(--mist);
   --color-line: var(--line);
   --color-signal: var(--signal);
   --color-signal-text: var(--signal-text);
-  /* No --color-debug utility: amber (--debug) is reached only by the canvas
-     overlay via getComputedStyle, so it can never leak into markup (§9.1). */
-  --font-display: 'Archivo', 'Instrument Sans', system-ui, sans-serif;
-  --font-sans: 'Instrument Sans', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Type — Geist for display + body, Geist Mono for labels/data. Both
+     --font-display and --font-sans are Geist (§6): one family, weight does the
+     work. Caveat is intentionally absent (diagram-only). */
+  --font-display: 'Geist', 'Inter', system-ui, sans-serif;
+  --font-sans: 'Geist', 'Inter', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Type scale (§6). Sizes come from the raw --fs-* tokens (tokens.css) so base
+     CSS and utilities share one source. Utilities: text-display … text-micro. */
+  --text-display: var(--fs-display);
+  --text-display--line-height: 1.05;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.02em;
+
+  --text-h1: var(--fs-h1);
+  --text-h1--line-height: 1.15;
+  --text-h1--font-weight: 500;
+
+  --text-h2: var(--fs-h2);
+  --text-h2--line-height: 1.25;
+  --text-h2--font-weight: 500;
+
+  --text-body: var(--fs-body);
+  --text-body--line-height: 1.65;
+
+  --text-caption: var(--fs-caption);
+  --text-caption--line-height: 1.5;
+
+  --text-micro: var(--fs-micro);
+  --text-micro--line-height: 1.4;
+  --text-micro--letter-spacing: 0.08em;
 }
 
 @layer base {
@@ -28,19 +75,30 @@
     height: 100%;
   }
 
-  /* FR-01: the document body never scrolls; panels fit the stage. */
+  /* FR-01 / §2: the desk never scrolls — the camera moves; open documents
+     scroll internally. The two-tone ground (rung 2, §3/§8): a warm light pool
+     at desk centre fading to a --desk-deep vignette at the edges. */
   body {
     overflow: hidden;
-    background: var(--bg);
+    background-color: var(--desk);
+    background-image: radial-gradient(
+      145% 125% at 50% 38%,
+      var(--desk-pool) 0%,
+      var(--desk) 46%,
+      var(--desk-deep) 100%
+    );
     color: var(--ink);
     font-family: var(--font-sans);
+    font-size: var(--fs-body);
     line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
-  /* FR-71: token focus ring, site-wide (kept out of scoped styles). */
+  /* Focus ring, site-wide — copper, per §7.1 (2px, offset 3px). */
   :focus-visible {
-    outline: 2px solid var(--signal);
-    outline-offset: 2px;
+    outline: 2px solid var(--copper);
+    outline-offset: 3px;
   }
 
   /* Controls that only function with JS (theme toggle, key hints) are
@@ -52,31 +110,11 @@
 }
 
 /*
- * Directional panel slides (FR-04, §9.5).
- * The stage carries view-transition-name: stage; the rail is isolated under
- * its own name so it stays still. data-nav-direction is set on the incoming
- * document by the shell script before the swap.
+ * Route swap (M2 note 2): no camera motion in this milestone. Zone-to-zone
+ * navigation is a plain route swap and the short crossfade below is an explicit
+ * placeholder — the Slide verb (§7.2) arrives in M3 and will animate the camera
+ * variables instead of transitioning snapshots.
  */
-@keyframes stage-out-left {
-  to {
-    transform: translateX(-100%);
-  }
-}
-@keyframes stage-in-right {
-  from {
-    transform: translateX(100%);
-  }
-}
-@keyframes stage-out-right {
-  to {
-    transform: translateX(100%);
-  }
-}
-@keyframes stage-in-left {
-  from {
-    transform: translateX(-100%);
-  }
-}
 @keyframes vt-fade-out {
   to {
     opacity: 0;
@@ -88,42 +126,43 @@
   }
 }
 
-/* The transition overlay must not eat clicks: inputs that land during
-   the 550ms slide pass through to the incoming page and interrupt it,
-   instead of dying on the snapshot (rapid rail clicks felt stuck). */
+/* The transition overlay must not eat clicks: inputs that land during the swap
+   pass through to the incoming page instead of dying on the snapshot. */
 ::view-transition {
   pointer-events: none;
 }
 
-/* The slide stays inside the stage frame: snapshots render in the top
-   layer where no ancestor clips them, and the stage group paints above
-   the rail's (capture order follows DOM order), so an unclipped
-   translateX(±100%) sweeps the outgoing panel across the left menu. */
-::view-transition-image-pair(stage) {
-  overflow: clip;
+/* Kill the whole-page crossfade — the camera store IS the motion between routes
+   (§7.2/§7.3), so animating the root too would animate the desk twice (M4
+   note 2). The desk is carried by the live camera, kept OUT of the snapshot
+   (note 1). Only the named `unfold` element morphs. */
+::view-transition-group(root),
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
 }
 
-::view-transition-old(stage),
-::view-transition-new(stage) {
-  animation-duration: 550ms;
-  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
-  animation-fill-mode: both;
+/* UNFOLD / FOLD (§7.3). OPEN is no longer a VT animation at all — the reveal is
+   progress-locked to the camera push (the desk runtime drives --unfold-t; see
+   the data-unfolding rules below), and the incoming document is captured hidden,
+   so the new-side snapshot must stay inert. CLOSE keeps the VT: the outgoing
+   document (the only side named `unfold`) folds out with a fast fade. */
+::view-transition-group(unfold) {
+  animation-duration: 320ms;
+  animation-timing-function: var(--ease-physical);
 }
-html[data-nav-direction='forward']::view-transition-old(stage) {
-  animation-name: stage-out-left;
+::view-transition-new(unfold) {
+  animation: none;
 }
-html[data-nav-direction='forward']::view-transition-new(stage) {
-  animation-name: stage-in-right;
-}
-html[data-nav-direction='back']::view-transition-old(stage) {
-  animation-name: stage-out-right;
-}
-html[data-nav-direction='back']::view-transition-new(stage) {
-  animation-name: stage-in-left;
+::view-transition-old(unfold) {
+  animation: vt-fade-out 180ms ease-out both;
 }
 
-/* Shared markdown prose (case-study chapters, notes, log entries). */
+/* Shared markdown prose (experiment documents, notes, log entries). M6
+   migrated this off the legacy aliases: muted prose is --ink-soft ON PAPER
+   (5.1:1, M2 note 4), links carry the copper accent. */
 .prose-md h2 {
+  margin-top: 2rem;
   font-family: var(--font-display);
   font-size: 28px;
   font-weight: 500;
@@ -137,7 +176,7 @@ html[data-nav-direction='back']::view-transition-new(stage) {
 .prose-md p {
   margin-top: 0.75rem;
   max-width: 42rem;
-  color: var(--mist);
+  color: var(--ink-soft);
 }
 .prose-md ul,
 .prose-md ol {
@@ -145,16 +184,308 @@ html[data-nav-direction='back']::view-transition-new(stage) {
   max-width: 42rem;
   padding-left: 1.25rem;
   list-style: disc;
-  color: var(--mist);
+  color: var(--ink-soft);
 }
 .prose-md a {
-  color: var(--signal-text);
+  color: var(--copper-deep);
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 .prose-md code {
   font-family: var(--font-mono);
   font-size: 0.875em;
+}
+
+/* ---------------------------------------------------------------------------
+ * §10 — document furniture: the drafting title block, captioned figure
+ * plates (M8 fills the architecture plate per §11), and the honest-metrics
+ * ruled mono table. All of it sits on the paper sheet, so muted ink is safe
+ * (M2 note 4). The status dot is the forest-green live marker (§5), shared
+ * with the zone cards.
+ * --------------------------------------------------------------------------- */
+.status-dot {
+  display: inline-block;
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: var(--status);
+  vertical-align: middle;
+}
+
+/* The simpler documents (§10): notes are index cards, log entries notebook
+   pages — one mono micro meta row over a ruled line. */
+.doc-cardhead__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 0.5) var(--space);
+  margin-block-start: calc(var(--space) * 1.5);
+  padding-block-end: calc(var(--space) * 0.5);
+  border-block-end: 1px solid var(--paper-edge);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.doc-titleblock {
+  margin-block-start: calc(var(--space) * 2);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-paper);
+}
+.doc-titleblock__meta,
+.doc-titleblock__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--space) * 0.75) var(--space);
+  padding: calc(var(--space) * 0.75) var(--space);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+.doc-titleblock__meta {
+  border-block-end: 1px solid var(--paper-edge);
+  text-transform: uppercase;
+}
+.doc-titleblock__foot {
+  border-block-start: 1px solid var(--paper-edge);
+}
+.doc-titleblock__status {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space) * 0.5);
+}
+.doc-titleblock__title {
+  padding: calc(var(--space) * 1.25) var(--space);
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3.5vw, 2.25rem);
+  font-weight: 500;
+  line-height: 1.15;
+}
+.doc-titleblock__stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 0.5);
+}
+.doc-chip {
+  padding: 1px 6px;
+  border: 1px solid var(--paper-edge);
+  border-radius: 4px;
+}
+
+.doc__abstract {
+  margin-block-start: calc(var(--space) * 2.5);
+  max-inline-size: 42rem;
+  font-size: 1.0625rem;
+}
+.doc__question {
+  margin-block-start: calc(var(--space) * 0.75);
+  max-inline-size: 42rem;
+  color: var(--ink-soft);
+}
+.doc__body {
+  margin-block-start: calc(var(--space) * 1.5);
+}
+.doc__section {
+  margin-block-start: calc(var(--space) * 4);
+}
+.doc__h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.doc__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space) * 0.75) calc(var(--space) * 2);
+  margin-block-start: var(--space);
+  list-style: none;
+  padding: 0;
+}
+
+/* Figure plates (§10/§11): the reserved empty state hatches so it reads as a
+   deliberate placeholder, never a broken image box. */
+.fig-plate {
+  margin-block-start: calc(var(--space) * 4);
+}
+.fig-plate__empty {
+  display: grid;
+  place-items: center;
+  min-block-size: 10rem;
+  border: 1px dashed var(--ink-soft);
+  border-radius: var(--radius-paper);
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 14px,
+    color-mix(in srgb, var(--paper-edge) 60%, transparent) 14px 15px
+  );
+}
+.fig-plate__reserved {
+  padding: 2px 8px;
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.fig-plate__body {
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-paper);
+  padding: var(--space);
+}
+.fig-plate__body :is(video, img) {
+  inline-size: 100%;
+  max-block-size: 48vh;
+  border-radius: 6px;
+  object-fit: contain;
+}
+.fig-plate__body svg {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+
+/* ---------------------------------------------------------------------------
+ * §11 — architecture diagrams (M8). Hand-drawn QUALITY, digitally built: ink
+ * strokes through ONE wobble filter per diagram (geometry only — text stays
+ * crisp), mono for labels, Caveat for margin notes (the only handwriting on
+ * the site), and exactly one copper path — the critical flow.
+ * --------------------------------------------------------------------------- */
+.arch-diagram {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.arch-diagram .d-box {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Paper-tone panels are the ONLY fills (§11). */
+.arch-diagram .d-panel {
+  fill: var(--paper);
+}
+.arch-diagram .d-arrow {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Stated-but-not-wired / pending components: dashed, softer ink. */
+.arch-diagram .d-ghost {
+  stroke: var(--ink-soft);
+  stroke-dasharray: 4 3;
+}
+.arch-diagram .d-ghost-label {
+  fill: var(--ink-soft);
+}
+/* THE one copper path per diagram — the critical flow. */
+.arch-diagram .d-flow {
+  fill: none;
+  stroke: var(--copper);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.arch-diagram .d-arrowhead {
+  fill: var(--ink);
+  stroke: none;
+}
+.arch-diagram .d-flowhead {
+  fill: var(--copper);
+  stroke: none;
+}
+.arch-diagram .d-label {
+  fill: var(--ink);
+}
+.arch-diagram .d-sub {
+  fill: var(--ink-soft);
+  font-size: 10px;
+}
+.arch-diagram .d-group-label {
+  fill: var(--ink-soft);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Margin notes: Caveat + hand-drawn leader arrows — handwriting lives here
+   and nowhere else (§11). */
+.arch-diagram .d-note {
+  fill: var(--ink-soft);
+  font-family: var(--font-hand);
+  font-size: 15px;
+}
+.arch-diagram .d-leader {
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 1.25;
+  stroke-linecap: round;
+}
+@media (max-width: 767px) {
+  .arch-diagram .d-box,
+  .arch-diagram .d-arrow {
+    stroke-width: 1.25;
+  }
+  .arch-diagram .d-flow {
+    stroke-width: 1.75;
+  }
+}
+.fig-plate__caption {
+  margin-block-start: calc(var(--space) * 0.75);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+/* Honest metrics (§10.5): a ruled mono table. The wrapper scrolls sideways on
+   narrow screens (inside the sheet — never the page). */
+.metrics-wrap {
+  margin-block-start: var(--space);
+  overflow-x: auto;
+}
+.metrics-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.metrics-table th,
+.metrics-table td {
+  padding: calc(var(--space) * 0.75) var(--space) calc(var(--space) * 0.75) 0;
+  border-block-end: 1px solid var(--paper-edge);
+  text-align: left;
+  vertical-align: top;
+}
+.metrics-table thead th {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-block-end-color: var(--ink-soft);
+}
+.metrics-table tbody th {
+  font-weight: 400;
+  color: var(--ink);
+}
+.metrics-table__source {
+  color: var(--ink-soft);
+}
+.metrics-table__pending {
+  color: var(--ink-soft);
+}
+.metrics-table__note {
+  display: block;
+  color: var(--ink-soft);
 }
 
 /*
@@ -185,18 +516,724 @@ html[data-nav-direction='back']::view-transition-new(stage) {
 }
 
 /*
- * FR-07: reduced motion replaces slides with a ≤150ms fade.
- * Astro's ClientRouter injects `::view-transition-*(*) { animation: none
- * !important }` under this media query; the html prefix (higher
- * specificity) plus !important is required for the mandated fade to win.
+ * Reduced motion (§7, M4 note 7): the camera cuts instantly (the store), and
+ * unfold/fold collapse to a single ≤120ms crossfade. Re-enable a short root
+ * crossfade (the `html` prefix + !important beats ClientRouter's injected
+ * animation:none) and flatten the unfold morph so nothing translates/scales.
  */
 @media (prefers-reduced-motion: reduce) {
-  html::view-transition-old(stage),
   html::view-transition-old(root) {
-    animation: vt-fade-out 150ms ease-out both !important;
+    animation: vt-fade-out 120ms ease-out both !important;
   }
-  html::view-transition-new(stage),
   html::view-transition-new(root) {
-    animation: vt-fade-in 150ms ease-out both !important;
+    animation: vt-fade-in 120ms ease-out both !important;
+  }
+  ::view-transition-group(unfold) {
+    animation: none;
+  }
+  ::view-transition-old(unfold) {
+    animation: vt-fade-out 120ms ease-out both;
+  }
+  ::view-transition-new(unfold) {
+    animation: vt-fade-in 120ms ease-out both;
+    animation-delay: 0ms;
+  }
+}
+
+/* ==================================================================== *
+ * The desk (§3, §4) — Layer 1 content plane, Layer 2 HUD.
+ *
+ * Contrast rule (M2 note 4): text on the bare desk uses --ink only
+ * (10.4:1); muted (--ink-soft) and accent (--copper*) text lives on paper,
+ * where it passes AA (5.1 / 5.5). Do not put muted or accent text on the
+ * desk ground.
+ * ==================================================================== */
+
+:root {
+  /* Vertical room the fixed title block needs; zones keep clear of it. */
+  --hud-space: 12rem;
+}
+
+/* A paper chip so it reads as an intentional drafting label when it appears,
+   with the copper focus ring like every other interactive object (note 8). */
+.skip-link {
+  position: absolute;
+  inset-inline-start: -9999px;
+  z-index: 60;
+  padding: calc(var(--space) * 0.75) calc(var(--space) * 1.5);
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-paper);
+  box-shadow: var(--e2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.skip-link:focus {
+  inset-block-start: calc(var(--space) * 2);
+  inset-inline-start: calc(var(--space) * 2);
+  outline: 2px solid var(--copper);
+  outline-offset: 3px;
+}
+
+/*
+ * Layer 1 — the DOM content plane: a zero-size origin point pinned to the
+ * viewport, with zones positioned from it in desk units. The transform derives
+ * entirely from the server-rendered --cam-* variables, so a hard load is
+ * already posed with zero JS (rung 4) and M3's camera store animates these same
+ * variables rather than a second positioning system.
+ */
+/* The desk layers (field + plane), grouped so STACK blurs them as one full-size
+   filter layer (§7.4). Positioned so the fixed children still resolve against
+   the viewport. */
+.desk-behind {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+/* Layer 0 — the WebGL scene (§8): one viewport-fixed canvas behind the field and
+   plane. Painted at rung 2 (the CSS ground) first; the scene fades in over ~600ms
+   once three is loaded and the first frame is drawn (.is-lit). If it never loads
+   or fails, it stays transparent and the CSS ground shows through. */
+.desk-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  inline-size: 100vw;
+  block-size: 100vh;
+  pointer-events: none;
+  opacity: 0;
+}
+.desk-scene.is-lit {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .desk-scene {
+    transition: opacity 600ms var(--ease-settle);
+  }
+}
+
+/* Layer 0.5 — the agent field: one viewport-fixed canvas beneath the plane, so
+   the DOM plane's opaque paper occludes the marks (§12, M3 note 7). */
+.desk-field {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  /* vw/vh (not dvh) so the canvas's centre matches the DOM plane's 50vw/50vh
+     projection exactly — otherwise the marks drift vertically on mobile where
+     dvh != vh (M3 review). */
+  inline-size: 100vw;
+  block-size: 100vh;
+  pointer-events: none;
+  /* Between bakes the COMPOSITOR carries the graphite bitmap (perf fix): the
+     transform is the camera delta from the pose the bitmap was baked at
+     (--field-*, inline on the canvas, set by desk-field.ts at each settle) to
+     the live --cam-* vars the runtime writes each animated frame — the same
+     pattern as .desk-plane. At rest and before the first bake it is identity.
+     No canvas repaints happen during a move; the field re-bakes once at
+     settle. */
+  transform: translate3d(
+      calc((var(--field-x0, var(--cam-x)) - var(--cam-x)) * var(--cam-zoom) * 1px),
+      calc((var(--field-y0, var(--cam-y)) - var(--cam-y)) * var(--cam-zoom) * 1px),
+      0
+    )
+    scale(calc(var(--cam-zoom) * var(--field-z0-inv, 1)));
+}
+/* Behind an open document the field is unmounted (no frames run), so the
+   persisted bitmap would sit frozen at the pre-open pose while the camera
+   pushed on without it — hide it; the marks return, re-projected, when the
+   document folds closed (M7 review). */
+body[data-view='document'] .desk-field {
+  visibility: hidden;
+}
+
+.desk-plane {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: 2;
+  inline-size: 0;
+  block-size: 0;
+  transform-origin: 0 0;
+  transform: translate3d(
+      calc(50vw - var(--cam-x) * var(--cam-zoom) * 1px),
+      calc(50vh - var(--cam-y) * var(--cam-zoom) * 1px),
+      0
+    )
+    scale(var(--cam-zoom));
+}
+
+/* During a Slide (M3) every zone renders, so the arriving zone is not blank as
+   it enters and the departing one keeps drawing as it leaves (note 2). The
+   desk-nav controller toggles .is-sliding for the tween's duration. */
+.desk-plane.is-sliding .zone {
+  content-visibility: visible;
+}
+
+/* ---------------------------------------------------------------------------
+ * STACK (§7.4): while a document is open, the desk beneath recedes. Exactly one
+ * filter layer — the plane blurs on desktop; the field is hidden (it would be a
+ * second filter, and is decorative). On mobile / reduced motion / no-blur
+ * fallback the blur is replaced by an opacity scrim. Eased over --t-stack, but
+ * applied instantly on a hard load (no class change to transition) — note 5.
+ * --------------------------------------------------------------------------- */
+body[data-view='document'] .desk-behind {
+  filter: blur(var(--glass-blur)) saturate(0.96);
+}
+.stack-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  background: var(--desk-deep);
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .desk-behind {
+    transition: filter var(--t-stack) var(--ease-settle);
+  }
+  .stack-scrim {
+    transition: opacity var(--t-stack) var(--ease-settle);
+  }
+}
+/* Mobile / fallback: no blur (cheap), an opacity scrim instead (§7.4). */
+@media (max-width: 767px) {
+  body[data-view='document'] .desk-behind {
+    filter: none;
+  }
+  body[data-view='document'] .stack-scrim {
+    opacity: 0.55;
+  }
+}
+/* Reduced motion: scrim, applied instantly (the transition is gated off). */
+@media (prefers-reduced-motion: reduce) {
+  body[data-view='document'] .desk-behind {
+    filter: none;
+  }
+  body[data-view='document'] .stack-scrim {
+    opacity: 0.55;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * UNFOLD (§7.3 amended + FIX A). EVERY document open hides the incoming
+ * document (body[data-unfold=traveling]) — a cross-zone open through Beat 1's
+ * travel, a same-zone open through the first 60% of its push — so the move reads
+ * as desk motion until the reveal. The runtime then swaps the attribute for
+ * body[data-unfolding] and drives --unfold-t from the push's progress: the
+ * document unfolds from the parent zone's card position (--unfold-ox/oy, note 4)
+ * across the final ~40% of the push.
+ * --------------------------------------------------------------------------- */
+body[data-view='document'] .document {
+  transform-origin: var(--unfold-ox, 50%) var(--unfold-oy, 50%);
+}
+/* The reveal window (FIX A): while body[data-unfolding], the document's
+   opacity/scale are a pure function of --unfold-t — written by the desk runtime
+   every tween tick, 0 until the push passes 60%, ramping to 1 at its end. NO
+   time-based transition here: the reveal must ride the camera's clock, never its
+   own. The marker is removed when the reveal completes, so the rest state (and
+   any hard load) carries no transform at all. */
+body[data-view='document'][data-unfolding] .document {
+  opacity: var(--unfold-t, 0);
+  transform: scale(calc(0.86 + 0.14 * var(--unfold-t, 0)));
+  /* No mis-clicks on a faint, scaling target during the ~180ms ramp (review);
+     interactivity arrives with the completed reveal (the marker's removal). */
+  pointer-events: none;
+}
+/* Pre-reveal (either flavour): the document is hidden. visibility:hidden (not
+   just opacity) so the not-yet-shown document is out of the tab order and the
+   a11y tree — opacity:0 alone leaves it focusable and screen-reader-readable.
+   It switches instantly (not transitioned) so the data-unfolding window starts
+   cleanly. */
+body[data-view='document'][data-unfold] .document {
+  visibility: hidden;
+  opacity: 0;
+  transform: scale(0.86);
+  pointer-events: none;
+}
+/* `traveling` only (before the push): the desk is NOT yet stacked — no blur, no
+   scrim, so Beat 1 reads as a plain Slide. Once the push starts (`pushing`)
+   these no longer match: the blur/scrim ride their --t-stack transition from
+   push start and finish before the settle (review), while the document itself
+   stays hidden until the 60% reveal. */
+body[data-view='document'][data-unfold='traveling'] .desk-behind {
+  filter: none;
+}
+body[data-view='document'][data-unfold='traveling'] .stack-scrim {
+  opacity: 0;
+}
+
+.zone {
+  position: absolute;
+  inset-block-start: calc(var(--zone-y) * 1px);
+  inset-inline-start: calc(var(--zone-x) * 1px);
+  transform: translate(-50%, -50%);
+  /* Tracks the viewport so a zone can never park content out of reach on a
+     small screen (note 6). Below 768px the §13 roll re-lays all of this
+     (the mobile block at the end of this file). */
+  inline-size: min(64rem, calc((100vw - var(--space) * 5) / var(--cam-zoom)));
+}
+
+/* Off-zone content is skipped until it matters (§4). */
+.zone:not([data-current]) {
+  content-visibility: auto;
+  contain-intrinsic-size: 64rem 40rem;
+}
+
+/* The sanctioned contained scroll: a zone taller than the viewport scrolls
+   inside itself instead of trapping content (note 6). */
+.zone__sheet {
+  /* Cap to the viewport, less a small margin. The zone box is centred on its
+     anchor, so reserving HUD space here would be split top *and* bottom and the
+     last line would still slide under the title block — the clearance is
+     therefore padding *inside* the scroll container, which holds whether the
+     zone scrolls or not (note 6). */
+  max-block-size: calc((100dvh - var(--space) * 4) / var(--cam-zoom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-soft) transparent;
+  /* Breathing room so focus rings survive the scroll container's clip. */
+  padding: 4px;
+  /* Clear the fixed title block with a comfortable visual gap (~24px on top of
+     the HUD reserve; note 8a). Divided by zoom because the plane scales the
+     sheet, so plane-space padding renders at padding x zoom. M9 owns the real
+     compact mobile strip. */
+  padding-block-end: calc((var(--hud-space) + var(--space) * 3) / var(--cam-zoom));
+}
+
+.zone-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.zone-title {
+  margin-block-start: var(--space);
+  font-size: var(--fs-h1);
+  line-height: 1.15;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.zone-empty {
+  margin-block-start: calc(var(--space) * 3);
+  color: var(--ink);
+}
+
+/* Paper objects — elevation 1 resting paper. */
+.paper-card {
+  display: block;
+  block-size: 100%;
+  padding: calc(var(--space) * 2);
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-paper);
+  box-shadow: var(--e1);
+  color: var(--ink);
+  text-decoration: none;
+}
+.paper-card--compact {
+  padding: calc(var(--space) * 1.5) calc(var(--space) * 2);
+}
+/* LIFT (§7.1, M7): hover raises the card −4px; the shadow crossfades e1→e2 on
+   a second shadow layer (the ::after's opacity — compositor-friendly, per
+   spec); polish.ts adds the ≤1.2° cursor tilt on fine pointers. Gated on
+   hover-capable devices — touch never lifts, it gets the press state. The
+   copper focus ring is global (§7.1). */
+.paper-card {
+  position: relative;
+}
+.paper-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: var(--radius-paper);
+  box-shadow: var(--e2);
+  opacity: 0;
+}
+.paper-card:hover {
+  border-color: var(--copper);
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .paper-card {
+    transition:
+      border-color 150ms var(--ease-settle),
+      transform var(--t-lift-out) var(--ease-settle);
+  }
+  .paper-card::after {
+    transition: opacity var(--t-lift-out) var(--ease-settle);
+  }
+  .paper-card:hover {
+    transform: perspective(600px) translateY(-4px) rotateX(var(--tilt-x, 0deg))
+      rotateY(var(--tilt-y, 0deg));
+    transition-duration: 150ms, var(--t-lift-in);
+  }
+  .paper-card:hover::after {
+    opacity: 1;
+    transition-duration: var(--t-lift-in);
+  }
+  /* Hybrid devices (review): a tap sets sticky :hover, but rule §13 is "touch
+     gets the press state, never hover" — polish.ts stamps the live input
+     modality and touch cancels the lift. */
+  html[data-input='touch'] .paper-card:hover {
+    transform: none;
+  }
+  html[data-input='touch'] .paper-card:hover::after {
+    opacity: 0;
+  }
+}
+/* Press (§13): every pointer — settle back onto the desk at e1. */
+.paper-card:active {
+  transform: scale(0.99);
+}
+.paper-card:active::after {
+  opacity: 0;
+}
+
+/* Small interactive chips (commit chips etc.) get a quiet 2px lift. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  a.chip {
+    display: inline-block;
+    transition:
+      transform var(--t-lift-out) var(--ease-settle),
+      border-color 150ms var(--ease-settle),
+      color 150ms var(--ease-settle);
+  }
+  a.chip:hover {
+    transform: translateY(-2px);
+    transition-duration: var(--t-lift-in), 150ms, 150ms;
+  }
+}
+a.chip:active {
+  transform: none;
+}
+
+/* The ink-reveal flourish (§7 — THE only one): a hand-drawn annotation
+   underline. Statically visible (rung 4, and for anyone who has seen it this
+   session); .ink-draw plays the 500ms draw-in once per session per zone
+   (polish.ts). Skipped under reduced motion. */
+.ink-underline {
+  display: block;
+  inline-size: min(100%, 14rem);
+  block-size: 8px;
+  margin-block-start: 4px;
+  overflow: visible;
+}
+.ink-underline path {
+  fill: none;
+  stroke: var(--copper);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: 100 100;
+  stroke-dashoffset: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ink-underline.ink-draw path {
+    animation: ink-draw 500ms var(--ease-settle) both;
+  }
+}
+@keyframes ink-draw {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.paper-card__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.paper-card__title {
+  margin-block-start: calc(var(--space) * 0.75);
+  font-size: var(--fs-h2);
+  line-height: 1.25;
+  font-weight: 500;
+  color: var(--ink);
+}
+.paper-card__note {
+  margin-block-start: calc(var(--space) * 0.75);
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.paper-card__foot {
+  margin-block-start: calc(var(--space) * 1.5);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+/* A link on the bare desk stays ink + underline — accent colour would drop
+   below AA on the ground (note 4). */
+.desk-link {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.desk-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* A link on paper may take the accent: copper-deep is AA there (5.5:1). */
+.paper-link {
+  color: var(--copper-deep);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.paper-link:hover {
+  color: var(--ink);
+}
+
+/*
+ * An open document (Sheet layout) — elevation 3, above the Stacked desk (plane
+ * z1, scrim z2) and below the title-block HUD (z40). M6 owns the document
+ * content; its existing markup fills this box unchanged. The paper stage also
+ * resolves the M1 contrast flag — muted prose sits at 5.1:1 here, not 3.5:1 on
+ * the bare desk (note 4).
+ */
+.document {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  padding: calc(var(--space) * 2);
+  /* The HUD reserve is viewport-relative: a fixed 12rem ate most of a short
+     viewport and starved the sheet. */
+  padding-block-end: min(var(--hud-space), 30dvh);
+  /* Short viewports scroll the stage rather than crushing the reading pane to
+     zero — the document templates size their panes with flex-1/min-h-0, which
+     otherwise absorb the whole deficit and become unreachable. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-soft) transparent;
+}
+.document__sheet {
+  block-size: 100%;
+  /* Floor so the inner pane always has room to render and scroll. */
+  min-block-size: 22rem;
+  inline-size: min(80rem, 100%);
+  margin-inline: auto;
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-paper);
+  box-shadow: var(--e3);
+  /* The page's own contained scroll (.panel-scroll) does the scrolling. */
+  overflow: hidden;
+}
+
+/* The document close affordance (§13 note: Esc has no key on touch). A real
+   link to the parent zone — the same fold every other close path takes, and
+   it works at rung 4. Desktop keeps Esc / Back / the title block; the chip is
+   mobile chrome only. */
+.doc-close {
+  display: none;
+}
+
+/* ==================================================================== *
+ * §13 — Mobile (< 768px): the vertical roll (M9).
+ *
+ * Zone routes collapse to a single-axis native scroll: the ROOT scroller
+ * IS the camera's y — desk.ts mirrors a user scroll into the store and
+ * drives the scroller from the store during navigations (one positioning
+ * system, §3). Zones stack in sheet order, each at least a viewport tall,
+ * snapping at their tops; a store-driven tween disarms the snap
+ * (html[data-roll-tween]) and always ends ON a snap position, so re-arming
+ * never jumps.
+ *
+ * THE ROLL IS GATED ON html[data-js]. Landing the scroll at the current
+ * zone and lifting the off-zone `inert` fences are both JS (adoptRollRest /
+ * applyModality in desk.ts). Without them the roll would stack five zones,
+ * open at Home for every route, and leave four zones visible-but-inert —
+ * dead to touch and absent from the a11y tree. So rung 4 (no JS) keeps the
+ * server-posed single-zone view — usable, operable, screen-reader-correct —
+ * exactly as desktop rung 4 does (review: rung-4 land-at-top / inert-zones).
+ *
+ * Document routes do NOT roll: they keep the fixed posed plane behind the
+ * full-screen sheet (a hard load is posed with zero JS — rung 4), rendered
+ * as a STATIC zoom-1 backdrop (§13 static camera; zoom is the reveal's
+ * progress clock on mobile, never a projection input). Stack is the opacity
+ * scrim — the no-blur rules further up already cover < 768px. Document
+ * chrome is rung-independent, so it is NOT gated on data-js.
+ * ==================================================================== */
+@media (max-width: 767px) {
+  /* Never a horizontal scroll trap, at any rung. */
+  html {
+    overflow-x: clip;
+  }
+  html[data-js] {
+    scroll-snap-type: y mandatory;
+    /* Focus/anchor scroll-into-view clears the fixed bottom strip (§14 focus
+       not obscured); the fixed close chip's band is cleared on the panes. */
+    scroll-padding-block-end: var(--tb-strip);
+  }
+  html[data-js][data-roll-tween] {
+    scroll-snap-type: none;
+  }
+
+  /* FR-01's "the desk never scrolls" is desktop law — on the roll the scroll
+     IS the Slide (§13). Document routes keep the base overflow:hidden. */
+  html[data-js] body[data-view='zone'] {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+    /* The two-tone ground rides the VIEWPORT, not the (now tall) document —
+       a fixed underlay keeps the light pool anchored exactly where the
+       rung-2 gradient and the scene's grade expect it. */
+    background-image: none;
+  }
+  html[data-js] body[data-view='zone']::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--desk);
+    background-image: radial-gradient(
+      145% 125% at 50% 38%,
+      var(--desk-pool) 0%,
+      var(--desk) 46%,
+      var(--desk-deep) 100%
+    );
+  }
+
+  /* The roll layout: the behind-wrapper joins the flow (its canvases stay
+     viewport-fixed); the plane is positioned at z-index 2 so it keeps the
+     desktop stacking order scene(0) < field(1) < plane(2) — un-positioning
+     .desk-behind dissolves its context, promoting the fixed canvases into
+     the root context where they would otherwise paint OVER the in-flow zone
+     text once the scene lights up (review BLOCKER). `position: relative`
+     with no offsets keeps the static-flow layout the gBCR snap map reads. */
+  html[data-js] body[data-view='zone'] .desk-behind {
+    position: static;
+  }
+  html[data-js] body[data-view='zone'] .desk-plane {
+    position: relative;
+    z-index: 2;
+    inline-size: auto;
+    block-size: auto;
+    transform: none;
+  }
+  /* Static flow, untransformed — the gBCR offsets desk.ts measures ARE the
+     snap map. Each zone is at least one viewport tall; a taller zone scrolls
+     freely inside its snap area (CSS snap permits rests within an oversized
+     area), so nothing nests a second scroll. */
+  html[data-js] body[data-view='zone'] .zone {
+    position: static;
+    transform: none;
+    inline-size: auto;
+    min-block-size: 100dvh;
+    scroll-snap-align: start;
+  }
+  html[data-js] body[data-view='zone'] .zone:not([data-current]) {
+    contain-intrinsic-size: auto 100dvh;
+  }
+  /* The roll scrolls; sheets don't (no nested touch scrolling). §13 gutters
+     (20px, grown for notches); the strip clearance keeps the last line
+     reachable above the fixed bottom strip. */
+  html[data-js] body[data-view='zone'] .zone__sheet {
+    max-block-size: none;
+    overflow: visible;
+    padding: calc(var(--space) * 3) max(20px, env(safe-area-inset-right))
+      calc(var(--tb-strip) + var(--space) * 3) max(20px, env(safe-area-inset-left));
+  }
+
+  /* The skip chip pins to the viewport — an absolute chip would sit at the
+     top of the tall roll document, off-screen from anywhere below Home. */
+  html[data-js] .skip-link {
+    position: fixed;
+  }
+
+  /* Document routes: the desk behind is a STATIC backdrop. The server vars
+     hold the parent pose; the transform ignores zoom, so the plane renders
+     head-on at rest scale and never moves behind the scrim. */
+  body[data-view='document'] .desk-plane {
+    transform: translate3d(
+      calc(50vw - var(--cam-x) * 1px),
+      calc(50dvh - var(--cam-y) * 1px),
+      0
+    );
+  }
+  body[data-view='document'] .zone {
+    inline-size: min(64rem, calc(100vw - var(--space) * 5));
+  }
+  body[data-view='document'] .zone__sheet {
+    max-block-size: calc(100dvh - var(--space) * 4);
+    padding-block-end: calc(var(--tb-strip) + var(--space) * 3);
+  }
+
+  /* Documents are full-screen paper (§13): edge-to-edge sheet, no HUD
+     reserve — the strip overlays, and the contained scroll clears it (and
+     the roll behind never chain-scrolls) from inside. */
+  .document {
+    padding: 0;
+  }
+  .document__sheet {
+    inline-size: 100%;
+    block-size: 100%;
+    min-block-size: 0;
+    border: 0;
+    border-radius: 0;
+  }
+  /* Reserve the fixed close chip's band so no template's header text lays
+     out under it (the chip is opaque, top-right, z-index 45 — review: it
+     covered the meta row / title on notched phones). Applies to whatever
+     the slot renders (the header sits OUTSIDE the scroll pane in the note /
+     log templates, so padding the pane alone would not clear it). */
+  .document__sheet > * {
+    padding-block-start: calc(
+      max(var(--space), env(safe-area-inset-top)) + 44px + var(--space)
+    );
+  }
+  .document :is(.panel-scroll, .note-pane) {
+    overscroll-behavior: contain;
+    padding-block-end: calc(var(--tb-strip) + var(--space) * 2);
+    /* Tabbing/anchoring inside the pane clears both fixed affordances. */
+    scroll-padding-block-end: calc(var(--tb-strip) + var(--space) * 2);
+    scroll-padding-block-start: calc(env(safe-area-inset-top) + 44px + var(--space));
+  }
+
+  /* The close chip: fixed over the sheet, ≥44px target, §13 press state
+     (scale 0.99 + e1). Pre-reveal it is hidden with the document
+     (body[data-unfold] covers the whole <main>). */
+  .doc-close {
+    position: fixed;
+    inset-block-start: max(var(--space), env(safe-area-inset-top));
+    inset-inline-end: max(var(--space), env(safe-area-inset-right));
+    z-index: 45;
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--space) * 0.75);
+    min-block-size: 44px;
+    padding: 0 calc(var(--space) * 1.75);
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-paper);
+    box-shadow: var(--e2);
+    font-family: var(--font-mono);
+    font-size: var(--fs-micro);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .doc-close:active {
+    transform: scale(0.99);
+    box-shadow: var(--e1);
   }
 }

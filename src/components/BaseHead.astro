@@ -1,0 +1,72 @@
+---
+/**
+ * Shared document head for both desk layouts (Desk, Sheet).
+ *
+ * Preloads Geist 400/500/700: the §6 display heading (700) now paints above the
+ * fold on Home, so M1's 400+500-only rationale has expired (M2 note 7). Geist
+ * Mono self-hosts via CSS but is not preloaded; Caveat is never preloaded — it
+ * loads lazily with diagram components only (§6/§11).
+ */
+import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import geist400Url from '@fontsource/geist/files/geist-latin-400-normal.woff2?url';
+import geist500Url from '@fontsource/geist/files/geist-latin-500-normal.woff2?url';
+import geist700Url from '@fontsource/geist/files/geist-latin-700-normal.woff2?url';
+
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+}
+
+const { title, description, ogImage = '/og/default.png' } = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImageURL = new URL(ogImage, Astro.site);
+---
+
+<meta charset="utf-8" />
+<!-- viewport-fit=cover: the §13 strip and close chip pad by env(safe-area-*),
+     which stays 0 without it on notched phones (M9). -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="preload" href={geist400Url} as="font" type="font/woff2" crossorigin />
+<link rel="preload" href={geist500Url} as="font" type="font/woff2" crossorigin />
+<link rel="preload" href={geist700Url} as="font" type="font/woff2" crossorigin />
+<meta name="generator" content={Astro.generator} />
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+<!-- Open Graph / Twitter (FR-82). -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="philsanjaya.com" />
+<meta property="og:url" content={canonical} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={ogImageURL} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImageURL} />
+<link rel="sitemap" href="/sitemap-index.xml" />
+<script is:inline>
+  // `data-js` marks that scripting ran, revealing JS-only controls (FR-74).
+  //
+  // The theme code path is kept stubbed but has no visible control in v1:
+  // dark mode ("workshop at night") is deferred, and its palette is specified
+  // in handoff §16 (§2 — hide the settings control, keep the path).
+  (() => {
+    const apply = () => {
+      document.documentElement.dataset.js = '';
+      const stored = localStorage.getItem('theme');
+      if (stored === 'light' || stored === 'dark') {
+        document.documentElement.dataset.theme = stored;
+      } else {
+        delete document.documentElement.dataset.theme;
+      }
+    };
+    apply();
+    document.addEventListener('astro:after-swap', apply);
+  })();
+</script>
+<ClientRouter />
