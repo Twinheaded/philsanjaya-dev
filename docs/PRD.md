@@ -307,11 +307,11 @@ Dates assume post-semester availability and are adjustable; sequence is not.
 
 ## 14. Execution environment and workflow (Claude Code)
 
-**Machine:** Windows, NVIDIA RTX 4050. **Runtime:** Node.js ≥ 20 LTS, npm. This is a Node project — `phil_venv` rules do not apply unless a Python utility is introduced (then standard `phil_venv` rules apply).
+**Machine:** Windows, NVIDIA RTX 4050. **Runtime:** Node.js ≥ 20 LTS, npm. This is a Node project — Python `.venv` rules do not apply unless a Python utility is introduced (then standard `.venv` rules apply).
 
-1. **Shell discipline.** Prefix shell executions with `cmd /c` (e.g. `cmd /c npm run build`) so processes terminate cleanly. Avoid interactive/persistent shells.
+1. **Shell discipline.** Run commands directly in PowerShell or Git Bash, with no shell wrapper (e.g. `npm run build`). Run long-lived processes such as the dev server in the background. Avoid interactive/persistent shells.
 2. **One issue at a time, in numeric order** (1.1 → 1.2 → …). Do not start a milestone until the previous one is reviewed by Phil.
-3. **Verify before commit.** A task is done only when `cmd /c npm run build` passes **and** the behaviour is confirmed in the dev server. Never commit untested work. From PHI-48 onward, `cmd /c npm test` must also pass locally, and CI must be green on the pushed commit before a milestone is reviewed.
+3. **Verify before commit.** A task is done only when `npm run build` passes **and** the behaviour is confirmed in the dev server. Never commit untested work. From PHI-48 onward, `npm test` must also pass locally, and CI must be green on the pushed commit before a milestone is reviewed.
 4. **Stop on failure.** Surface the error and halt; never build the next step on a broken state.
 5. **Commits.** Conventional Commits, imperative mood, subject < 72 chars, footer `Refs: PHI-xx`. One issue may span multiple commits; each commit is a runnable checkpoint.
 6. **Paths** relative; no hardcoded absolute paths; configuration in files, not constants.
@@ -356,7 +356,7 @@ Paste into Claude Code from the empty project folder:
 >
 > You are the builder for my portfolio website. The Linear project "Portfolio Website" tracks the work: milestones M1–M5, issues PHI-27 through PHI-49, numbered 1.1 → 5.2 (note: 1.5 = PHI-48 and 1.6 = PHI-49 were added in PRD v1.1). Execute **M1 only** for now, one issue at a time in numeric order, starting with PHI-27 (1.1 Scaffold).
 >
-> Non-negotiables from the PRD: Windows shell discipline (`cmd /c` prefix, §14.1); verify with `cmd /c npm run build` plus a manual dev-server check before any commit (§14.3); stop immediately on failure (§14.4); Conventional Commits with footer `Refs: PHI-xx` (§14.5); the honest-numbers rule applies to everything, including UI chrome (§4.2).
+> Non-negotiables from the PRD: Windows shell discipline (no shell wrapper, §14.1); verify with `npm run build` plus a manual dev-server check before any commit (§14.3); stop immediately on failure (§14.4); Conventional Commits with footer `Refs: PHI-xx` (§14.5); the honest-numbers rule applies to everything, including UI chrome (§4.2).
 >
 > When all six M1 issues (PHI-27 → PHI-30, PHI-48, PHI-49) are done and verified, stop and report back with: the live deploy URL, the CI status, the commit list, and anything that deviated from the PRD. I will review before M2 begins.
 
