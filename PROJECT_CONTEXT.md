@@ -1,8 +1,8 @@
 # PROJECT_CONTEXT — philsanjaya.com
 
-What this project is and how it works, as of **2026-11-05** (written during the
-PHI-121 read-only audit; describes `main` at `dc88124`). Refresh it when a
-milestone closes.
+What this project is and how it works, as of **2026-11-06** (written during the
+PHI-121 read-only audit against `main` at `dc88124`; updated for PHI-159, which
+removed the Notes and Log sections). Refresh it when a milestone closes.
 
 ## What it is, and for whom
 
@@ -13,9 +13,12 @@ site has to load, read correctly, and be truthful: it follows an
 an em-dash, never a guess). The specification is [docs/PRD.md](docs/PRD.md);
 architecture decisions are in [docs/adr/](docs/adr/) (0001–0007).
 
-The design is a **fixed-viewport, no-scroll shell**: five top-level panels
-(Home, Projects, Notes, Log, About) slide sideways instead of the page
-scrolling. A small canvas of autonomous "steering agents" (Phil's COS30002
+The design is a **fixed-viewport, no-scroll shell**: three top-level panels
+(01 Home, 02 Projects, 03 About) slide sideways instead of the page
+scrolling. Notes and Log were removed in PHI-159 (Nov 2026) so the site reads
+as a portfolio, not a learning journal; their markdown is kept, unbuilt, in
+`archive/` (see `archive/README.md`), and `public/_redirects` sends their old
+URLs to `/` with a 301. A small canvas of autonomous "steering agents" (Phil's COS30002
 wander/align/flee maths, ported to TypeScript) runs behind the home hero.
 
 ## Stack
@@ -26,10 +29,10 @@ wander/align/flee maths, ported to TypeScript) runs behind the home hero.
 | Styling | Tailwind CSS v4 via `@tailwindcss/vite`; colour tokens as CSS custom properties mapped with `@theme inline` | `src/styles/global.css`, `src/styles/tokens.css` |
 | Fonts | Self-hosted `@fontsource` (Archivo 500, Instrument Sans 400/500, IBM Plex Mono 400); three latin woff2 subsets preloaded | `src/layouts/Shell.astro:7-34` |
 | Client JS | Vanilla TypeScript only (no client framework, ADR 0003) | `src/islands/agents/`, inline `<script>`s in pages |
-| Content | Astro content collections with zod schemas (`projects`, `notes`, `buildlog`), markdown files | `src/content.config.ts`, `src/content/**` |
+| Content | Astro content collection with a zod schema (`projects`), markdown files. Former `notes`/`buildlog` markdown sits in `archive/`, outside the build | `src/content.config.ts`, `src/content/projects/**`, `archive/` |
 | OG images | Built at build time with satori → resvg, one per project + default | `src/pages/og/[...route].png.ts` |
 | SEO | `@astrojs/sitemap`, generated `robots.txt`, per-page canonical/OG/Twitter tags, JSON-LD `Person` on home | `Shell.astro:21-50`, `src/pages/robots.txt.ts`, `src/pages/index.astro:8-27` |
-| Tests | Vitest, 29 tests on the steering maths only | `src/islands/agents/behaviours.test.ts` |
+| Tests | Vitest: 29 tests on the steering maths, 4 on the panel sequence | `src/islands/agents/behaviours.test.ts`, `src/lib/panels.test.ts` |
 | Node | CI uses Node 22; `.node-version` = 22; `engines` `>=22.12.0`. Local machine: Node 24.16.0, npm 11.13.0 at `C:\Program Files\nodejs` (on PATH, no prelude needed) | |
 
 > Doc drift: `README.md:15` still says "Astro 5"; the code and ADR 0006 say Astro 6.
@@ -41,18 +44,19 @@ src/content/*.md  ──(zod schema, build fails on bad frontmatter)──┐
                                                                   ▼
 src/pages/*.astro ── Shell.astro (head, rail nav, ClientRouter) ── astro build ──► dist/  (static HTML/CSS/JS, OG PNGs, sitemap)
 src/islands/agents/*.ts ── bundled by Vite ───────────────────────┘                  │
-public/ (_headers, resume.pdf, media/, favicon) ── copied as-is ────────────────────┘
+public/ (_headers, _redirects, resume.pdf, media/, favicon) ─ as-is ────────────────────┘
                                                                                      ▼
                                        GitHub Actions `deploy` job ── wrangler pages deploy ──► Cloudflare Pages project `philsanjaya-dev`
                                                                                                     ├─ philsanjaya.com (production, custom domain)
                                                                                                     └─ philsanjaya-dev.pages.dev (same build)
 ```
 
-**Routes (18 HTML pages + OG images + robots/sitemap):** `/`, `/projects`,
+**Routes (9 HTML pages + OG images + robots/sitemap):** `/`, `/projects`,
 `/projects/<slug>` (5 published studies: ctf-arena, aegisx, market-sentiment,
-power-forecasting, this-website), `/notes` (+ pagination), `/notes/<slug>` (1),
-`/log` + `/log/2` (pagination), `/log/<slug>` (entries 00–04), `/about`,
-`/404`, `/og/<slug>.png`, `/robots.txt`, `/sitemap-index.xml`, `/resume.pdf`.
+power-forecasting, this-website), `/about`, `/404`, `/og/<slug>.png`,
+`/robots.txt`, `/sitemap-index.xml`, `/resume.pdf`. Old `/notes…` and `/log…`
+URLs 301 to `/` via `public/_redirects` (Cloudflare only; `astro preview`
+ignores the file).
 
 **Key modules**
 
@@ -66,8 +70,9 @@ power-forecasting, this-website), `/notes` (+ pagination), `/notes/<slug>` (1),
   become chapters; with JS they are shown one at a time as slides, without JS
   they stack in one scrollable frame. Chapter 0 is a generated metric dashboard
   (`MetricCard.astro`).
-- `src/components/NotePane.astro` — the contained-scroll reading pane for
-  notes/log entries, with a small inline script that toggles the bottom fade.
+- `src/components/NotePane.astro` — the contained-scroll reading pane that
+  notes/log entries used, with a small inline script that toggles the bottom
+  fade. **Unused since PHI-159**; kept so Notes or Log can be restored.
 - `src/islands/agents/engine.ts` / `behaviours.ts` / `readout.ts` — the
   canvas island: pure steering functions (tested) plus the canvas loop,
   route-keyed behaviour, reduced-motion static frame, `d` debug overlay.
@@ -79,7 +84,7 @@ power-forecasting, this-website), `/notes` (+ pagination), `/notes/<slug>` (1),
 | Boundary | Notes |
 | --- | --- |
 | Content → HTML | All content is Phil's own markdown in the repo, rendered at build time. No user input, no forms, no server runtime. |
-| Browser | Static files only. CSP from `public/_headers`: `script-src 'self'` + two sha256 hashes pinning the two inline scripts (theme snippet; reading-pane mask). JSON-LD is a data block, not covered by script-src. |
+| Browser | Static files only. CSP from `public/_headers`: `script-src 'self'` + two sha256 hashes pinning the two inline scripts (theme snippet; reading-pane mask). Since PHI-159 no built page carries the reading-pane script, so its hash is unused but left in place for a restore. JSON-LD is a data block, not covered by script-src. |
 | GitHub (`Twinheaded/philsanjaya-dev`, **public**) | One collaborator. `main` has **no branch protection**. Workflow token is read-only (`permissions: contents: read`; repo default `read`). Dependabot security updates are on (10 open dependency PRs). |
 | GitHub Actions → Cloudflare | Repo secret `CLOUDFLARE_API_TOKEN` (last set 2026-07-19, PHI-60 rotation). Account ID is in `ci.yml` in clear (an identifier, not a secret). |
 | Cloudflare zone | DNS + registrar for philsanjaya.com (renewal due 2027-07-04). `www` → apex and http → https are zone redirect rules. **Zone-level Email Obfuscation is on**: Cloudflare rewrites the About page's `mailto:` link and injects a decode script at the edge — that behaviour is not in the repo. |
@@ -134,6 +139,9 @@ reduced motion honoured; fully readable without JavaScript (FR-74).
 
 ## Changes in this refresh
 
-First version of this file on `main` (none existed before). Facts that were
+**PHI-159 (2026-11-06):** Notes and Log removed; three panels; routes, content,
+tests, CSP and `NotePane` notes updated above.
+
+**PHI-121 (2026-11-05):** first version of this file (none existed before). Facts that were
 stale elsewhere and are corrected here: the stack is Astro 6, not Astro 5;
 `main` already has a `verify` script; Node is installed system-wide.

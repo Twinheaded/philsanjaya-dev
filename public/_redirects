@@ -1,0 +1,11 @@
+# Cloudflare Pages redirects (PHI-159). Notes and Log were removed from the
+# site; old links and search results land on the home page, not a 404.
+# Static rules come before splat rules (Cloudflare: top-most match wins).
+# The trailing-slash forms are listed explicitly because Cloudflare does not
+# document whether an empty splat (/notes/*) matches /notes/.
+/notes    /  301
+/notes/   /  301
+/log      /  301
+/log/     /  301
+/notes/*  /  301
+/log/*    /  301

@@ -1,7 +1,8 @@
 /**
- * Content collections (FR-20): projects, notes, buildlog. Adding content
- * is a markdown file, never a code change (FR-24). Invalid frontmatter
- * fails the build.
+ * Content collections (FR-20): projects. Adding content is a markdown
+ * file, never a code change (FR-24). Invalid frontmatter fails the build.
+ * The notes and buildlog collections were removed in PHI-159; their
+ * markdown is kept, unbuilt, in archive/ (see archive/README.md).
  */
 
 import { defineCollection, z } from 'astro:content';
@@ -57,29 +58,4 @@ const projects = defineCollection({
   }),
 });
 
-const notes = defineCollection({
-  loader: glob({ base: './src/content/notes', pattern: CONTENT_GLOB }),
-  schema: z.object({
-    title: z.string().min(1),
-    date: z.coerce.date(),
-    summary: z.string().max(160).optional(),
-    tags: z.array(z.string()).default([]),
-  }),
-});
-
-const buildlog = defineCollection({
-  loader: glob({ base: './src/content/buildlog', pattern: CONTENT_GLOB }),
-  schema: z.object({
-    title: z.string().min(1),
-    entry: z.number().int().min(0),
-    date: z.coerce.date(),
-    /** Milestone reference, e.g. "M1" — or "design" for entry 00 (FR-52). */
-    milestone: z.string().min(1),
-    /** Short SHAs linking to GitHub commits; empty for entry 00 (FR-23). */
-    commits: z
-      .array(z.string().regex(/^[0-9a-f]{7,12}$/i, 'commits are short SHAs'))
-      .default([]),
-  }),
-});
-
-export const collections = { projects, notes, buildlog };
+export const collections = { projects };

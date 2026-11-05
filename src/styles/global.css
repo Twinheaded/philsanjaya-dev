@@ -122,7 +122,7 @@ html[data-nav-direction='back']::view-transition-new(stage) {
   animation-name: stage-in-left;
 }
 
-/* Shared markdown prose (case-study chapters, notes, log entries). */
+/* Shared markdown prose (case-study chapters). */
 .prose-md h2 {
   font-family: var(--font-display);
   font-size: 28px;

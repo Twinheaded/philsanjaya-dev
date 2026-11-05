@@ -28,15 +28,16 @@ project "Portfolio Website" (PHI-27 … PHI-49); every commit references its iss
 
 ## Maintenance
 
-**Add a project, note, or build-log entry** — one markdown file, never a code change:
+**Add a project** — one markdown file, never a code change:
 
 - Project: `src/content/projects/<slug>.md`, copying an existing study's frontmatter
   shape. Every `metrics[]` entry needs a `source` or the build fails (FR-22); a value of
   `pending` renders as an honest em-dash card. `status: draft` keeps it unpublished;
   `## ` headings become chapters.
-- Note: `src/content/notes/<slug>.md` (title, date, optional summary/tags).
-- Build-log entry: `src/content/buildlog/NN-slug.md` (title, entry number, date,
-  milestone, `commits[]` as short SHAs — they render as links to GitHub).
+
+The Notes and Log sections were removed in PHI-159. Their markdown is kept,
+unbuilt, in `archive/`; `archive/README.md` says how to bring them back.
+`public/_redirects` sends their old URLs to the home page.
 
 Run `npm run verify` before committing. Every push to `main` runs CI
 (check → build → test) and deploys to Cloudflare Pages on green.
