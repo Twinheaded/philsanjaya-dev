@@ -48,5 +48,6 @@ redeploys; history stays honest). Emergency — Cloudflare dashboard → Workers
 
 **Domain:** `philsanjaya.com`, registered 2026-07-04 — **renewal due 2027-07-04**. DNS
 and registration on Cloudflare; `www` → apex is a zone Redirect Rule; security headers
-ship from `public/_headers` (the CSP pins the single inline theme script by hash — if
-that script changes, recompute the hash per the comment in that file).
+ship from `public/_headers` (the CSP pins each inline script by hash — if one changes,
+`npm run verify` fails in `src/csp-hashes.test.ts`, naming each page and the new hash to
+add to `script-src`).
