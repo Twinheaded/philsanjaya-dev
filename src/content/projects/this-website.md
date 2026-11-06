@@ -31,7 +31,7 @@ element, and a standing rule that no metric appears anywhere without a source.
 
 ## Approach
 
-Content is data: every project, note, and build-log entry is a markdown file with a
+Content is data: every project is a markdown file with a
 schema-checked frontmatter, so adding one is a commit, never a code change. The shell
 is Astro with view transitions; the agents are a vanilla-TypeScript canvas island
 ported from my COS30002 steering coursework. The honest-numbers rule is enforced
@@ -39,7 +39,7 @@ mechanically — a metric without a `source` field fails the build.
 
 ## Architecture
 
-A 200px rail and a `100dvh` stage; five panel routes joined by directional slide
+A 200px rail and a `100dvh` stage; three panel routes joined by directional slide
 transitions. One island owns the canvas: pure steering maths over an injected seeded
 RNG, an engine for the loop and DPR-aware sizing, and a readout that displays only
 live-measured values. CI runs type-check, build, and the steering tests on every push,
@@ -55,4 +55,4 @@ and was re-measured, on the production domain, the day the site launched.
 
 The constraint is the design. No-scroll forces every panel to fit the viewport, which
 forces editing; the source-required schema forces every claim to carry its receipt.
-The build log on this site records the decisions as they happened, commit by commit.
+The site's public commit history records the decisions as they happened, commit by commit.

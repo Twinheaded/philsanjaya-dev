@@ -1,7 +1,7 @@
 /**
  * Content collections (FR-20): projects. Adding content is a markdown
  * file, never a code change (FR-24). Invalid frontmatter fails the build.
- * The notes and buildlog collections were removed in PHI-159; their
+ * The Notes and Log collections were removed in PHI-159; their
  * markdown is kept, unbuilt, in archive/ (see archive/README.md).
  */
 
