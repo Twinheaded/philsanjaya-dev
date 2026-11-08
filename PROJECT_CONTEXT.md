@@ -85,7 +85,7 @@ ignores the file).
 | --- | --- |
 | Content → HTML | All content is Phil's own markdown in the repo, rendered at build time. No user input, no forms, no server runtime. |
 | Browser | Static files only. CSP from `public/_headers`: `script-src 'self'` + two sha256 hashes pinning the two inline scripts (theme snippet; reading-pane mask). Since PHI-159 no built page carries the reading-pane script, so its hash is unused but left in place for a restore. JSON-LD is a data block, not covered by script-src. |
-| GitHub (`Twinheaded/philsanjaya-dev`, **public**) | One collaborator. `main` has **no branch protection**. Workflow token is read-only (`permissions: contents: read`; repo default `read`). Dependabot security updates are on (10 open dependency PRs). |
+| GitHub (`Twinheaded/philsanjaya-dev`, **public**) | One collaborator. `main` is protected by **ruleset 26697168** (PHI-155): the `build-and-test` check is required, force pushes and deletion are blocked, and the bypass list is empty, so nobody can push past it. To get past it, switch the ruleset off in Settings. Workflow token is read-only (`permissions: contents: read`; repo default `read`). Dependabot security updates are on (10 open dependency PRs). |
 | GitHub Actions → Cloudflare | Repo secret `CLOUDFLARE_API_TOKEN` (last set 2026-07-19, PHI-60 rotation). Account ID is in `ci.yml` in clear (an identifier, not a secret). |
 | Cloudflare zone | DNS + registrar for philsanjaya.com (renewal due 2027-07-04). `www` → apex and http → https are zone redirect rules. **Zone-level Email Obfuscation is on**: Cloudflare rewrites the About page's `mailto:` link and injects a decode script at the edge — that behaviour is not in the repo. |
 | Private sources | `_inbox/` (gitignored) holds Phil's coursework reports, CV and poster that the case studies cite. Never committed. |
@@ -103,14 +103,36 @@ npm audit           # 17 known vulnerabilities, tracked in PHI-147
 `.claude/launch.json` (gitignored) defines `astro-dev` (4321) and
 `astro-preview` (4322) for the agent's preview pane.
 
-**CI** (`.github/workflows/ci.yml`): on every push to `main` and every PR,
-`build-and-test` runs `npm ci → check → build → test`. On push to `main` only,
-the `deploy` job rebuilds and runs `npx wrangler pages deploy dist
---project-name=philsanjaya-dev --branch=main`. Wrangler is **not** in the
-lockfile, so `npx` fetches the latest release at deploy time.
+**CI** (`.github/workflows/ci.yml`, hardened in PHI-155):
+- `build-and-test` runs on every push to any branch, and on every PR.
+  - It runs `npm ci → check → build → test`, holds no secrets, and uploads
+    `dist/` as the `dist` artifact.
+- `deploy` runs only for pushes to `main`, after `build-and-test`.
+  - It installs with `npm ci --ignore-scripts`, so no dependency install
+    script runs.
+  - It downloads that `dist` artifact and publishes it without rebuilding.
+  - It runs wrangler **4.158.0** (an exact devDependency in the lockfile)
+    from `node_modules/.bin`: `wrangler pages deploy dist
+    --project-name=philsanjaya-dev --branch=main`.
+  - Only its final step can read `CLOUDFLARE_API_TOKEN`. If the secret is
+    missing, the deploy fails rather than skipping.
+- Every `uses:` is pinned to a full commit SHA, with the tag as a comment.
 
-**Rollback:** `git revert` + push (preferred), or Cloudflare dashboard →
-Workers & Pages → `philsanjaya-dev` → Deployments → Rollback (README).
+**Push routine** (the ruleset enforces it):
+1. Commit on a branch and push the branch.
+2. Wait for `build-and-test` to go green on that commit.
+3. Fast-forward `main` to the same commit with `git push origin main`. CI then
+   deploys.
+
+A direct push of an unchecked commit to `main` is refused with
+`GH013 … Required status check "build-and-test" is expected`. One quirk: a
+commit whose files exactly match an already-green commit counts as passed, so
+an empty commit gets through. Any real change has new files and gets checked.
+
+**Rollback:** `git revert` on a branch, then the push routine above (preferred).
+A direct push of the revert to `main` is refused. Emergency path: Cloudflare
+dashboard → Workers & Pages → `philsanjaya-dev` → Deployments → Rollback
+(README).
 
 **Line endings:** Phil's checkout uses `core.autocrlf=true`, so a local build
 emits CRLF inside markdown-rendered HTML while CI (Linux) emits LF. Pages are

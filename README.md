@@ -39,12 +39,15 @@ The Notes and Log sections were removed in PHI-159. Their markdown is kept,
 unbuilt, in `archive/`; `archive/README.md` says how to bring them back.
 `public/_redirects` sends their old URLs to the home page.
 
-Run `npm run verify` before committing. Every push to `main` runs CI
-(check → build → test) and deploys to Cloudflare Pages on green.
+Run `npm run verify` before committing. Every branch push runs CI (check → build →
+test). `main` only takes commits that already passed, so the routine is: push the
+branch, wait for green, then fast-forward `main` with `git push origin main`. CI then
+deploys that tested build to Cloudflare Pages.
 
-**Roll back a deploy:** preferred — `git revert` the offending commit and push (CI
-redeploys; history stays honest). Emergency — Cloudflare dashboard → Workers & Pages →
-`philsanjaya-dev` → Deployments → previous production deployment → Rollback.
+**Roll back a deploy:** preferred — `git revert` the offending commit on a branch, then
+use the same routine (history stays honest). A direct push to `main` is refused (GH013),
+so don't push the revert straight there. Emergency — Cloudflare dashboard → Workers &
+Pages → `philsanjaya-dev` → Deployments → previous production deployment → Rollback.
 
 **Domain:** `philsanjaya.com`, registered 2026-07-04 — **renewal due 2027-07-04**. DNS
 and registration on Cloudflare; `www` → apex is a zone Redirect Rule; security headers
