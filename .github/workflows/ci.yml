@@ -5,6 +5,7 @@
 # the Cloudflare token to its final step only. main is protected by a ruleset
 # that requires the build-and-test check, so the routine is: push the branch,
 # wait for green, then fast-forward main to that same commit.
+# Push routine and the ruleset tests behind it: Linear PHI-155.
 name: CI
 
 on:
